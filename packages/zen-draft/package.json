@@ -21,9 +21,10 @@
   },
   "files": ["dist", "README.md"],
   "scripts": {
-    "build": "bun build src/index.ts --outdir dist --target node --minify --sourcemap && bun build src/index.ts --outdir dist --target node --minify --sourcemap --format cjs --outfile dist/index.cjs && tsc --emitDeclarationOnly --outDir dist",
+    
+    "build": "bun build src/index.ts --outdir dist --target node --minify --sourcemap && bun build src/index.ts --outdir dist --target node --minify --sourcemap --format cjs --outfile dist/index.cjs",
     "dev": "bun build src/index.ts --outdir dist --target node --sourcemap --watch",
-    "clean": "rimraf dist"
+    "clean": "bun rimraf dist"
   },
   "dependencies": {
     "@sylphx/zen": "workspace:*"

@@ -15,7 +15,8 @@
   },
   "files": ["dist"],
   "scripts": {
-    "build": "bun build src/index.ts --outdir dist --target node --minify --sourcemap && bun build src/index.ts --outdir dist --target node --minify --sourcemap --format cjs --outfile dist/index.cjs && tsc --emitDeclarationOnly --outDir dist"
+    
+    "build": "bun build src/index.ts --outdir dist --target node --minify --sourcemap && bun build src/index.ts --outdir dist --target node --minify --sourcemap --format cjs --outfile dist/index.cjs",
   },
   "keywords": ["zen", "router", "routing", "state management", "minimal", "tiny"],
   "author": "Sylph Lab <hi@sylphlab.com>",

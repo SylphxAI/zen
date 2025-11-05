@@ -16,7 +16,8 @@
   "files": ["dist"],
   "sideEffects": false,
   "scripts": {
-    "build": "bun build src/index.ts --outdir dist --target node --minify --sourcemap && bun build src/index.ts --outdir dist --target node --minify --sourcemap --format cjs --outfile dist/index.cjs && tsc --emitDeclarationOnly --outDir dist"
+    
+    "build": "bun build src/index.ts --outdir dist --target node --minify --sourcemap && bun build src/index.ts --outdir dist --target node --minify --sourcemap --format cjs --outfile dist/index.cjs",
   },
   "peerDependencies": {
     "@sylphx/zen": "workspace:*",

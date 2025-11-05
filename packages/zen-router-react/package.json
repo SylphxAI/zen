@@ -27,8 +27,9 @@
     "url": "https://github.com/sylphlab/zen/issues"
   },
   "scripts": {
-    "build": "bun build src/index.ts --outdir dist --target node --minify --sourcemap && bun build src/index.ts --outdir dist --target node --minify --sourcemap --format cjs --outfile dist/index.cjs && tsc --emitDeclarationOnly --outDir dist",
-    "clean": "rimraf dist .turbo"
+    
+    "build": "bun build src/index.ts --outdir dist --target node --minify --sourcemap && bun build src/index.ts --outdir dist --target node --minify --sourcemap --format cjs --outfile dist/index.cjs",
+    "clean": "bun rimraf dist .turbo"
   },
   "dependencies": {
     "@sylphx/zen": "workspace:*",

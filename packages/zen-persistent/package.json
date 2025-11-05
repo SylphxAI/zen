@@ -16,9 +16,10 @@
   "files": ["dist"],
   "sideEffects": false,
   "scripts": {
-    "typecheck": "tsc --noEmit",
-    "build": "bun build src/index.ts --outdir dist --target node --minify --sourcemap && bun build src/index.ts --outdir dist --target node --minify --sourcemap --format cjs --outfile dist/index.cjs && tsc --emitDeclarationOnly --outDir dist",
-    "validate": "pnpm run check-format && pnpm run lint && pnpm run typecheck && pnpm run test"
+    "typecheck": "bun tsc --noEmit",
+    
+    "build": "bun build src/index.ts --outdir dist --target node --minify --sourcemap && bun build src/index.ts --outdir dist --target node --minify --sourcemap --format cjs --outfile dist/index.cjs",
+    "validate": "bun run check-format && bun run lint && bun run typecheck && bun run test"
   },
   "peerDependencies": {
     "@sylphx/zen": "workspace:*"

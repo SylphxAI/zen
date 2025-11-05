@@ -21,17 +21,19 @@
   },
   "files": ["dist", "README.md"],
   "scripts": {
-    "build": "bunup --format esm,cjs --dts --target node --minify",
+    "build": "bunup --format esm,cjs --dts --target node",
     "dev": "bun build src/index.ts --outdir dist --target node --sourcemap --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "clean": "bun rimraf dist"
   },
   "dependencies": {
-    "@sylphx/zen": "workspace:*"
+    "@sylphx/zen": "workspace:*",
+    "immer": "^10.1.1"
   },
   "devDependencies": {
     "bunup": "^0.15.13",
     "@types/node": "^20.12.12",
-    "immer": "^10.1.1",
     "typescript": "^5.4.5",
     "vitest": "^1.6.0"
   },

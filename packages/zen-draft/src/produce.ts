@@ -21,9 +21,12 @@ function mapImmerPatches(immerPatches: ReadonlyArray<ImmerPatch>): ZenPatch[] {
   const mapped: ZenPatch[] = [];
   for (const p of immerPatches) {
     const mappedPath = p.path.map((segment) => {
+      // Ensure segment is not undefined or null
+      if (segment == null) return segment;
+
       const num = Number(segment);
-      // Check specifically for non-negative integers for array indices
-      return Number.isInteger(num) && num >= 0 ? num : segment;
+      // Check specifically for finite non-negative integers for array indices
+      return Number.isFinite(num) && Number.isInteger(num) && num >= 0 ? num : segment;
     });
 
     // Check for Set operations based on Immer's observed output format

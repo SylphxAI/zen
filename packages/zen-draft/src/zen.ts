@@ -2,7 +2,7 @@ import { get, set } from '@sylphx/zen';
 import type { Zen } from '@sylphx/zen';
 import { produce } from './produce';
 import type { Patch, ProduceOptions } from './types';
-import { deepEqual } from './utils'; // Import deepEqual
+import { deepEqual } from './utils';
 
 /**
  * Produces the next state for a writable zen by applying a recipe function

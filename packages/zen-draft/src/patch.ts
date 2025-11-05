@@ -237,9 +237,21 @@ function _applyCopyPatch<T>(patch: Patch, baseState: T, draft: T): void {
   if (valueToCopy === undefined && getValueByPath(baseState, patch.from) === undefined) {
     throw new Error(`'copy' operation source path does not exist or is invalid: ${patch.from.join('/')}`);
   }
-  // Use JSON clone for simplicity
-  const clonedValue = JSON.parse(JSON.stringify(valueToCopy ?? null));
-  // Optional: Check addSuccess?
+  // Use structuredClone for deep copy (available in Node 17+, modern browsers)
+  // Falls back to JSON method for primitive values or if structuredClone fails
+  let clonedValue: unknown;
+  if (typeof valueToCopy === 'object' && valueToCopy !== null) {
+    try {
+      clonedValue = typeof structuredClone !== 'undefined'
+        ? structuredClone(valueToCopy)
+        : JSON.parse(JSON.stringify(valueToCopy));
+    } catch {
+      // Fallback for non-cloneable objects
+      clonedValue = JSON.parse(JSON.stringify(valueToCopy));
+    }
+  } else {
+    clonedValue = valueToCopy;
+  }
   setValueByPath(baseState, draft, patch.path, clonedValue, 'add');
 }
 

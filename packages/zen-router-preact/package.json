@@ -1,12 +1,12 @@
 {
   "name": "@sylphx/zen-router-preact",
-  "version": "0.0.3",
+  "version": "0.0.1",
   "description": "Preact integration for @sylphx/zen-router",
   "author": "Sylph Lab <hi@sylphlab.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/sylphlab/zen.git",
+    "url": "https://github.com/sylphx/zen.git",
     "directory": "packages/zen-router-preact"
   },
   "type": "module",
@@ -22,12 +22,12 @@
   },
   "files": ["dist", "README.md"],
   "keywords": ["zen", "router", "preact", "hooks", "state management"],
-  "homepage": "https://github.com/sylphlab/zen/tree/main/packages/zen-router-preact#readme",
+  "homepage": "https://github.com/sylphx/zen/tree/main/packages/zen-router-preact#readme",
   "bugs": {
-    "url": "https://github.com/sylphlab/zen/issues"
+    "url": "https://github.com/sylphx/zen/issues"
   },
   "scripts": {
-    "build": "bun build src/index.ts --outdir dist --target node --minify --sourcemap && bun build src/index.ts --outdir dist --target node --minify --sourcemap --format cjs --outfile dist/index.cjs",
+    "build": "bunup --format esm,cjs --dts --target node --minify",
     "clean": "bun rimraf dist .turbo"
   },
   "dependencies": {
@@ -38,6 +38,7 @@
     "preact": "^10.0.0"
   },
   "devDependencies": {
+    "bunup": "^0.15.13",
     "@types/react": "^18.3.3",
     "preact": "^10.22.1",
     "typescript": "^5.4.5",

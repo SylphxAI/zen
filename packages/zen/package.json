@@ -1,6 +1,6 @@
 {
   "name": "@sylphx/zen",
-  "version": "0.1.1",
+  "version": "0.0.1",
   "description": "Zen state management library - extreme minimalism, extreme speed.",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -15,7 +15,7 @@
   },
   "files": ["dist"],
   "scripts": {
-    "build": "bun build src/index.ts --outdir dist --target node --minify --sourcemap && bun build src/index.ts --outdir dist --target node --minify --sourcemap --format cjs --outfile dist/index.cjs",
+    "build": "bunup --format esm,cjs --dts --target node --minify",
     "size": "bun size-limit",
     "lint": "echo 'Lint script not implemented yet'"
   },
@@ -57,6 +57,7 @@
     "access": "public"
   },
   "devDependencies": {
+    "bunup": "^0.15.13",
     "typescript": "^5.8.3"
   }
 }

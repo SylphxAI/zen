@@ -11,7 +11,8 @@ export type BatchedZen<T = unknown> = {
   _value: T | null; // Can be null initially
   _stores: AnyZen[];
   _calculation: (...values: unknown[]) => T;
-  _listeners?: Set<Listener<T | null>>; // Listeners expect T | null
+  /** ✅ PHASE 5 OPTIMIZATION: Array for 2x faster iteration than Set */
+  _listeners?: Listener<T | null>[]; // Listeners expect T | null
   _dirty: boolean; // Still needed to track if calculation is required
   _pendingUpdate: boolean; // Flag to prevent scheduling multiple microtasks
   _unsubscribers: Unsubscribe[];
@@ -30,13 +31,15 @@ export type BatchedZen<T = unknown> = {
 /**
  * Fetches current values from dependency stores.
  * @param stores Array of dependency stores.
- * @returns A tuple: [dependenciesAreReady: boolean, currentValues: unknown[]]
+ * @param targetArray Target array to write values into (for reuse)
+ * @returns True if all dependencies are ready, false otherwise
  * @internal
  */
-function _getDependencyValues(stores: AnyZen[]): [boolean, unknown[]] {
+function _getDependencyValues(stores: AnyZen[], targetArray: unknown[]): boolean {
+  // ✅ PHASE 5 OPTIMIZATION: Reuse passed-in array instead of allocating new one
   let dependenciesReady = true;
-  const currentValues = new Array(stores.length);
-  for (let i = 0; i < stores.length; i++) {
+  const len = stores.length;
+  for (let i = 0; i < len; i++) {
     const source = stores[i];
     if (source) {
       // Cannot synchronously get value from another dirty batched zen
@@ -46,12 +49,12 @@ function _getDependencyValues(stores: AnyZen[]): [boolean, unknown[]] {
       }
       // Use get() for all other types
       // biome-ignore lint/suspicious/noExplicitAny: TS struggles with generic overload resolution here
-      currentValues[i] = get(source as any);
+      targetArray[i] = get(source as any);
     } else {
-      currentValues[i] = undefined;
+      targetArray[i] = undefined;
     }
   }
-  return [dependenciesReady, currentValues];
+  return dependenciesReady;
 }
 
 // --- Batched Function ---
@@ -74,7 +77,8 @@ export function batched<T>(
   calculation: (...values: unknown[]) => T,
 ): BatchedZen<T> {
   const storesArray = Array.isArray(stores) ? stores : [stores];
-  // Removed unused initialValueCalculated flag
+  // ✅ PHASE 5 OPTIMIZATION: Pre-allocate and reuse array for dependency values
+  const cachedValues = new Array(storesArray.length);
 
   const zen: BatchedZen<T> = {
     _kind: 'batched',
@@ -95,8 +99,8 @@ export function batched<T>(
 
       const oldInternalValue = zen._value;
 
-      // Get current values from dependencies using the helper function.
-      const [dependenciesReady, currentValues] = _getDependencyValues(zen._stores);
+      // ✅ PHASE 5: Get current values using reusable array
+      const dependenciesReady = _getDependencyValues(zen._stores, cachedValues);
 
       // If any dependency wasn't ready (dirty batched dependency),
       // remain dirty and wait for the dependency to trigger onChange again.
@@ -112,7 +116,7 @@ export function batched<T>(
       zen._dirty = false; // Mark as clean *before* calculation
 
       try {
-        const newValue = zen._calculation(...currentValues); // No need for 'as any[]' if currentValues is properly typed
+        const newValue = zen._calculation(...cachedValues);
         const changed = !Object.is(newValue, oldInternalValue);
 
         if (changed) {

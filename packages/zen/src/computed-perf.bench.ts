@@ -1,5 +1,5 @@
 import { bench, describe } from 'vitest';
-import { zen, set, computed, subscribe } from './zen';
+import { computed, set, subscribe, zen } from './zen';
 
 describe('Computed Performance - Version Tracking Benefits', () => {
   bench('computed: source updates but value unchanged (version check benefit)', () => {

@@ -20,6 +20,8 @@ export function effect<Stores extends AnyZen[]>(
   let isCancelled = false;
   let initialRun = true; // Flag to track the first execution
   let setupComplete = false; // Flag to prevent running callback during setup
+  // ✅ PHASE 5 OPTIMIZATION: Pre-allocate array for values to reduce allocations
+  const currentValues = new Array(stores.length);
 
   // Function to run the callback and handle cleanup
   const runCallback = () => {
@@ -36,33 +38,65 @@ export function effect<Stores extends AnyZen[]>(
       lastCleanup = undefined; // Reset cleanup after running
     }
 
-    // Get current values, handling updates for computed/batched
-    const currentValues = stores.map((s) => {
+    // ✅ PHASE 5 OPTIMIZATION: Reuse pre-allocated array + cache length
+    const len = stores.length;
+
+    // Fast path for single store (most common case)
+    if (len === 1) {
+      const s = stores[0];
       switch (s._kind) {
         case 'computed': {
           const computed = s as import('./computed').ComputedZen<unknown>;
           if (computed._dirty || computed._value === null) {
             computed._update();
           }
-          return computed._value; // Can be null
+          currentValues[0] = computed._value;
+          break;
         }
-        case 'batched': {
-          // Batched zens update via microtask, read current value (might be null/stale)
-          // The effect will re-run if the batched zen updates later.
-          return s._value; // Can be null
-        }
+        case 'batched':
+          currentValues[0] = s._value;
+          break;
         case 'zen':
         case 'map':
         case 'deepMap':
         case 'karma':
-          return s._value; // Direct value
+          currentValues[0] = s._value;
+          break;
         default:
-          return null;
+          currentValues[0] = null;
       }
-    });
+    } else {
+      // Multiple stores - populate array
+      for (let i = 0; i < len; i++) {
+        const s = stores[i];
+        switch (s._kind) {
+          case 'computed': {
+            const computed = s as import('./computed').ComputedZen<unknown>;
+            if (computed._dirty || computed._value === null) {
+              computed._update();
+            }
+            currentValues[i] = computed._value;
+            break;
+          }
+          case 'batched':
+            currentValues[i] = s._value;
+            break;
+          case 'zen':
+          case 'map':
+          case 'deepMap':
+          case 'karma':
+            currentValues[i] = s._value;
+            break;
+          default:
+            currentValues[i] = null;
+        }
+      }
+    }
 
-    // Check if any value is still null (initial state for computed/batched)
-    const dependenciesReady = !currentValues.some((v) => v === null);
+    // ✅ PHASE 5: Fast path for single store dependency check
+    const dependenciesReady = len === 1
+      ? currentValues[0] !== null
+      : !currentValues.some((v) => v === null);
 
     if (dependenciesReady) {
       // All values are non-null, proceed.

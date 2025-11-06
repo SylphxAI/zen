@@ -3,10 +3,10 @@ import type { ComputedZen } from './computed';
 import type {
   AnyZen,
   DeepMapZen,
+  KarmaState,
+  KarmaZen,
   Listener,
   MapZen,
-  TaskState,
-  TaskZen,
   Unsubscribe,
   ZenValue,
   ZenWithValue,
@@ -74,7 +74,7 @@ export function get<T>(zen: Zen<T>): T;
 export function get<T>(zen: ComputedZen<T>): T | null;
 export function get<T extends object>(zen: MapZen<T>): T; // Add MapZen overload back
 export function get<T extends object>(zen: DeepMapZen<T>): T;
-export function get<T>(zen: TaskZen<T>): TaskState<T>; // Add TaskZen overload back
+export function get<T>(zen: KarmaZen<T>): KarmaState<T>; // Add KarmaZen overload back
 // General implementation signature using ZenValue
 export function get<A extends AnyZen>(zen: A): ZenValue<A> | null {
   // Return includes null for computed initial state
@@ -83,7 +83,7 @@ export function get<A extends AnyZen>(zen: A): ZenValue<A> | null {
     case 'zen':
     case 'map': // Add 'map' case back
     case 'deepMap':
-    case 'task': // Add 'task' case back
+    case 'karma': // Add 'task' case back
       // For these types, _value directly matches ZenValue<A>
       // Cast needed as TS struggles with inference within generic function.
       return zen._value as ZenValue<A>;
@@ -168,7 +168,10 @@ export function set<T>(zen: Zen<T>, value: T, force = false): void {
  * @returns A function to unsubscribe the listener.
  */
 /** @internal */
-function _handleFirstSubscription<A extends AnyZen>(zen: A, baseZen: ZenWithValue<ZenValue<A>>): void {
+function _handleFirstSubscription<A extends AnyZen>(
+  zen: A,
+  baseZen: ZenWithValue<ZenValue<A>>,
+): void {
   // Trigger onMount listeners
   const mountLs = baseZen._mountListeners;
   if (mountLs?.size) {
@@ -207,7 +210,10 @@ function _handleFirstSubscription<A extends AnyZen>(zen: A, baseZen: ZenWithValu
 }
 
 /** @internal */
-function _handleLastUnsubscribe<A extends AnyZen>(zen: A, baseZen: ZenWithValue<ZenValue<A>>): void {
+function _handleLastUnsubscribe<A extends AnyZen>(
+  zen: A,
+  baseZen: ZenWithValue<ZenValue<A>>,
+): void {
   baseZen._listeners = undefined; // Clean up Set if empty
 
   // Trigger onStop listeners if this was the last value listener

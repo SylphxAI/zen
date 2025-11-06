@@ -90,12 +90,12 @@ console.log('Updated array:', get(settings).other); // Logs: Updated array: [100
 unsubPath();
 ```
 
-### `task` Example
+### `karma` Example
 
 ```typescript
-import { task, subscribe } from '@sylphx/zen';
+import { karma, subscribe } from '@sylphx/zen';
 
-const fetchData = task(async (id: number) => {
+const fetchData = karma(async (id: number) => {
   // Simulate API call
   await new Promise(resolve => setTimeout(resolve, 50));
   if (id < 0) throw new Error('Invalid ID');
@@ -177,7 +177,7 @@ const unsubTimer = subscribe(timerZen, (value) => {
 
 *   **Tiny size:** ~1.33 kB gzipped (full bundle).
 *   Excellent performance (see benchmarks).
-*   Functional API (`atom`, `computed`, `map`, `deepMap`, `task`, `batch`).
+*   Functional API (`atom`, `computed`, `map`, `deepMap`, `karma`, `batch`).
 *   Lifecycle events (`onMount`, `onSet`, `onNotify`, `onStop`).
 *   Key/Path listeners for maps (`listenKeys`, `listenPaths`).
 *   Explicit batching for combining updates.

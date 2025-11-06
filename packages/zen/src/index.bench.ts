@@ -1,5 +1,5 @@
 // This file is intentionally left blank after refactoring benchmarks
-// into separate files (atom.bench.ts, computed.bench.ts, map.bench.ts, task.bench.ts).
+// into separate files (atom.bench.ts, computed.bench.ts, map.bench.ts, karma.bench.ts).
 // It can be used for future integration benchmarks if needed.
 
 import { describe, expect, it } from 'vitest'; // Add it, expect

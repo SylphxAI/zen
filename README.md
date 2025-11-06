@@ -35,7 +35,7 @@ By focusing relentlessly on a highly optimized, simple core and only the essenti
 *   🚀 **Extreme Performance:** Hyper-optimized core delivers benchmark-leading speed (see below).
 *   ⚛️ **Core Primitives:** `zen` for basic state, `computed` for derived values.
 *   🗺️ **Object Helpers:** `map` for shallow object state, `deepMap` for nested objects/arrays with efficient path updates/listeners.
-*   ⚡ **Async Handling:** `task` atom for managing async operation states (loading, error, data).
+*   ⚡ **Async Handling:** `karma` atom for managing async operation states (loading, error, data).
 *   ✂️ **Immutable Updates:** `@sylphx/zen-craft` provides Immer-like `produce()` with JSON Patch generation for time-travel and undo/redo.
 *   🌐 **Multi-Framework:** Official integrations for React, Vue, Preact, Solid.js, and Svelte – each <250 bytes.
 *   👂 **Lifecycle Events:** Optional hooks (`onMount`, `onStart`, `onStop`, `onSet`, `onNotify`) for fine-grained control when needed.
@@ -299,12 +299,12 @@ unsubTheme();
 unsubData();
 ```
 
-### `task`
+### `karma`
 
 Handle async operations gracefully.
 
 ```typescript
-import { task, computed, get, subscribe, runTask, getTaskState } from '@sylphx/zen';
+import { karma, computed, get, subscribe, runKarma, getKarmaState } from '@sylphx/zen';
 
 const fetchData = async (userId: number): Promise<{ id: number; name: string }> => {
   // Simulate API call
@@ -313,10 +313,10 @@ const fetchData = async (userId: number): Promise<{ id: number; name: string }> 
   return { id: userId, name: `User ${userId}` };
 };
 
-const userTask = task(fetchData);
+const userKarma = karma(fetchData);
 
-// Use core 'get' to read the task state atom
-const userStatus = computed([userTask], (state) => {
+// Use core 'get' to read the karma state atom
+const userStatus = computed([userKarma], (state) => {
   if (state.loading) return 'Loading user...';
   if (state.error) return `Error: ${state.error.message}`;
   if (state.data) return `User Found: ${state.data.name} (ID: ${state.data.id})`;
@@ -327,8 +327,8 @@ const userStatus = computed([userTask], (state) => {
 subscribe(userStatus, status => console.log(status));
 // Output: Enter a user ID (Initial call)
 
-// Run the task using runTask
-runTask(userTask, 123)
+// Run the karma using runKarma
+runKarma(userKarma, 123)
   .then(data => console.log('Success:', data))
   .catch(err => console.error('Caught Error:', err));
 
@@ -338,7 +338,7 @@ runTask(userTask, 123)
 // Output: Success: { id: 123, name: 'User 123' }
 
 // Run with invalid ID
-runTask(userTask, 0)
+runKarma(userKarma, 0)
   .catch(err => console.error('Caught Error:', err.message));
 
 // Output: Loading user...
@@ -347,7 +347,7 @@ runTask(userTask, 0)
 // Output: Caught Error: Invalid ID
 
 // You can also get the current state directly
-console.log(getTaskState(userTask)); // Output: { loading: false, error: Error: Invalid ID, data: undefined }
+console.log(getKarmaState(userKarma)); // Output: { loading: false, error: Error: Invalid ID, data: undefined }
 ```
 
 ### `craft` (Immutable Updates)

@@ -1,5 +1,5 @@
 import { bench, describe } from 'vitest';
-import { runTask, task } from './task'; // Import functional API
+import { karma, runKarma } from './karma'; // Import functional API
 
 describe('Task Creation', () => {
   const asyncFn = async () => {
@@ -7,7 +7,7 @@ describe('Task Creation', () => {
     return 'done';
   };
   bench('zen', () => {
-    task(asyncFn);
+    karma(asyncFn);
   });
   // No direct equivalents in other libs for simple creation bench
 });
@@ -17,11 +17,11 @@ describe('Task Run (Resolve)', () => {
     await new Promise((r) => setTimeout(r, 0));
     return 'done';
   };
-  const zTaskResolve = task(asyncFnResolve);
+  const zTaskResolve = karma(asyncFnResolve);
 
   bench('zen (resolve)', async () => {
     // Run and await completion, but the benchmark measures the time to initiate and settle
-    await runTask(zTaskResolve);
+    await runKarma(zTaskResolve);
   });
 });
 
@@ -30,11 +30,11 @@ describe('Task Run (Reject)', () => {
     await new Promise((r) => setTimeout(r, 0));
     throw new Error('fail');
   };
-  const zTaskReject = task(asyncFnReject);
+  const zTaskReject = karma(asyncFnReject);
 
   bench('zen (reject)', async () => {
     try {
-      await runTask(zTaskReject);
+      await runKarma(zTaskReject);
     } catch {
       // ignore error for benchmark
     }

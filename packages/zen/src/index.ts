@@ -18,7 +18,7 @@ export const zen = _zen;
 export { map } from './map';
 export { computed } from './computed';
 export { deepMap } from './deepMap';
-export { task } from './task';
+export { karma } from './karma';
 export { mapCreator } from './mapCreator';
 
 // Core Functions
@@ -36,7 +36,7 @@ export const listenKeys = _listenKeys;
 
 // Other Functions
 export { setPath as setDeepMapPath, set as setDeepMapValue } from './deepMap';
-export { runTask, getTaskState, subscribeToTask } from './task';
+export { runKarma, getKarmaState, subscribeToKarma } from './karma';
 export { batchedUpdate } from './batchedUpdate';
 export { batched } from './batched';
 export { effect } from './effect';

@@ -54,7 +54,7 @@ export function effect<Stores extends AnyZen[]>(
         case 'zen':
         case 'map':
         case 'deepMap':
-        case 'task':
+        case 'karma':
           return s._value; // Direct value
         default:
           return null;

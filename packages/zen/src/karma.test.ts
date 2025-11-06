@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getTaskState, runTask, subscribeToTask, task } from './task'; // Import getTaskState and subscribeToTask
-import { subscribe } from './zen'; // Keep core subscribe for comparison if needed, or remove if subscribeToTask covers all needs
+import { getKarmaState, runKarma, subscribeToKarma, task } from './karma'; // Import getKarmaState and subscribeToKarma
+import { subscribe } from './zen'; // Keep core subscribe for comparison if needed, or remove if subscribeToKarma covers all needs
 
 // Helper to wait for promises/microtasks
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -21,22 +21,22 @@ describe('task', () => {
   });
 
   it('should create a task atom with initial state', () => {
-    taskAtom = task(asyncFnSuccess);
+    taskAtom = karma(asyncFnSuccess);
     expect(taskAtom._kind).toBe('task');
     expect(taskAtom._value).toEqual({ loading: false, error: undefined, data: undefined });
     expect(taskAtom._asyncFn).toBe(asyncFnSuccess);
   });
 
   it('should update state to loading when run starts', () => {
-    taskAtom = task(asyncFnSuccess);
-    runTask(taskAtom, 'test');
+    taskAtom = karma(asyncFnSuccess);
+    runKarma(taskAtom, 'test');
     expect(taskAtom._value).toEqual({ loading: true, error: undefined, data: undefined });
     expect(asyncFnSuccess).toHaveBeenCalledWith('test');
   });
 
   it('should update state with data on successful completion', async () => {
-    taskAtom = task(asyncFnSuccess);
-    const promise = runTask(taskAtom, 'abc');
+    taskAtom = karma(asyncFnSuccess);
+    const promise = runKarma(taskAtom, 'abc');
     expect(taskAtom._value.loading).toBe(true);
 
     await promise; // Wait for the async function to complete
@@ -46,12 +46,12 @@ describe('task', () => {
   });
 
   it('should update state with error on failure', async () => {
-    taskAtom = task(asyncFnError);
+    taskAtom = karma(asyncFnError);
     const errorListener = vi.fn();
 
     // Use try/catch as run() re-throws the error
     try {
-      await runTask(taskAtom, 'fail');
+      await runKarma(taskAtom, 'fail');
     } catch (e) {
       errorListener(e);
     }
@@ -65,7 +65,7 @@ describe('task', () => {
   });
 
   it('should notify subscribers on state changes', async () => {
-    taskAtom = task(asyncFnSuccess);
+    taskAtom = karma(asyncFnSuccess);
     const listener = vi.fn();
     const unsubscribe = subscribe(taskAtom, listener);
 
@@ -76,7 +76,7 @@ describe('task', () => {
       undefined, // oldValue is undefined on initial subscribe call
     );
 
-    const promise = runTask(taskAtom, 'notify');
+    const promise = runKarma(taskAtom, 'notify');
 
     // Loading state notification
     expect(listener).toHaveBeenCalledTimes(2);
@@ -110,26 +110,26 @@ describe('task', () => {
       return 'First finished';
     });
 
-    taskAtom = task(slowFn);
+    taskAtom = karma(slowFn);
     const listener = vi.fn();
-    const unsubscribe = subscribeToTask(taskAtom, listener); // Use subscribeToTask
+    const unsubscribe = subscribeToKarma(taskAtom, listener); // Use subscribeToKarma
     listener.mockClear(); // Clear initial subscribe call
 
     // Start first run
-    const promiseRun1 = runTask(taskAtom, 'first');
+    const promiseRun1 = runKarma(taskAtom, 'first');
     expect(slowFn).toHaveBeenCalledTimes(1);
     expect(listener).toHaveBeenCalledTimes(1); // Loading state call
-    expect(getTaskState(taskAtom)).toEqual({ loading: true });
+    expect(getKarmaState(taskAtom)).toEqual({ loading: true });
     const loadingState = { loading: true }; // Store for oldValue check
 
     // Attempt to start second run while first is running
-    const promiseRun2 = runTask(taskAtom, 'second');
+    const promiseRun2 = runKarma(taskAtom, 'second');
 
     // Assertions based on preventing concurrent run:
     expect(slowFn).toHaveBeenCalledTimes(1); // slowFn should NOT be called again
     // expect(promiseRun2).toBe(promiseRun1); // Removed: Incorrect assertion due to async function always returning a new promise wrapper.
     expect(listener).toHaveBeenCalledTimes(1); // Listener should NOT be called again for loading
-    expect(getTaskState(taskAtom)).toEqual({ loading: true }); // State remains loading
+    expect(getKarmaState(taskAtom)).toEqual({ loading: true }); // State remains loading
 
     // Resolve the first run
     resolveFirst!('First finished');
@@ -140,34 +140,34 @@ describe('task', () => {
     const firstRunFinishedState = { loading: false, data: 'First finished' };
     expect(listener).toHaveBeenCalledTimes(2); // Finished state call (Total: Loading1 + Finished1)
     expect(listener).toHaveBeenLastCalledWith(firstRunFinishedState, loadingState);
-    expect(getTaskState(taskAtom)).toEqual(firstRunFinishedState);
+    expect(getKarmaState(taskAtom)).toEqual(firstRunFinishedState);
 
     unsubscribe();
   });
 
-  // Test for getTaskState
-  it('should return current state via getTaskState', async () => {
-    taskAtom = task(asyncFnSuccess);
-    expect(getTaskState(taskAtom)).toEqual({ loading: false }); // Initial
+  // Test for getKarmaState
+  it('should return current state via getKarmaState', async () => {
+    taskAtom = karma(asyncFnSuccess);
+    expect(getKarmaState(taskAtom)).toEqual({ loading: false }); // Initial
 
-    const promise = runTask(taskAtom, 'get');
-    expect(getTaskState(taskAtom)).toEqual({ loading: true }); // Loading
+    const promise = runKarma(taskAtom, 'get');
+    expect(getKarmaState(taskAtom)).toEqual({ loading: true }); // Loading
 
     await promise;
-    expect(getTaskState(taskAtom)).toEqual({ loading: false, data: 'Success: get' }); // Success
+    expect(getKarmaState(taskAtom)).toEqual({ loading: false, data: 'Success: get' }); // Success
   });
 
-  // Test for subscribeToTask
-  it('should notify subscribers via subscribeToTask', async () => {
-    taskAtom = task(asyncFnSuccess);
+  // Test for subscribeToKarma
+  it('should notify subscribers via subscribeToKarma', async () => {
+    taskAtom = karma(asyncFnSuccess);
     const listener = vi.fn();
-    const unsubscribe = subscribeToTask(taskAtom, listener); // Use subscribeToTask
+    const unsubscribe = subscribeToKarma(taskAtom, listener); // Use subscribeToKarma
 
     // Initial state notification
     expect(listener).toHaveBeenCalledTimes(1);
     expect(listener).toHaveBeenLastCalledWith({ loading: false }, undefined);
 
-    const promise = runTask(taskAtom, 'sub');
+    const promise = runKarma(taskAtom, 'sub');
 
     // Loading state notification
     expect(listener).toHaveBeenCalledTimes(2);
@@ -186,7 +186,7 @@ describe('task', () => {
 
     // Ensure listener is not called after unsubscribe
     listener.mockClear();
-    runTask(taskAtom, 'after');
+    runKarma(taskAtom, 'after');
     await tick();
     expect(listener).not.toHaveBeenCalled();
   });

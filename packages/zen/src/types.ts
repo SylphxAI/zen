@@ -14,7 +14,7 @@ export type Unsubscribe = () => void;
 /** Base structure for zens that directly hold value and listeners. */
 export type ZenWithValue<T> = {
   /** Distinguishes zen types for faster checks */
-  _kind: 'zen' | 'computed' | 'map' | 'deepMap' | 'task' | 'batched'; // Add 'batched'
+  _kind: 'zen' | 'computed' | 'map' | 'deepMap' | 'karma' | 'batched'; // Add 'batched'
   /** Current value */
   _value: T; // Value type enforced by generic, no null default
   /** Value listeners (Set for efficient add/delete/has) */
@@ -39,9 +39,8 @@ export type ZenWithValue<T> = {
   _mountCleanups?: Map<any, (() => void) | undefined>;
 };
 
-/** Represents the possible states of a TaskZen. */
-export type TaskState<T = unknown> =
-  // Add TaskState back
+/** Represents the possible states of a KarmaZen. */
+export type KarmaState<T = unknown> =
   | { loading: true; error?: undefined; data?: undefined }
   | { loading: false; error: Error; data?: undefined }
   | { loading: false; error?: undefined; data: T }
@@ -63,10 +62,9 @@ export type DeepMapZen<T extends object = object> = ZenWithValue<T> & {
   // No extra properties needed, structure matches ZenWithValue<Object>
 };
 
-/** Represents a Task Zen holding state and the async function. */
-export type TaskZen<T = void, Args extends unknown[] = unknown[]> = ZenWithValue<TaskState<T>> & {
-  // Add TaskZen back
-  _kind: 'task';
+/** Represents a Karma Zen holding state and the async function. */
+export type KarmaZen<T = void, Args extends unknown[] = unknown[]> = ZenWithValue<KarmaState<T>> & {
+  _kind: 'karma';
   _asyncFn: (...args: Args) => Promise<T>;
 };
 
@@ -83,6 +81,6 @@ export type AnyZen =
   | MapZen<object>
   | DeepMapZen<object>
   // biome-ignore lint/suspicious/noExplicitAny: Base union type requires any
-  | TaskZen<any, any>
+  | KarmaZen<any, any>
   // biome-ignore lint/suspicious/noExplicitAny: Base union type requires any
   | BatchedZen<any>; // Add BatchedZen<any>

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getKarmaState, runKarma, subscribeToKarma, task } from './karma'; // Import getKarmaState and subscribeToKarma
-import { subscribe } from './zen'; // Keep core subscribe for comparison if needed, or remove if subscribeToKarma covers all needs
+import { getKarmaState, karma, runKarma, subscribeToKarma } from './karma';
+import { subscribe } from './zen';
 
 // Helper to wait for promises/microtasks
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -22,7 +22,7 @@ describe('task', () => {
 
   it('should create a task atom with initial state', () => {
     taskAtom = karma(asyncFnSuccess);
-    expect(taskAtom._kind).toBe('task');
+    expect(taskAtom._kind).toBe('karma');
     expect(taskAtom._value).toEqual({ loading: false, error: undefined, data: undefined });
     expect(taskAtom._asyncFn).toBe(asyncFnSuccess);
   });

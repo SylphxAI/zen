@@ -91,11 +91,22 @@ const _updateLeafNode = (
  */
 const setDeep = (obj: unknown, path: Path, value: unknown): unknown => {
   // 1. Normalize path to an array of keys/indices.
-  const pathArray: PathArray = Array.isArray(path)
-    ? path
-    : (String(path).match(/[^.[\]]+/g) || []).map((s) =>
+  // OPTIMIZATION: Fast path for simple dot notation (no brackets)
+  let pathArray: PathArray;
+  if (Array.isArray(path)) {
+    pathArray = path;
+  } else {
+    const pathStr = String(path);
+    // Fast path: if no brackets, just split by dot
+    if (!pathStr.includes('[') && !pathStr.includes(']')) {
+      pathArray = pathStr.split('.').map((s) => (/^\d+$/.test(s) ? Number.parseInt(s, 10) : s));
+    } else {
+      // Complex path with brackets, use regex
+      pathArray = (pathStr.match(/[^.[\]]+/g) || []).map((s) =>
         /^\d+$/.test(s) ? Number.parseInt(s, 10) : s,
       );
+    }
+  }
 
   // 2. Handle empty path: return original object (no-op).
   if (pathArray.length === 0) {

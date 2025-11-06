@@ -43,20 +43,12 @@ const _cloneNode = (node: unknown, isArrayIndexHint: boolean): object | unknown[
 };
 
 /** Handles updating the leaf node during setDeep recursion. @internal */
-const _updateLeafNode = (
-  currentLevel: unknown,
-  key: string | number,
-  value: unknown,
-): unknown => {
+const _updateLeafNode = (currentLevel: unknown, key: string | number, value: unknown): unknown => {
   const currentIsObject = typeof currentLevel === 'object' && currentLevel !== null;
   const currentLevelObj = currentLevel as Record<string | number, unknown>;
 
   // Check if update is needed (not object, key missing, or value different)
-  if (
-    !currentIsObject ||
-    !(key in currentLevelObj) ||
-    !Object.is(currentLevelObj[key], value)
-  ) {
+  if (!currentIsObject || !(key in currentLevelObj) || !Object.is(currentLevelObj[key], value)) {
     const isArrayIndex = typeof key === 'number';
     const currentClone = _cloneNode(currentLevel, isArrayIndex); // Use helper
 
@@ -182,158 +174,157 @@ const getChangedPaths = (objA: unknown, objB: unknown): PathArray[] => {
   const paths: PathArray[] = []; // Store results as PathArray
   const visited = new Set<unknown>(); // Track visited objects
 
-/**
- * Handles base cases for the deep comparison logic in getChangedPaths.
- * Returns true if a base case was met (difference found or identical), false otherwise.
- * @internal
- */
-function _handleCompareBaseCases(
-  a: unknown,
-  b: unknown,
-  currentPath: PathArray,
-  paths: PathArray[], // Mutated
-  visited: Set<unknown>, // Mutated
-): boolean {
-  // 1. Identical values (Object.is)? Stop comparison for this branch.
-  if (Object.is(a, b)) {
-    return true; // Base case met: identical
+  /**
+   * Handles base cases for the deep comparison logic in getChangedPaths.
+   * Returns true if a base case was met (difference found or identical), false otherwise.
+   * @internal
+   */
+  function _handleCompareBaseCases(
+    a: unknown,
+    b: unknown,
+    currentPath: PathArray,
+    paths: PathArray[], // Mutated
+    visited: Set<unknown>, // Mutated
+  ): boolean {
+    // 1. Identical values (Object.is)? Stop comparison for this branch.
+    if (Object.is(a, b)) {
+      return true; // Base case met: identical
+    }
+
+    // Handle cycles
+    if (
+      (typeof a === 'object' && a !== null && visited.has(a)) ||
+      (typeof b === 'object' && b !== null && visited.has(b))
+    ) {
+      return true; // Base case met: cycle detected
+    }
+
+    // 2. One is null/undefined, the other is not? Path changed.
+    const aIsNullOrUndefined = a === null || a === undefined;
+    const bIsNullOrUndefined = b === null || b === undefined;
+    if (aIsNullOrUndefined !== bIsNullOrUndefined) {
+      paths.push([...currentPath]);
+      return true; // Base case met: difference found
+    }
+    // If both are null/undefined, Object.is would have caught it.
+
+    // 3. Different types (primitive vs object, array vs object)? Path changed.
+    if (typeof a !== typeof b || Array.isArray(a) !== Array.isArray(b)) {
+      paths.push([...currentPath]);
+      return true; // Base case met: difference found
+    }
+
+    // 4. Both are primitives or functions (and not identical per Object.is)? Path changed.
+    if (typeof a !== 'object' || a === null) {
+      // a === null check handles null case
+      paths.push([...currentPath]);
+      return true; // Base case met: difference found
+    }
+
+    // None of the base cases met
+    return false;
   }
 
-  // Handle cycles
-  if (
-    (typeof a === 'object' && a !== null && visited.has(a)) ||
-    (typeof b === 'object' && b !== null && visited.has(b))
-  ) {
-    return true; // Base case met: cycle detected
-  }
+  /** @internal Compares keys from object 'a' against 'b'. */
+  function _compareKeysFromA(
+    a: object,
+    b: object,
+    currentPath: PathArray,
+    paths: PathArray[], // Mutated
+    processedKeys: Set<string | number>, // Mutated
+    compareFn: (x: unknown, y: unknown, p: PathArray) => void, // Recursive call
+  ): void {
+    const objAAsserted = a as Record<string | number, unknown>;
+    const objBAsserted = b as Record<string | number, unknown>;
+    const keysA = Object.keys(objAAsserted);
 
-  // 2. One is null/undefined, the other is not? Path changed.
-  const aIsNullOrUndefined = a === null || a === undefined;
-  const bIsNullOrUndefined = b === null || b === undefined;
-  if (aIsNullOrUndefined !== bIsNullOrUndefined) {
-    paths.push([...currentPath]);
-    return true; // Base case met: difference found
-  }
-  // If both are null/undefined, Object.is would have caught it.
+    for (const key of keysA) {
+      processedKeys.add(key);
+      const pathSegment = Array.isArray(a) ? Number.parseInt(key, 10) : key;
+      const newPath = [...currentPath, pathSegment];
+      const valA = objAAsserted[key];
+      const valB = objBAsserted[key]; // Access potentially undefined value
 
-  // 3. Different types (primitive vs object, array vs object)? Path changed.
-  if (typeof a !== typeof b || Array.isArray(a) !== Array.isArray(b)) {
-    paths.push([...currentPath]);
-    return true; // Base case met: difference found
-  }
-
-  // 4. Both are primitives or functions (and not identical per Object.is)? Path changed.
-  if (typeof a !== 'object' || a === null) {
-    // a === null check handles null case
-    paths.push([...currentPath]);
-    return true; // Base case met: difference found
-  }
-
-  // None of the base cases met
-  return false;
-}
-
-/** @internal Compares keys from object 'a' against 'b'. */
-function _compareKeysFromA(
-  a: object,
-  b: object,
-  currentPath: PathArray,
-  paths: PathArray[], // Mutated
-  processedKeys: Set<string | number>, // Mutated
-  compareFn: (x: unknown, y: unknown, p: PathArray) => void, // Recursive call
-): void {
-  const objAAsserted = a as Record<string | number, unknown>;
-  const objBAsserted = b as Record<string | number, unknown>;
-  const keysA = Object.keys(objAAsserted);
-
-  for (const key of keysA) {
-    processedKeys.add(key);
-    const pathSegment = Array.isArray(a) ? Number.parseInt(key, 10) : key;
-    const newPath = [...currentPath, pathSegment];
-    const valA = objAAsserted[key];
-    const valB = objBAsserted[key]; // Access potentially undefined value
-
-    // Check if key exists in B and if values differ
-    if (!(key in objBAsserted) || !Object.is(valA, valB)) {
-      // If both values are nested objects/arrays, recurse.
-      if (
-        typeof valA === 'object' &&
-        valA !== null &&
-        typeof valB === 'object' &&
-        valB !== null
-      ) {
-        compareFn(valA, valB, newPath); // Use passed compare function
-      } else {
-        // Otherwise, the difference is at this path (value diff or key only in A).
-        paths.push(newPath);
+      // Check if key exists in B and if values differ
+      if (!(key in objBAsserted) || !Object.is(valA, valB)) {
+        // If both values are nested objects/arrays, recurse.
+        if (
+          typeof valA === 'object' &&
+          valA !== null &&
+          typeof valB === 'object' &&
+          valB !== null
+        ) {
+          compareFn(valA, valB, newPath); // Use passed compare function
+        } else {
+          // Otherwise, the difference is at this path (value diff or key only in A).
+          paths.push(newPath);
+        }
       }
     }
   }
-}
 
-/** @internal Finds keys present in 'b' but not in 'a'. */
-function _findKeysOnlyInB(
-  b: object,
-  currentPath: PathArray,
-  paths: PathArray[], // Mutated
-  processedKeys: Set<string | number>,
-): void {
-  const objBAsserted = b as Record<string | number, unknown>;
-  const keysB = Object.keys(objBAsserted);
-  for (const key of keysB) {
-    if (!processedKeys.has(key)) {
-      // Key only exists in B, difference found.
-      const pathSegment = Array.isArray(b) ? Number.parseInt(key, 10) : key; // Use 'b' for array check
-      paths.push([...currentPath, pathSegment]);
+  /** @internal Finds keys present in 'b' but not in 'a'. */
+  function _findKeysOnlyInB(
+    b: object,
+    currentPath: PathArray,
+    paths: PathArray[], // Mutated
+    processedKeys: Set<string | number>,
+  ): void {
+    const objBAsserted = b as Record<string | number, unknown>;
+    const keysB = Object.keys(objBAsserted);
+    for (const key of keysB) {
+      if (!processedKeys.has(key)) {
+        // Key only exists in B, difference found.
+        const pathSegment = Array.isArray(b) ? Number.parseInt(key, 10) : key; // Use 'b' for array check
+        paths.push([...currentPath, pathSegment]);
+      }
     }
   }
-}
 
+  /**
+   * Handles comparison of objects or arrays in getChangedPaths.
+   * @internal
+   */
+  function _compareObjectsOrArrays(
+    a: object, // Known to be object/array here
+    b: object, // Known to be object/array here
+    currentPath: PathArray,
+    paths: PathArray[], // Mutated
+    visited: Set<unknown>, // Mutated
+    compareFn: (x: unknown, y: unknown, p: PathArray) => void, // Recursive call
+  ): void {
+    // Add to visited set before recursing
+    visited.add(a);
+    visited.add(b);
 
-/**
- * Handles comparison of objects or arrays in getChangedPaths.
- * @internal
- */
-function _compareObjectsOrArrays(
-  a: object, // Known to be object/array here
-  b: object, // Known to be object/array here
-  currentPath: PathArray,
-  paths: PathArray[], // Mutated
-  visited: Set<unknown>, // Mutated
-  compareFn: (x: unknown, y: unknown, p: PathArray) => void, // Recursive call
-): void {
-  // Add to visited set before recursing
-  visited.add(a);
-  visited.add(b);
+    // Compare keys from A against B
+    const processedKeys = new Set<string | number>();
+    _compareKeysFromA(a, b, currentPath, paths, processedKeys, compareFn);
 
-  // Compare keys from A against B
-  const processedKeys = new Set<string | number>();
-  _compareKeysFromA(a, b, currentPath, paths, processedKeys, compareFn);
-
-  // Find keys only in B
-  _findKeysOnlyInB(b, currentPath, paths, processedKeys);
-  // Remove from visited after processing children (for non-tree structures)
-  // visited.delete(a); // Optional: depends if graph structures are expected
-  // visited.delete(b);
-}
-
-function compare(a: unknown, b: unknown, currentPath: PathArray = []) {
-  // Handle base cases first
-  if (_handleCompareBaseCases(a, b, currentPath, paths, visited)) {
-    return; // Base case handled (difference found or identical/cycle)
+    // Find keys only in B
+    _findKeysOnlyInB(b, currentPath, paths, processedKeys);
+    // Remove from visited after processing children (for non-tree structures)
+    // visited.delete(a); // Optional: depends if graph structures are expected
+    // visited.delete(b);
   }
 
-  // If base cases didn't handle it, we know both a and b are non-null objects/arrays
-  // and are not identical references or part of a cycle already visited at this level.
-  _compareObjectsOrArrays(
-    a as object, // Safe cast after base case checks
-    b as object, // Safe cast after base case checks
-    currentPath,
-    paths,
-    visited,
-    compare, // Pass self for recursion
-  );
-}
+  function compare(a: unknown, b: unknown, currentPath: PathArray = []) {
+    // Handle base cases first
+    if (_handleCompareBaseCases(a, b, currentPath, paths, visited)) {
+      return; // Base case handled (difference found or identical/cycle)
+    }
+
+    // If base cases didn't handle it, we know both a and b are non-null objects/arrays
+    // and are not identical references or part of a cycle already visited at this level.
+    _compareObjectsOrArrays(
+      a as object, // Safe cast after base case checks
+      b as object, // Safe cast after base case checks
+      currentPath,
+      paths,
+      visited,
+      compare, // Pass self for recursion
+    );
+  }
 
   compare(objA, objB); // Call the new top-level compare function
   return paths;
@@ -427,10 +418,7 @@ function _handleDeepMapSetUpdateAndNotify<T extends object>(
 }
 
 /** @internal Handles onSet calls for deepMap set/setPath */
-function _handleDeepMapOnSet<T extends object>(
-  deepMapZen: DeepMapZen<T>,
-  nextValue: T,
-): void {
+function _handleDeepMapOnSet<T extends object>(deepMapZen: DeepMapZen<T>, nextValue: T): void {
   if (batchDepth <= 0) {
     const setLs = deepMapZen._setListeners as Set<Listener<T>> | undefined;
     if (setLs?.size) {
@@ -457,7 +445,6 @@ function _handleDeepMapNotification<T extends object>(
     notifyListeners(deepMapZen as AnyZen, nextValue, currentValue);
   }
 }
-
 
 /**
  * Sets the entire value of the DeepMap Zen, replacing the current object.

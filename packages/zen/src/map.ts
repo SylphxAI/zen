@@ -55,9 +55,13 @@ function _handleMapKeyNotification<T extends object, K extends keyof T>(
   if (batchDepth > 0) {
     queueZenForBatch(mapZen as Zen<T>, oldValue);
   } else {
-    // Immediate notifications
+    // OPTIMIZATION: Only emit key changes if there are listeners
+    // Check is very cheap, avoids WeakMap lookup overhead
+    if (mapZen._listeners?.size || mapZen._notifyListeners?.size) {
+      notifyListeners(mapZen as AnyZen, nextValue, oldValue);
+    }
+    // Always emit key changes (separate from value listeners)
     _emitKeyChanges(mapZen, [key], nextValue);
-    notifyListeners(mapZen as AnyZen, nextValue, oldValue);
   }
 }
 

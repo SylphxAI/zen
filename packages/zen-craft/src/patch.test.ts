@@ -366,4 +366,145 @@ describe('applyPatches', () => {
 
     // TODO: Add tests for Map/Set clear() equivalent patches if applicable
   });
+
+  describe('Edge Cases and Error Paths', () => {
+    it('should handle invalid path segments gracefully', () => {
+      const baseState = { a: { b: 1 } };
+      const patches: Patch[] = [{ op: 'replace', path: ['a', 'x', 'y'], value: 99 }];
+      const nextState = applyPatches(baseState, patches);
+      // Creates intermediate path
+      expect(nextState).toEqual({ a: { b: 1, x: { y: 99 } } });
+    });
+
+    it('should handle removing from non-existent array index', () => {
+      const baseState: ArrayState = { list: [1, 2] };
+      const patches: Patch[] = [{ op: 'remove', path: ['list', 10] }];
+      const nextState = applyPatches(baseState, patches);
+      // No change when index doesn't exist
+      expect(nextState).toEqual({ list: [1, 2] });
+    });
+
+    it('should handle replace on array with out-of-bounds index', () => {
+      const baseState: ArrayState = { list: [1, 2] };
+      const patches: Patch[] = [{ op: 'replace', path: ['list', 10], value: 99 }];
+      const nextState = applyPatches(baseState, patches);
+      // Replace fails for out-of-bounds, falls back to no change
+      expect(nextState).toEqual({ list: [1, 2] });
+    });
+
+    it('should handle invalid string segment on array', () => {
+      const baseState: ArrayState = { list: [1, 2] };
+      const patches: Patch[] = [{ op: 'add', path: ['list', 'invalid'], value: 3 }];
+      const nextState = applyPatches(baseState, patches);
+      // Invalid segment type for array
+      expect(nextState).toEqual({ list: [1, 2] });
+    });
+
+    it('should handle traversing through null', () => {
+      const baseState = { a: null as null | { b: number } };
+      const patches: Patch[] = [{ op: 'remove', path: ['a', 'b'] }];
+      const nextState = applyPatches(baseState, patches);
+      // Cannot traverse through null
+      expect(nextState).toEqual({ a: null });
+    });
+
+    it('should handle traversing through primitive', () => {
+      const baseState = { a: 42 as number | { b: number } };
+      const patches: Patch[] = [{ op: 'remove', path: ['a', 'b'] }];
+      const nextState = applyPatches(baseState, patches);
+      // Cannot traverse through primitive
+      expect(nextState).toEqual({ a: 42 });
+    });
+
+    it('should handle Set traversal attempt', () => {
+      const baseState: SetState = { set: new Set([1, 2]) };
+      // Trying to access a property "within" a Set doesn't make sense
+      const patches: Patch[] = [{ op: 'add', path: ['set', 'prop'], value: 'test' }];
+      const nextState = applyPatches(baseState, patches);
+      // Should fail to traverse into Set
+      expect(nextState.set).toEqual(new Set([1, 2]));
+    });
+
+    it('should handle Map operations during path creation', () => {
+      const baseState: MapState = { map: new Map() };
+      const patches: Patch[] = [{ op: 'add', path: ['map', 'nested', 'deep'], value: 123 }];
+      const nextState = applyPatches(baseState, patches);
+      // Creates intermediate object in Map
+      expect(nextState.map.get('nested')).toEqual({ deep: 123 });
+    });
+
+    it('should handle undefined segment in path', () => {
+      const baseState = { a: { b: 1 } };
+      const patches: Patch[] = [{ op: 'remove', path: ['a', undefined as unknown as string] }];
+      const nextState = applyPatches(baseState, patches);
+      // Undefined segment should be handled gracefully
+      expect(nextState).toEqual({ a: { b: 1 } });
+    });
+
+    it('should handle move operation with failed remove', () => {
+      const baseState = { a: { b: 1 }, c: 2 };
+      const patches: Patch[] = [
+        { op: 'move', from: ['x', 'y', 'z'], path: ['c'] }, // Non-existent source
+      ];
+      expect(() => applyPatches(baseState, patches)).toThrow(/source path does not exist/);
+    });
+
+    it('should handle copy operation with primitive value', () => {
+      const baseState = { a: 42, b: 0 };
+      const patches: Patch[] = [{ op: 'copy', from: ['a'], path: ['b'] }];
+      const nextState = applyPatches(baseState, patches);
+      expect(nextState).toEqual({ a: 42, b: 42 });
+    });
+
+    it('should handle set_add on non-Set', () => {
+      const baseState = { notASet: { a: 1 } };
+      const patches: Patch[] = [{ op: 'set_add', path: ['notASet'], value: 2 }];
+      const nextState = applyPatches(baseState, patches);
+      // Should be no-op if target is not a Set
+      expect(nextState).toEqual({ notASet: { a: 1 } });
+    });
+
+    it('should handle set_delete on non-Set', () => {
+      const baseState = { notASet: { a: 1 } };
+      const patches: Patch[] = [{ op: 'set_delete', path: ['notASet'], value: 2 }];
+      const nextState = applyPatches(baseState, patches);
+      // Should be no-op if target is not a Set
+      expect(nextState).toEqual({ notASet: { a: 1 } });
+    });
+
+    it('should handle getValueByPath traversing through Set', () => {
+      const baseState: SetState = { set: new Set([1, 2, 3]) };
+      // Try to read deep into a Set - should fail gracefully
+      const patches: Patch[] = [{ op: 'test', path: ['set', 0, 'prop'], value: 'test' }];
+      expect(() => applyPatches(baseState, patches)).toThrow(/'test' operation failed/);
+    });
+
+    it('should handle object segment type (converts to string)', () => {
+      const baseState = { a: { b: 1 } };
+      const patches: Patch[] = [
+        { op: 'replace', path: ['a', {} as unknown as string], value: 99 },
+      ];
+      const nextState = applyPatches(baseState, patches);
+      // Object segment gets converted to "[object Object]" string
+      expect(nextState).toEqual({ a: { b: 1, '[object Object]': 99 } });
+    });
+
+    it('should handle path traversal with invalid intermediate segment', () => {
+      const baseState = { a: { b: 1 } };
+      const patches: Patch[] = [
+        { op: 'remove', path: ['a', null as unknown as string, 'x'] },
+      ];
+      const nextState = applyPatches(baseState, patches);
+      // Cannot traverse through null segment
+      expect(nextState).toEqual({ a: { b: 1 } });
+    });
+
+    it('should handle adding to primitive value parent', () => {
+      const baseState = { a: 42 };
+      const patches: Patch[] = [{ op: 'remove', path: ['a', 'x'] }];
+      const nextState = applyPatches(baseState, patches);
+      // Cannot add property to primitive
+      expect(nextState).toEqual({ a: 42 });
+    });
+  });
 });

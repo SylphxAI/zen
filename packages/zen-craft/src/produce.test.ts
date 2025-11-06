@@ -59,18 +59,15 @@ describe('produce', () => {
       expect(true).toBe(true); // Placeholder assertion
     });
 
-    // Test returning a new value from non-draftable (Incompatible with simplified signature)
+    // Test non-draftable base state (primitives)
     it('should handle non-draftable base state', () => {
-      // const baseState = 123;
-      // // R is inferred as number
-      // const [nextState, patches, inversePatches] = produce(baseState, (draft) => {
-      //   expect(draft).toBe(123);
-      //   return draft + 1;
-      // });
-      // expect(nextState).toBe(124);
-      // expect(patches).toEqual([]);
-      // expect(inversePatches).toEqual([]);
-      expect(true).toBe(true); // Placeholder assertion
+      const baseState = 123;
+      const mockRecipe = vi.fn();
+      const [nextState, patches, inversePatches] = produce(baseState, mockRecipe);
+      expect(mockRecipe).toHaveBeenCalledWith(123);
+      expect(nextState).toBe(123);
+      expect(patches).toEqual([]);
+      expect(inversePatches).toEqual([]);
     });
 
     // Test returning non-draftable from draftable (Incompatible with simplified signature)

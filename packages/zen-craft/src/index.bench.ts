@@ -1,7 +1,7 @@
 // Import zen atom factory
 import { zen } from '@sylphx/zen';
 import { bench, describe } from 'vitest';
-import { produce, craftZen } from './index';
+import { craftZen, produce } from './index';
 
 // --- produce Benchmarks ---
 // Note: produce() internally uses @sylphx/craft, these benchmarks measure the overhead

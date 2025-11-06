@@ -1,8 +1,7 @@
 import { get, set } from '@sylphx/zen';
 import type { Zen } from '@sylphx/zen';
 import { produce } from './produce';
-import type { Patch, CraftOptions } from './types';
-import { deepEqual } from './utils';
+import type { CraftOptions, Patch } from './types';
 
 /**
  * Craft-powered immutable updates for Zen atoms.
@@ -23,8 +22,8 @@ export function craftZen<T>(
   const currentState = get(targetZen); // Use get() function
   const [nextState, patches, inversePatches] = produce(currentState, recipe, options);
 
-  // Only set the zen if the state value actually changed (use deep equality)
-  if (!deepEqual(nextState, currentState)) {
+  // Only set if reference changed (craft guarantees structural sharing)
+  if (nextState !== currentState) {
     set(targetZen, nextState); // Use set() function
   }
 

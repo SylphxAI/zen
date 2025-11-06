@@ -1,80 +1,51 @@
-// Import craft for comparison
-import { craft } from '@sylphx/craft';
 // Import zen atom factory
 import { zen } from '@sylphx/zen';
-import { bench, describe, vi } from 'vitest'; // Import vi for potential mocking if needed
+import { bench, describe } from 'vitest';
 import { produce, produceZen } from './index';
+
 // --- produce Benchmarks ---
+// Note: produce() internally uses @sylphx/craft, these benchmarks measure the overhead
 describe('produce: Simple Object Replace', () => {
   const base = { value: 1 };
-  bench('zen-draft', () => {
+  bench('zen-craft', () => {
     produce(base, (draft) => {
-      draft.value = 2;
-    });
-  });
-  bench('craft', () => {
-    craft(base, (draft) => {
       draft.value = 2;
     });
   });
 });
 describe('produce: Nested Object Replace', () => {
   const base = { a: { b: { c: 1 } } };
-  bench('zen-draft', () => {
+  bench('zen-craft', () => {
     produce(base, (draft) => {
       draft.a.b.c = 2;
     });
   });
-  bench('craft', () => {
-    craft(base, (draft) => {
-      draft.a.b.c = 2;
-    });
-  });
 });
+
 describe('produce: Array Push (Small)', () => {
   const base = { items: [1, 2, 3] };
-  bench('zen-draft', () => {
+  bench('zen-craft', () => {
     produce(base, (draft) => {
       draft.items.push(4);
     });
   });
-
-  bench('craft', () => {
-    craft(base, (draft) => {
-      draft.items.push(4);
-    });
-  });
 });
+
 describe('produce: Array Push (Large)', () => {
   const largeArrayBase = { items: Array.from({ length: 1000 }, (_, i) => i) };
-  bench('zen-draft', () => {
-    // Create a fresh copy for each run to avoid mutation across runs
+  bench('zen-craft', () => {
     const currentBase = { items: [...largeArrayBase.items] };
     produce(currentBase, (draft) => {
-      draft.items.push(1000);
-    });
-  });
-
-  bench('craft', () => {
-    // Create a fresh copy for each run
-    const currentBase = { items: [...largeArrayBase.items] };
-    craft(currentBase, (draft) => {
       draft.items.push(1000);
     });
   });
 });
+
 describe('produce: Array Splice (Large)', () => {
   const largeArrayBase = { items: Array.from({ length: 1000 }, (_, i) => i) };
-  bench('zen-draft', () => {
+  bench('zen-craft', () => {
     const currentBase = { items: [...largeArrayBase.items] };
     produce(currentBase, (draft) => {
-      draft.items.splice(500, 1, -1); // Replace one item in the middle
-    });
-  });
-
-  bench('craft', () => {
-    const currentBase = { items: [...largeArrayBase.items] };
-    craft(currentBase, (draft) => {
       draft.items.splice(500, 1, -1);
     });
   });
@@ -83,148 +54,112 @@ describe('produce: Map Set (Add/Replace)', () => {
   const createMapBase = () => ({
     data: new Map(Array.from({ length: 100 }, (_, i) => [`key${i}`, i])),
   });
-  bench('zen-draft', () => {
+  bench('zen-craft', () => {
     const currentBase = createMapBase();
     produce(currentBase, (draft) => {
       draft.data.set('key50', -1); // Replace
       draft.data.set('newKey', 1000); // Add
     });
   });
-
-  bench('craft', () => {
-    const currentBase = createMapBase();
-    craft(currentBase, (draft) => {
-      draft.data.set('key50', -1);
-      draft.data.set('newKey', 1000);
-    });
-  });
 });
+
 describe('produce: Map Delete', () => {
   const createMapBase = () => ({
     data: new Map(Array.from({ length: 100 }, (_, i) => [`key${i}`, i])),
   });
-  bench('zen-draft', () => {
+  bench('zen-craft', () => {
     const currentBase = createMapBase();
     produce(currentBase, (draft) => {
       draft.data.delete('key50');
     });
   });
-
-  bench('craft', () => {
-    const currentBase = createMapBase();
-    craft(currentBase, (draft) => {
-      draft.data.delete('key50');
-    });
-  });
 });
+
 describe('produce: Map Clear', () => {
   const createMapBase = () => ({
     data: new Map(Array.from({ length: 100 }, (_, i) => [`key${i}`, i])),
   });
-  bench('zen-draft', () => {
+  bench('zen-craft', () => {
     const currentBase = createMapBase();
     produce(currentBase, (draft) => {
       draft.data.clear();
     });
   });
-
-  bench('craft', () => {
-    const currentBase = createMapBase();
-    craft(currentBase, (draft) => {
-      draft.data.clear();
-    });
-  });
 });
+
 describe('produce: Set Add', () => {
   const createSetBase = () => ({
     data: new Set(Array.from({ length: 100 }, (_, i) => `item${i}`)),
   });
-  bench('zen-draft', () => {
+  bench('zen-craft', () => {
     const currentBase = createSetBase();
     produce(currentBase, (draft) => {
       draft.data.add('newItem');
     });
   });
-
-  bench('craft', () => {
-    const currentBase = createSetBase();
-    craft(currentBase, (draft) => {
-      draft.data.add('newItem');
-    });
-  });
 });
+
 describe('produce: Set Delete', () => {
   const createSetBase = () => ({
     data: new Set(Array.from({ length: 100 }, (_, i) => `item${i}`)),
   });
-  bench('zen-draft', () => {
+  bench('zen-craft', () => {
     const currentBase = createSetBase();
     produce(currentBase, (draft) => {
       draft.data.delete('item50');
     });
   });
-
-  bench('craft', () => {
-    const currentBase = createSetBase();
-    craft(currentBase, (draft) => {
-      draft.data.delete('item50');
-    });
-  });
 });
+
 describe('produce: Set Clear', () => {
   const createSetBase = () => ({
     data: new Set(Array.from({ length: 100 }, (_, i) => `item${i}`)),
   });
-  bench('zen-draft', () => {
+  bench('zen-craft', () => {
     const currentBase = createSetBase();
     produce(currentBase, (draft) => {
       draft.data.clear();
     });
   });
-
-  bench('craft', () => {
-    const currentBase = createSetBase();
-    craft(currentBase, (draft) => {
-      draft.data.clear();
-    });
-  });
 });
-// --- produceAtom Benchmarks ---
-describe('produceAtom: Simple Object Replace', () => {
+// --- produceZen Benchmarks ---
+// These measure the performance of zen-craft integration with zen atoms
+describe('produceZen: Simple Object Replace', () => {
   const createBaseAtom = () => zen({ value: 1 });
-  bench('zen-draft + zen', () => {
+  bench('zen-craft + zen', () => {
     const myZen = createBaseAtom();
     produceZen(myZen, (draft) => {
       draft.value = 2;
     });
   });
 });
-describe('produceAtom: Nested Object Replace', () => {
+
+describe('produceZen: Nested Object Replace', () => {
   const createBaseAtom = () => zen({ a: { b: { c: 1 } } });
-  bench('zen-draft + zen', () => {
+  bench('zen-craft + zen', () => {
     const myZen = createBaseAtom();
     produceZen(myZen, (draft) => {
       draft.a.b.c = 2;
     });
   });
 });
-describe('produceAtom: Array Push (Small)', () => {
+
+describe('produceZen: Array Push (Small)', () => {
   const createBaseAtom = () => zen({ items: [1, 2, 3] });
-  bench('zen-draft + zen', () => {
+  bench('zen-craft + zen', () => {
     const myZen = createBaseAtom();
     produceZen(myZen, (draft) => {
       draft.items.push(4);
     });
   });
 });
-describe('produceAtom: Array Push (Large)', () => {
+
+describe('produceZen: Array Push (Large)', () => {
   const createLargeArrayBaseAtom = () => zen({ items: Array.from({ length: 1000 }, (_, i) => i) });
-  bench('zen-draft + zen', () => {
-    // Create atom inside bench for fair comparison if needed, though setup cost is usually excluded
+  bench('zen-craft + zen', () => {
     const myZen = createLargeArrayBaseAtom();
     produceZen(myZen, (draft) => {
       draft.items.push(1000);
     });
   });
 });
-// Add more produceAtom benchmarks for splice, map, set etc. if needed

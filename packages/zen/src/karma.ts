@@ -1,245 +1,530 @@
-// Karma zen implementation for managing asynchronous operations.
-// import type { Zen } from './zen'; // Removed unused Zen import
+// Karma: Full Reactive Async Store (like Riverpod AsyncProvider)
 import type {
   AnyZen,
   KarmaState,
   KarmaZen,
   Listener,
-  Unsubscribe /* ZenWithValue, */,
-} from './types'; // Removed unused ZenWithValue, Add AnyZen, Remove unused ZenValue
-import { notifyListeners, subscribe as subscribeToCoreZen } from './zen'; // Import core subscribe AND notifyListeners
-// Removed import { notifyListeners } from './internalUtils'; // Import notifyListeners
-// Removed createZen, getZenValue, setZenValue, subscribeToZen imports
+  Unsubscribe,
+} from './types';
 
-// --- Type Definition ---
-/**
- * Represents a Karma Zen, which wraps an asynchronous function
- * and provides its state (loading, error, data) reactively.
- */
-// KarmaZen type is now defined in types.ts
+// --- Type Definitions ---
 
-// --- Internal state for tracking running promises ---
-// WeakMap to associate KarmaZen instances with their currently running promise.
-const runningPromises = new WeakMap<KarmaZen<unknown>, Promise<unknown>>(); // Use unknown
+export type QueryKey = readonly unknown[];
 
-// WeakMap to store cached results based on arguments
-const resultCache = new WeakMap<KarmaZen<unknown>, Map<string, unknown>>();
-
-// --- Karma Options ---
 export interface KarmaOptions<Args extends unknown[] = unknown[]> {
-  /** Enable caching based on arguments. Defaults to false. */
-  cache?: boolean;
-  /** Custom function to generate cache key from arguments. Defaults to JSON.stringify. */
-  cacheKey?: (...args: Args) => string;
-  /** Maximum number of cached results. Uses LRU eviction. Defaults to 100. */
-  maxCacheSize?: number;
+  /** Function to generate cache key. Returns array like ['user', id]. Default: JSON.stringify(args) */
+  cacheKey?: (...args: Args) => QueryKey;
+
+  /** Keep cache alive even when no listeners. Default: false (auto-dispose) */
+  keepAlive?: boolean;
+
+  /** Time to keep cache after last listener removed (ms). Default: 30000 (30s) */
+  cacheTime?: number;
+
+  /** Time until cache is considered stale (ms). Triggers background refetch. */
+  staleTime?: number;
+}
+
+// Per-parameter cache entry (reactive!)
+interface CacheEntry<T> {
+  // Cached data
+  data: T | undefined;
+  error: Error | undefined;
+  loading: boolean;
+  timestamp: number;
+
+  // Reactive state
+  listeners: Set<Listener<KarmaState<T>>>;
+  runningPromise: Promise<T> | undefined;
+
+  // Lifecycle
+  disposeTimer?: ReturnType<typeof setTimeout>;
+}
+
+// --- Global Cache (all karma instances share by default) ---
+
+const globalKarmaCache = new WeakMap<
+  KarmaZen<unknown, unknown[]>,
+  Map<string, CacheEntry<unknown>>
+>();
+
+// --- Helper Functions ---
+
+/** Get cache map for a karma instance */
+function getCacheMap<T, Args extends unknown[]>(
+  karma: KarmaZen<T, Args>
+): Map<string, CacheEntry<T>> {
+  const k = karma as KarmaZen<unknown, unknown[]>;
+  let cache = globalKarmaCache.get(k) as Map<string, CacheEntry<T>> | undefined;
+
+  if (!cache) {
+    cache = new Map<string, CacheEntry<T>>();
+    globalKarmaCache.set(k, cache as Map<string, CacheEntry<unknown>>);
+  }
+
+  return cache;
+}
+
+/** Generate cache key string from args */
+function generateCacheKey<Args extends unknown[]>(
+  karma: KarmaZen<unknown, Args>,
+  args: Args
+): string {
+  if (karma._cacheKeyFn) {
+    const key = karma._cacheKeyFn(...args);
+    return JSON.stringify(key);
+  }
+  return JSON.stringify(args);
+}
+
+/** Get or create cache entry for specific args */
+function getOrCreateCacheEntry<T, Args extends unknown[]>(
+  karma: KarmaZen<T, Args>,
+  args: Args
+): CacheEntry<T> {
+  const cache = getCacheMap(karma);
+  const key = generateCacheKey(karma, args);
+
+  let entry = cache.get(key) as CacheEntry<T> | undefined;
+
+  if (!entry) {
+    entry = {
+      data: undefined,
+      error: undefined,
+      loading: false,
+      timestamp: 0,
+      listeners: new Set(),
+      runningPromise: undefined,
+    };
+    cache.set(key, entry as CacheEntry<unknown>);
+  }
+
+  return entry;
+}
+
+/** Get current state from cache entry */
+function getStateFromEntry<T>(entry: CacheEntry<T>): KarmaState<T> {
+  if (entry.loading) {
+    return { loading: true, error: undefined, data: undefined };
+  }
+  if (entry.error) {
+    return { loading: false, error: entry.error, data: undefined };
+  }
+  if (entry.data !== undefined) {
+    return { loading: false, error: undefined, data: entry.data };
+  }
+  return { loading: false, error: undefined, data: undefined };
+}
+
+// --- Core Reactive Logic ---
+
+/**
+ * Execute async function and update cache entry (reactive!)
+ */
+async function executeFetch<T, Args extends unknown[]>(
+  karma: KarmaZen<T, Args>,
+  args: Args,
+  entry: CacheEntry<T>
+): Promise<T> {
+  // Check if already running
+  if (entry.runningPromise) {
+    return entry.runningPromise;
+  }
+
+  // Update state to loading
+  const oldLoading = entry.loading;
+  entry.loading = true;
+  entry.error = undefined;
+
+  // Notify all listeners of loading state (if changed)
+  if (!oldLoading) {
+    const loadingState: KarmaState<T> = { loading: true, error: undefined, data: undefined };
+    for (const listener of entry.listeners) {
+      listener(loadingState);
+    }
+  }
+
+  // Execute async function
+  const promise = karma._asyncFn(...args);
+  entry.runningPromise = promise;
+
+  try {
+    const result = await promise;
+
+    // Only update if this promise is still current
+    if (entry.runningPromise === promise) {
+      const oldData = entry.data;
+      entry.data = result;
+      entry.error = undefined;
+      entry.loading = false;
+      entry.timestamp = Date.now();
+      entry.runningPromise = undefined;
+
+      // Notify all listeners of success (if data changed)
+      const successState: KarmaState<T> = { loading: false, error: undefined, data: result };
+      for (const listener of entry.listeners) {
+        listener(successState);
+      }
+    }
+
+    return result;
+  } catch (error) {
+    // Only update if this promise is still current
+    if (entry.runningPromise === promise) {
+      const errorObj = error instanceof Error ? error : new Error(String(error ?? 'Unknown error'));
+      entry.error = errorObj;
+      entry.data = undefined;
+      entry.loading = false;
+      entry.timestamp = Date.now();
+      entry.runningPromise = undefined;
+
+      // Notify all listeners of error
+      const errorState: KarmaState<T> = { loading: false, error: errorObj, data: undefined };
+      for (const listener of entry.listeners) {
+        listener(errorState);
+      }
+    }
+
+    throw error;
+  }
 }
 
 /**
- * Creates a Karma Zen to manage the state of an asynchronous operation.
- *
- * @template T The type of the data returned by the async function.
- * @param asyncFn The asynchronous function to execute when `runKarma` is called.
- * @param options Optional configuration for caching behavior.
- * @returns A KarmaZen instance.
+ * Subscribe to cache entry (reactive!)
  */
-// Add Args generic parameter matching KarmaZen type
-export function karma<T = void, Args extends unknown[] = unknown[]>(
-  // Use unknown[] for Args
-  asyncFn: (...args: Args) => Promise<T>,
-  options?: KarmaOptions<Args>,
-): KarmaZen<T, Args> {
-  // Return KarmaZen with Args
-  // Create the merged KarmaZen object directly
-  const karmaZen: KarmaZen<T, Args> = {
-    // Use KarmaZen with Args
-    _kind: 'karma',
-    _value: { loading: false }, // Initial KarmaState
-    _asyncFn: asyncFn,
-    _cacheEnabled: options?.cache ?? false,
-    _cacheKeyFn: options?.cacheKey,
-    _maxCacheSize: options?.maxCacheSize ?? 100,
-    // Listener properties (_listeners, etc.) are initially undefined
-  };
+function subscribeToEntry<T>(
+  entry: CacheEntry<T>,
+  listener: Listener<KarmaState<T>>
+): Unsubscribe {
+  // Add listener
+  entry.listeners.add(listener);
 
-  // Initialize cache if enabled
-  if (karmaZen._cacheEnabled) {
-    resultCache.set(karmaZen as KarmaZen<unknown>, new Map<string, unknown>());
+  // Cancel dispose timer if exists
+  if (entry.disposeTimer) {
+    clearTimeout(entry.disposeTimer);
+    entry.disposeTimer = undefined;
   }
 
-  // No need for STORE_MAP_KEY_SET marker for karma zens
+  // Immediately notify listener of current state
+  const currentState = getStateFromEntry(entry);
+  listener(currentState);
+
+  // Return unsubscribe function
+  return () => {
+    entry.listeners.delete(listener);
+  };
+}
+
+/**
+ * Schedule disposal of cache entry (auto-dispose)
+ */
+function scheduleDispose<T, Args extends unknown[]>(
+  karma: KarmaZen<T, Args>,
+  entry: CacheEntry<T>,
+  cacheKey: string
+): void {
+  // Don't dispose if keepAlive
+  if (karma._keepAlive) {
+    return;
+  }
+
+  // Don't dispose if still has listeners
+  if (entry.listeners.size > 0) {
+    return;
+  }
+
+  // Cancel existing timer
+  if (entry.disposeTimer) {
+    clearTimeout(entry.disposeTimer);
+  }
+
+  // Schedule disposal
+  const cacheTime = karma._cacheTime ?? 30000; // 30s default
+  entry.disposeTimer = setTimeout(() => {
+    // Double-check no listeners were added
+    if (entry.listeners.size === 0) {
+      const cache = getCacheMap(karma);
+      cache.delete(cacheKey);
+    }
+  }, cacheTime);
+}
+
+// --- Factory ---
+
+/**
+ * Creates a reactive async karma store (like Riverpod AsyncProvider)
+ *
+ * @template T The type of data returned by async function
+ * @param asyncFn The async function to execute
+ * @param options Configuration options
+ * @returns KarmaZen instance with reactive caching
+ *
+ * @example
+ * ```typescript
+ * const fetchUser = karma(
+ *   async (id: number) => fetchUserAPI(id),
+ *   {
+ *     cacheKey: (id) => ['user', id],
+ *     keepAlive: false, // Auto-dispose when no listeners
+ *     cacheTime: 30000, // Keep cache 30s after last listener
+ *     staleTime: 5000,  // Background refetch if older than 5s
+ *   }
+ * );
+ * ```
+ */
+export function karma<T = void, Args extends unknown[] = unknown[]>(
+  asyncFn: (...args: Args) => Promise<T>,
+  options?: KarmaOptions<Args>
+): KarmaZen<T, Args> {
+  const karmaZen: KarmaZen<T, Args> = {
+    _kind: 'karma',
+    _value: { loading: false }, // Legacy, not used in v2
+    _asyncFn: asyncFn,
+    _cacheKeyFn: options?.cacheKey,
+    _keepAlive: options?.keepAlive ?? false,
+    _cacheTime: options?.cacheTime,
+    _staleTime: options?.staleTime,
+  };
+
   return karmaZen;
 }
 
-// --- Functional API for Karma ---
+// --- API ---
 
 /**
- * Runs the asynchronous function associated with the task.
- * If the task is already running, returns the existing promise.
- * If caching is enabled and a cached result exists for the arguments, returns the cached result.
- * Updates the task's state zen based on the outcome.
- * @param karmaZen The karma zen to run.
- * @param args Arguments to pass to the asynchronous function.
- * @returns A promise that resolves with the result or rejects with the error.
+ * Run karma async function with reactive caching
+ *
+ * Performance: Returns cached data immediately if available, no re-run needed.
+ *
+ * @param karma The karma instance
+ * @param args Arguments to pass to async function
+ * @returns Promise that resolves with data
+ *
+ * @example
+ * ```typescript
+ * // First call: fetches
+ * await runKarma(fetchUser, 1);
+ *
+ * // Second call: returns cache immediately (no refetch!)
+ * await runKarma(fetchUser, 1);
+ *
+ * // Different args: fetches
+ * await runKarma(fetchUser, 2);
+ * ```
  */
-// Add Args generic parameter matching KarmaZen type
 export function runKarma<T, Args extends unknown[]>(
-  karmaZen: KarmaZen<T, Args>,
+  karma: KarmaZen<T, Args>,
   ...args: Args
 ): Promise<T> {
-  // Use unknown[] for Args
-  // Operate directly on karmaZen
-  // const stateZen = karmaZen._stateZen; // Removed
+  const entry = getOrCreateCacheEntry(karma, args);
 
-  // Check cache if enabled
-  if (karmaZen._cacheEnabled) {
-    const cache = resultCache.get(karmaZen as KarmaZen<unknown>);
-    if (cache) {
-      // Generate cache key
-      const cacheKey = karmaZen._cacheKeyFn ? karmaZen._cacheKeyFn(...args) : JSON.stringify(args);
+  // Check if cached data exists
+  if (entry.data !== undefined && !entry.loading) {
+    const age = Date.now() - entry.timestamp;
+    const isStale = karma._staleTime !== undefined && age > karma._staleTime;
 
-      // Check if cached result exists
-      if (cache.has(cacheKey)) {
-        const cachedResult = cache.get(cacheKey) as T;
-
-        // LRU: Move accessed entry to end (most recently used)
-        cache.delete(cacheKey);
-        cache.set(cacheKey, cachedResult);
-
-        // Update state with cached data (synchronous)
-        const oldState = karmaZen._value;
-        karmaZen._value = { loading: false, data: cachedResult, error: undefined };
-        // Only notify if state actually changed
-        if (oldState.loading || oldState.error || oldState.data !== cachedResult) {
-          notifyListeners(karmaZen as AnyZen, karmaZen._value, oldState);
-        }
-
-        // Return resolved promise with cached data
-        return Promise.resolve(cachedResult);
-      }
+    if (isStale) {
+      // Stale-while-revalidate: return cache + background refetch
+      Promise.resolve().then(() => {
+        executeFetch(karma, args, entry).catch(() => {
+          // Error already stored in entry and notified to listeners
+        });
+      });
     }
+
+    return Promise.resolve(entry.data);
   }
 
-  // Check if a promise is already running for this task using the WeakMap.
-  // Cast karmaZen for WeakMap key compatibility
-  const existingPromise = runningPromises.get(karmaZen as KarmaZen<unknown>); // Cast to unknown
-  if (existingPromise) {
-    // console.log('Task already running, returning existing promise.'); // Optional debug log
-    // Cast existing promise back to Promise<T> for return type compatibility
-    return existingPromise as Promise<T>;
-  }
-
-  // Define the actual execution logic within an async function.
-  const execute = async (): Promise<T> => {
-    // Set loading state immediately. Clear previous error/data.
-    const oldState = karmaZen._value;
-    karmaZen._value = { loading: true, error: undefined, data: undefined };
-    // Notify listeners directly attached to KarmaZen, cast to AnyZen.
-    notifyListeners(karmaZen as AnyZen, karmaZen._value, oldState);
-
-    // Call the stored async function and store the promise.
-    const promise = karmaZen._asyncFn(...args);
-    // Cast karmaZen for WeakMap key compatibility
-    runningPromises.set(karmaZen as KarmaZen<unknown>, promise); // Cast to unknown
-
-    try {
-      // Wait for the async function to complete.
-      const result = await promise;
-
-      // **Crucially**, only update the state if this *specific* promise instance
-      // is still the one tracked in the WeakMap.
-      // Cast karmaZen for WeakMap key compatibility
-      if (runningPromises.get(karmaZen as KarmaZen<unknown>) === promise) {
-        // Cast to unknown
-        // console.log('Task succeeded, updating state.'); // Optional debug log
-
-        // Store result in cache if enabled
-        if (karmaZen._cacheEnabled) {
-          const cache = resultCache.get(karmaZen as KarmaZen<unknown>);
-          if (cache) {
-            const cacheKey = karmaZen._cacheKeyFn
-              ? karmaZen._cacheKeyFn(...args)
-              : JSON.stringify(args);
-
-            // Implement LRU eviction if cache is full
-            const maxSize = karmaZen._maxCacheSize ?? 100;
-            if (cache.size >= maxSize) {
-              // Remove oldest entry (first key in Map)
-              const firstKey = cache.keys().next().value;
-              if (firstKey !== undefined) {
-                cache.delete(firstKey);
-              }
-            }
-
-            // Store the result
-            cache.set(cacheKey, result);
-          }
-        }
-
-        const oldStateSuccess = karmaZen._value;
-        karmaZen._value = { loading: false, data: result, error: undefined };
-        // Notify listeners directly attached to KarmaZen, cast to AnyZen.
-        notifyListeners(karmaZen as AnyZen, karmaZen._value, oldStateSuccess);
-        // Cast karmaZen for WeakMap key compatibility
-        runningPromises.delete(karmaZen as KarmaZen<unknown>); // Cast to unknown
-      } else {
-        // console.log('Task succeeded, but a newer run is active. Ignoring result.'); // Optional debug log
-      }
-
-      return result; // Return the successful result.
-    } catch (error) {
-      // Similar check for race conditions on error.
-      // Cast karmaZen for WeakMap key compatibility
-      if (runningPromises.get(karmaZen as KarmaZen<unknown>) === promise) {
-        // Cast to unknown
-        // console.error('Task failed, updating state:', error); // Optional debug log
-        // Ensure the error stored is always an Error instance.
-        const errorObj =
-          error instanceof Error ? error : new Error(String(error ?? 'Unknown error'));
-        const oldStateError = karmaZen._value;
-        karmaZen._value = { loading: false, error: errorObj, data: undefined };
-        // Notify listeners directly attached to KarmaZen, cast to AnyZen.
-        notifyListeners(karmaZen as AnyZen, karmaZen._value, oldStateError);
-        // Cast karmaZen for WeakMap key compatibility
-        runningPromises.delete(karmaZen as KarmaZen<unknown>); // Cast to unknown
-      } else {
-        // console.error('Task failed, but a newer run is active. Ignoring error.'); // Optional debug log
-      }
-
-      throw error; // Re-throw the error so the caller's catch block works.
-    }
-  };
-
-  // Start the execution and return the promise.
-  return execute();
+  // No cache or loading, execute fetch
+  return executeFetch(karma, args, entry);
 }
 
 /**
- * Gets the current state of a karma zen.
- * @param karmaZen The karma zen to read from.
- * @returns The current KarmaState.
- */
-export function getKarmaState<T, Args extends unknown[]>(
-  karmaZen: KarmaZen<T, Args>,
-): KarmaState<T> {
-  // KarmaZen now directly holds the KarmaState value
-  return karmaZen._value;
-}
-
-/**
- * Subscribes to changes in a karma zen's state.
- * @param karmaZen The karma zen to subscribe to.
- * @param listener The listener function.
- * @returns An unsubscribe function.
+ * Subscribe to karma for specific arguments (fully reactive!)
+ *
+ * - Auto-fetches if no data
+ * - Receives updates when data changes
+ * - Auto-disposes cache when last listener unsubscribes
+ *
+ * @param karma The karma instance
+ * @param args Arguments for the async function
+ * @param listener Callback that receives state updates
+ * @returns Unsubscribe function
+ *
+ * @example
+ * ```typescript
+ * const unsub = subscribeToKarma(fetchUser, [1], (state) => {
+ *   if (state.loading) console.log('Loading...');
+ *   if (state.data) console.log('User:', state.data);
+ *   if (state.error) console.log('Error:', state.error);
+ * });
+ *
+ * // Later
+ * unsub(); // Auto-dispose after cacheTime
+ * ```
  */
 export function subscribeToKarma<T, Args extends unknown[]>(
-  karmaZen: KarmaZen<T, Args>,
-  listener: Listener<KarmaState<T>>,
+  karma: KarmaZen<T, Args>,
+  args: Args,
+  listener: Listener<KarmaState<T>>
 ): Unsubscribe {
-  // Subscribe directly to the KarmaZen using the core subscribe function.
-  // Cast karmaZen to AnyZen and listener to any to satisfy the generic signature.
-  // biome-ignore lint/suspicious/noExplicitAny: Listener type requires any due to complex generic resolution
-  return subscribeToCoreZen(karmaZen as AnyZen, listener as any);
+  const entry = getOrCreateCacheEntry(karma, args);
+  const key = generateCacheKey(karma, args);
+
+  const unsub = subscribeToEntry(entry, listener);
+
+  // Trigger initial fetch if no data and not loading
+  if (entry.data === undefined && !entry.loading && !entry.runningPromise) {
+    executeFetch(karma, args, entry).catch(() => {
+      // Error already stored in entry and notified to listeners
+    });
+  }
+
+  // Return enhanced unsubscribe that handles auto-dispose
+  return () => {
+    unsub();
+    scheduleDispose(karma, entry, key);
+  };
 }
 
-// Removed temporary UpdatedKarmaZen type and updatedCreateTask function
+/**
+ * Get current karma state for specific arguments (no subscription)
+ *
+ * @param karma The karma instance
+ * @param args Arguments for the async function
+ * @returns Current state snapshot
+ */
+export function getKarmaState<T, Args extends unknown[]>(
+  karma: KarmaZen<T, Args>,
+  args: Args
+): KarmaState<T> {
+  const entry = getOrCreateCacheEntry(karma, args);
+  return getStateFromEntry(entry);
+}
+
+// --- Global Cache API ---
+
+/**
+ * Global cache control API for karma instances
+ */
+export const karmaCache = {
+  /**
+   * Get current cached state (no fetch, no subscription)
+   */
+  get<T, Args extends unknown[]>(
+    karma: KarmaZen<T, Args>,
+    ...args: Args
+  ): KarmaState<T> | undefined {
+    const cache = getCacheMap(karma);
+    const key = generateCacheKey(karma, args);
+    const entry = cache.get(key) as CacheEntry<T> | undefined;
+
+    return entry ? getStateFromEntry(entry) : undefined;
+  },
+
+  /**
+   * Set cached data (optimistic update, reactive!)
+   *
+   * Notifies all active listeners immediately.
+   */
+  set<T, Args extends unknown[]>(
+    karma: KarmaZen<T, Args>,
+    args: Args,
+    data: T
+  ): void {
+    const entry = getOrCreateCacheEntry(karma, args);
+
+    entry.data = data;
+    entry.error = undefined;
+    entry.loading = false;
+    entry.timestamp = Date.now();
+
+    // Notify all listeners (reactive!)
+    const state: KarmaState<T> = { loading: false, error: undefined, data };
+    for (const listener of entry.listeners) {
+      listener(state);
+    }
+  },
+
+  /**
+   * Invalidate cache (triggers re-fetch for active listeners - fully reactive!)
+   *
+   * If entry has active listeners, immediately triggers refetch.
+   * If no listeners, just clears cache.
+   */
+  invalidate<T, Args extends unknown[]>(
+    karma: KarmaZen<T, Args>,
+    ...args: Args
+  ): void {
+    const cache = getCacheMap(karma);
+    const key = generateCacheKey(karma, args);
+    const entry = cache.get(key) as CacheEntry<T> | undefined;
+
+    if (!entry) {
+      return;
+    }
+
+    // Clear cached data
+    entry.data = undefined;
+    entry.error = undefined;
+    entry.timestamp = 0;
+
+    // If has active listeners, trigger re-fetch (reactive!)
+    if (entry.listeners.size > 0) {
+      executeFetch(karma, args, entry).catch(() => {
+        // Error already stored in entry and notified to listeners
+      });
+    }
+  },
+
+  /**
+   * Invalidate all cache entries for this karma
+   */
+  invalidateAll<T>(karma: KarmaZen<T, unknown[]>): void {
+    const cache = getCacheMap(karma);
+
+    // Clear all entries
+    // Note: Cannot trigger refetch without args, just clear
+    cache.clear();
+  },
+
+  /**
+   * Force dispose cache entry (even if has listeners)
+   */
+  dispose<T, Args extends unknown[]>(
+    karma: KarmaZen<T, Args>,
+    ...args: Args
+  ): void {
+    const cache = getCacheMap(karma);
+    const key = generateCacheKey(karma, args);
+    const entry = cache.get(key) as CacheEntry<T> | undefined;
+
+    if (entry?.disposeTimer) {
+      clearTimeout(entry.disposeTimer);
+    }
+
+    cache.delete(key);
+  },
+
+  /**
+   * Get cache statistics (debug)
+   */
+  stats<T>(karma: KarmaZen<T, unknown[]>): {
+    entries: number;
+    totalListeners: number;
+    cacheKeys: string[];
+  } {
+    const cache = getCacheMap(karma);
+    let totalListeners = 0;
+
+    for (const entry of cache.values()) {
+      totalListeners += (entry as CacheEntry<T>).listeners.size;
+    }
+
+    return {
+      entries: cache.size,
+      totalListeners,
+      cacheKeys: Array.from(cache.keys()),
+    };
+  },
+};

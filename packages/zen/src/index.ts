@@ -39,7 +39,7 @@ export const listenKeys = _listenKeys;
 
 // Other Functions
 export { setPath as setDeepMapPath, set as setDeepMapValue } from './deepMap';
-export { runKarma, getKarmaState, subscribeToKarma } from './karma';
+export { runKarma, getKarmaState, subscribeToKarma, karmaCache } from './karma';
 export { batchedUpdate } from './batchedUpdate';
 export { batched } from './batched';
 export { effect } from './effect';

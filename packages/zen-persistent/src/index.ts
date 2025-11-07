@@ -5,11 +5,11 @@ import {
   type Zen,
   get,
   map,
-  onMount,
   set,
   subscribe,
   zen, // Change zen to zen
 } from '@sylphx/zen';
+import { onMount } from '@sylphx/zen/advanced';
 
 // --- Types ---
 

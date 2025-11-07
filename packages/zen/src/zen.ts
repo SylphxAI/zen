@@ -19,18 +19,8 @@ export let batchDepth = 0;
 /** Stores zens that have changed within the current batch, along with their original value. */
 const batchQueue = new Map<Zen<unknown>, unknown>();
 
-// ✅ PHASE 2 OPTIMIZATION: Global version counter for fast staleness checks
-/** Global version counter, incremented on every zen update. @internal */
-let globalVersion = 0;
-
-/**
- * Increments and returns the next global version.
- * Kept as simple inline function for optimal JIT performance.
- * @internal
- */
-export function incrementVersion(): number {
-  return ++globalVersion;
-}
+// ✅ PHASE 6 OPTIMIZATION: Version tracking removed
+// Graph coloring (color states: 0=clean, 1=green, 2=red) completely replaces version tracking
 
 // ============================================================================
 // ✅ PHASE 6 OPTIMIZATION: Graph Coloring Algorithm
@@ -262,8 +252,6 @@ export function set<T>(zen: Zen<T>, value: T, force = false): void {
 
     // Update value
     zen._value = value;
-    // ✅ PHASE 2 OPTIMIZATION: Increment global version on every update
-    zen._version = incrementVersion();
     // ✅ PHASE 6 OPTIMIZATION: Mark as RED and propagate GREEN to dependents
     markDirty(zen as AnyZen);
 

@@ -1,6 +1,6 @@
 // Lightweight single-source selector implementation (like Zustand/Reselect).
 import type { AnyZen, SelectZen, Unsubscribe, ZenValue, ZenWithValue } from './types';
-import { incrementVersion, markDirty, notifyListeners, updateIfNecessary } from './zen';
+import { markDirty, notifyListeners, updateIfNecessary } from './zen';
 
 // --- Internal Select Logic ---
 
@@ -91,8 +91,6 @@ function updateSelectValue<T, S>(zen: SelectZen<T, S>): boolean {
 
   // Update internal value
   zen._value = newValue;
-  // ✅ PHASE 2 OPTIMIZATION: Increment version when select value changes
-  zen._version = incrementVersion();
   // ✅ PHASE 6 OPTIMIZATION: Mark as RED and propagate GREEN to dependents
   markDirty(zen as AnyZen);
 

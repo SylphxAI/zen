@@ -1,7 +1,7 @@
 import type { BatchedZen } from './batched'; // Import BatchedZen type
 // Functional computed (derived state) implementation.
 import type { AnyZen, Unsubscribe, ZenWithValue } from './types';
-import { incrementVersion, markDirty, notifyListeners, updateIfNecessary } from './zen';
+import { markDirty, notifyListeners, updateIfNecessary } from './zen';
 // Removed getZenValue, subscribeToZen imports as logic is inlined
 
 // --- Type Definitions ---
@@ -12,8 +12,6 @@ export type ComputedZen<T = unknown> = ZenWithValue<T | null> & {
   _kind: 'computed';
   _value: T | null; // Override value type
   _dirty: boolean;
-  /** ✅ PHASE 2 OPTIMIZATION: Track source versions for fast staleness checks */
-  _sourceVersions?: number[];
   readonly _sources: ReadonlyArray<AnyZen>; // Use AnyZen recursively
   _sourceValues: unknown[]; // Use unknown[] instead of any[]
   // Internal calculation function accepts spread arguments
@@ -40,24 +38,20 @@ type Stores = ReadonlyArray<AnyZen>; // Use AnyZen directly
 /**
  * Fetches current values from dependency stores and checks readiness.
  * Mutates the targetValueArray with fetched values.
- * ✅ PHASE 2 OPTIMIZATION: Also tracks source versions for fast staleness checks.
  * @param sources Array of dependency stores.
  * @param targetValueArray Array to populate with fetched values.
- * @param sourceVersions Optional array to populate with source versions.
  * @returns True if all dependencies are ready, false otherwise.
  * @internal
  */
 function _getSourceValuesAndReadiness(
   sources: ReadonlyArray<AnyZen>,
   targetValueArray: unknown[], // Mutates this array
-  sourceVersions?: number[], // ✅ PHASE 2: Track versions
 ): boolean {
   let computedCanUpdate = true;
   for (let i = 0; i < sources.length; i++) {
     const source = sources[i];
     if (!source) {
       targetValueArray[i] = undefined;
-      if (sourceVersions) sourceVersions[i] = 0;
       continue; // Skip missing sources
     }
 
@@ -67,8 +61,6 @@ function _getSourceValuesAndReadiness(
       case 'map':
       case 'deepMap':
         sourceValue = source._value;
-        // ✅ PHASE 2: Store source version
-        if (sourceVersions) sourceVersions[i] = source._version ?? 0;
         break;
       case 'computed': {
         const computedSource = source as ComputedZen<unknown>;
@@ -79,8 +71,6 @@ function _getSourceValuesAndReadiness(
           }
         }
         sourceValue = computedSource._value;
-        // ✅ PHASE 2: Store source version
-        if (sourceVersions) sourceVersions[i] = computedSource._version ?? 0;
         break;
       }
       case 'batched': {
@@ -89,8 +79,6 @@ function _getSourceValuesAndReadiness(
           computedCanUpdate = false;
         }
         sourceValue = batchedSource._value;
-        // ✅ PHASE 2: Store source version
-        if (sourceVersions) sourceVersions[i] = batchedSource._version ?? 0;
         break;
       }
     }
@@ -107,7 +95,7 @@ function _getSourceValuesAndReadiness(
  * Recalculates the computed value based on current source values.
  * Updates the internal `_value` and notifies listeners if the value changes.
  * Assumes the zen is already marked as dirty or needs initial calculation.
- * ✅ PHASE 2 OPTIMIZATION: Uses version tracking to skip stale checks.
+ * ✅ PHASE 6 OPTIMIZATION: Uses graph coloring to avoid unnecessary recomputation.
  * @returns True if the value changed, false otherwise.
  * @internal
  */
@@ -181,53 +169,8 @@ function updateComputedValue<T>(zen: ComputedZen<T>): boolean {
   const calc = zen._calculation;
   const old = zen._value; // Capture value BEFORE recalculation (could be null)
 
-  // ✅ PHASE 4 OPTIMIZATION: Fast path for single source (most common case)
-  // Initialize source versions array if needed
-  zen._sourceVersions ??= new Array(srcs.length);
-  const versions = zen._sourceVersions;
-
-  // Fast path: Check if any source version changed
-  let anySourceChanged = false;
-  if (old !== null) {
-    // Skip on first calculation
-    const srcLen = srcs.length;
-
-    // ✅ PHASE 4: Special case for single source (most common)
-    if (srcLen === 1) {
-      const source = srcs[0];
-      if (source) {
-        const currentVersion = source._version ?? 0;
-        if (currentVersion === versions[0]) {
-          zen._dirty = false;
-          zen._color = 0; // CLEAN
-          return false; // No change - skip recalculation
-        }
-        anySourceChanged = true;
-      }
-    } else {
-      // Multiple sources - check all
-      for (let i = 0; i < srcLen; i++) {
-        const source = srcs[i];
-        if (source) {
-          const currentVersion = source._version ?? 0;
-          if (currentVersion !== versions[i]) {
-            anySourceChanged = true;
-            break;
-          }
-        }
-      }
-
-      // If no source version changed, we can skip recalculation
-      if (!anySourceChanged) {
-        zen._dirty = false;
-        zen._color = 0; // CLEAN
-        return false; // No change
-      }
-    }
-  }
-
   // 1. Get current values and check readiness using helper
-  const computedCanUpdate = _getSourceValuesAndReadiness(srcs, vals, versions);
+  const computedCanUpdate = _getSourceValuesAndReadiness(srcs, vals);
 
   // If dependencies weren't ready (e.g., dirty batched dependency, or nested computed failed update),
   // mark computed as dirty and return false (no change).
@@ -268,8 +211,6 @@ function updateComputedValue<T>(zen: ComputedZen<T>): boolean {
 
   // 4. Update internal value
   zen._value = newValue;
-  // ✅ PHASE 2 OPTIMIZATION: Increment version when computed value changes
-  zen._version = incrementVersion();
   // ✅ PHASE 6 OPTIMIZATION: Mark as RED and propagate GREEN to dependents
   markDirty(zen as AnyZen);
 
@@ -436,8 +377,6 @@ export function computed<T, S extends AnyZen | Stores>(
     _dirty: true,
     _sources: [...storesArray], // Use spread syntax on the normalized array
     _sourceValues: new Array(storesArray.length), // Use length of normalized array
-    // ✅ PHASE 2 OPTIMIZATION: Initialize source version tracking
-    _sourceVersions: new Array(storesArray.length),
     // Store the calculation function as provided (expecting spread args)
     _calculation: calculation, // No cast needed now
     _equalityFn: equalityFn,

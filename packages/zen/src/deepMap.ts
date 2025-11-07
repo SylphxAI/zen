@@ -3,7 +3,7 @@ import { type PathListener, _emitPathChanges, listenPaths as addPathListener } f
 import type { AnyZen, DeepMapZen, Listener, Unsubscribe } from './types'; // Combine types, Add AnyZen
 import { get as getCoreValue, subscribe as subscribeToCoreZen } from './zen'; // Core get/subscribe
 import type { Zen } from './zen'; // Import Zen type for casting
-import { batchDepth, incrementVersion, notifyListeners, queueZenForBatch } from './zen'; // Import version helper and batch helpers
+import { batchDepth, notifyListeners, queueZenForBatch } from './zen'; // Import batch helpers
 // Removed import { notifyListeners } from './zen'; // Import notifyListeners from zen.ts
 // Removed import { getChangedPaths } from './deepMapInternal'; // Deep object utilities from parent
 
@@ -377,8 +377,6 @@ export function setPath<T extends object>(
 
     // Update the internal value
     deepMapZen._value = nextValue as T;
-    // ✅ PHASE 2 OPTIMIZATION: Increment version on deepMap updates
-    deepMapZen._version = incrementVersion();
 
     // Handle batching or immediate notification
     _handleDeepMapNotification(deepMapZen, currentValue, nextValue as T, path);
@@ -403,8 +401,6 @@ function _handleDeepMapSetUpdateAndNotify<T extends object>(
     // Use deep clone for immutability before assigning
     const finalValue = deepClone(nextValue);
     deepMapZen._value = finalValue; // Assign the cloned value
-    // ✅ PHASE 2 OPTIMIZATION: Increment version on deepMap updates
-    deepMapZen._version = incrementVersion();
 
     // Handle batching or immediate notification
     if (batchDepth > 0) {
@@ -418,8 +414,6 @@ function _handleDeepMapSetUpdateAndNotify<T extends object>(
     // still update the internal reference to the new object, but don't notify.
     // Use deep clone here too for consistency.
     deepMapZen._value = deepClone(nextValue);
-    // ✅ PHASE 2 OPTIMIZATION: Still increment version for reference changes
-    deepMapZen._version = incrementVersion();
   }
 }
 

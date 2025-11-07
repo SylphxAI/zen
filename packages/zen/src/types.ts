@@ -25,8 +25,6 @@ export type ZenWithValue<T> = {
   _kind: 'zen' | 'computed' | 'select' | 'map' | 'deepMap' | 'karma' | 'batched';
   /** Current value */
   _value: T;
-  /** ✅ PHASE 2 OPTIMIZATION: Version tracking for fast staleness checks */
-  _version?: number;
   /** ✅ PHASE 6 OPTIMIZATION: Graph coloring for lazy pull-based evaluation (0=clean, 1=check, 2=dirty) */
   _color?: NodeColor;
   /** ✅ PHASE 1 OPTIMIZATION: Array-based listeners for better performance */
@@ -87,8 +85,6 @@ export type SelectZen<T = unknown, S = unknown> = {
   _kind: 'select';
   _value: T | null;
   _dirty: boolean;
-  /** ✅ PHASE 2 OPTIMIZATION: Version tracking for fast staleness checks */
-  _version?: number;
   /** ✅ PHASE 6 OPTIMIZATION: Graph coloring for lazy pull-based evaluation */
   _color?: NodeColor;
   readonly _source: AnyZen;

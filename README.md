@@ -448,11 +448,13 @@ All results in operations per second (higher is better):
 ### 🚀 What Makes Zen Fast?
 
 1. **Extreme minimalism** - Every byte counts, zero waste
-2. **Optimized subscriber notifications** - Smart batching and deduplication
-3. **Efficient dependency tracking** - Minimal overhead computed values
-4. **Native JavaScript** - No proxy overhead for basic operations
-5. **Smart caching** - Computed values cached until dependencies change
-6. **Zero indirection** - Direct function calls, no wrappers
+2. **Graph coloring algorithm** - Lazy pull-based evaluation prevents unnecessary recomputation
+3. **Optimized subscriber notifications** - Array-based listeners with smart batching
+4. **Efficient dependency tracking** - Minimal overhead computed values
+5. **Native JavaScript** - No proxy overhead for basic operations
+6. **Smart caching** - Computed values cached until dependencies change
+7. **Zero indirection** - Direct function calls, no wrappers
+8. **Hot path optimization** - Critical paths inlined for maximum speed
 
 ### 📈 Run Benchmarks Yourself
 
@@ -610,15 +612,27 @@ setKey(user, 'age', 30); // ✅ OK
 
 ## How It Works
 
-Zen uses a **minimal publish-subscribe architecture** with smart dependency tracking:
+Zen uses a **minimal publish-subscribe architecture** with advanced optimizations:
 
 1. **Atoms** store primitive reactive state
-2. **Computed values** track their dependencies automatically
-3. **Subscribers** are notified only when their dependencies change
-4. **Batching** groups multiple updates into single notifications
-5. **Structural sharing** ensures efficient memory usage
+2. **Graph coloring algorithm** enables lazy pull-based evaluation
+3. **Computed values** track dependencies with 3-state system (CLEAN/GREEN/RED)
+4. **Subscribers** are notified only when their dependencies actually change
+5. **Batching** groups multiple updates into single notifications
+6. **Array-based listeners** for maximum notification speed
+7. **Structural sharing** ensures efficient memory usage
 
 All with **zero proxy overhead** for basic operations and **microscopic bundle size**.
+
+### Graph Coloring Optimization (Phase 6)
+
+Zen uses a reactive graph coloring algorithm inspired by Reactively for optimal performance:
+
+- **CLEAN (0)** - Value is definitely clean, no update needed
+- **GREEN (1)** - Potentially affected, needs validation of dependencies
+- **RED (2)** - Definitely dirty, requires recomputation
+
+This approach eliminates redundant updates in diamond dependencies and enables true lazy evaluation where computed values only update when actually accessed.
 
 ## Development
 

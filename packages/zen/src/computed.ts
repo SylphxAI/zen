@@ -1,7 +1,7 @@
 import type { BatchedZen } from './batched'; // Import BatchedZen type
 // Functional computed (derived state) implementation.
 import type { AnyZen, Unsubscribe, ZenWithValue } from './types';
-import { incrementVersion, notifyListeners } from './zen';
+import { incrementVersion, markDirty, notifyListeners, updateIfNecessary } from './zen';
 // Removed getZenValue, subscribeToZen imports as logic is inlined
 
 // --- Type Definitions ---
@@ -112,11 +112,68 @@ function _getSourceValuesAndReadiness(
  * @internal
  */
 function updateComputedValue<T>(zen: ComputedZen<T>): boolean {
+  // ✅ PHASE 6 OPTIMIZATION: Graph coloring check
+  // CLEAN (0) - no update needed
+  if (zen._color === 0) {
+    return false;
+  }
+
+  // GREEN (1) - need to verify if sources actually changed
+  if (zen._color === 1) {
+    const srcs = zen._sources;
+    if (srcs && srcs.length > 0) {
+      const srcLen = srcs.length;
+
+      // Fast path for single source
+      if (srcLen === 1) {
+        // Recursively check parent
+        const source = srcs[0];
+        if (source._color !== undefined) {
+          updateIfNecessary(source);
+          if (source._color === 2) {
+            // Parent is dirty - we're dirty too
+            zen._color = 2;
+          } else {
+            // Parent is clean - we're clean too
+            zen._color = 0;
+            zen._dirty = false;
+            return false;
+          }
+        }
+      } else {
+        // Multiple sources - check all
+        let anyParentDirty = false;
+        for (let i = 0; i < srcLen; i++) {
+          const source = srcs[i];
+          if (source) {
+            updateIfNecessary(source);
+            if (source._color === 2) {
+              anyParentDirty = true;
+              break; // ✅ Early exit
+            }
+          }
+        }
+
+        if (!anyParentDirty) {
+          // All parents clean - we're clean too
+          zen._color = 0;
+          zen._dirty = false;
+          return false;
+        }
+
+        // At least one parent dirty - mark ourselves RED
+        zen._color = 2;
+      }
+    }
+  }
+
+  // Now we know we're RED (2) - need to recompute
   const srcs = zen._sources;
 
   // If there are no sources, the value cannot be computed.
   if (!srcs || srcs.length === 0) {
     zen._dirty = true; // Remain dirty
+    zen._color = 2; // RED
     return false;
   }
 
@@ -142,6 +199,7 @@ function updateComputedValue<T>(zen: ComputedZen<T>): boolean {
         const currentVersion = source._version ?? 0;
         if (currentVersion === versions[0]) {
           zen._dirty = false;
+          zen._color = 0; // CLEAN
           return false; // No change - skip recalculation
         }
         anySourceChanged = true;
@@ -162,6 +220,7 @@ function updateComputedValue<T>(zen: ComputedZen<T>): boolean {
       // If no source version changed, we can skip recalculation
       if (!anySourceChanged) {
         zen._dirty = false;
+        zen._color = 0; // CLEAN
         return false; // No change
       }
     }
@@ -174,6 +233,7 @@ function updateComputedValue<T>(zen: ComputedZen<T>): boolean {
   // mark computed as dirty and return false (no change).
   if (!computedCanUpdate) {
     zen._dirty = true;
+    zen._color = 2; // RED
     return false;
   }
   // Note: We proceed even if some vals are null, assuming null is a valid state.
@@ -183,12 +243,14 @@ function updateComputedValue<T>(zen: ComputedZen<T>): boolean {
   if (srcs.length === 1) {
     if (vals[0] === undefined) {
       zen._dirty = true;
+      zen._color = 2; // RED
       return false;
     }
   } else {
     // Multiple sources - check all
     if (vals.some((v) => v === undefined)) {
       zen._dirty = true;
+      zen._color = 2; // RED
       return false;
     }
   }
@@ -196,6 +258,7 @@ function updateComputedValue<T>(zen: ComputedZen<T>): boolean {
   // 2. Dependencies are ready, proceed with calculation
   const newValue = calc(...vals); // vals are now guaranteed non-null AND non-undefined
   zen._dirty = false; // Mark as clean *after* successful calculation
+  zen._color = 0; // CLEAN
 
   // 3. Check if the value actually changed using the equality function
   // Handle the initial null case for 'old'
@@ -207,6 +270,8 @@ function updateComputedValue<T>(zen: ComputedZen<T>): boolean {
   zen._value = newValue;
   // ✅ PHASE 2 OPTIMIZATION: Increment version when computed value changes
   zen._version = incrementVersion();
+  // ✅ PHASE 6 OPTIMIZATION: Mark as RED and propagate GREEN to dependents
+  markDirty(zen as AnyZen);
 
   // 5. Value updated. Return true to indicate change.
   // DO NOT notify here. Notification is handled by the caller (e.g., computedSourceChanged or batch end).
@@ -222,6 +287,8 @@ function computedSourceChanged<T>(zen: ComputedZen<T>): void {
   if (zen._dirty) return;
 
   zen._dirty = true;
+  // ✅ PHASE 6 OPTIMIZATION: Mark as RED when source changes
+  zen._color = 2;
 
   // ✅ PHASE 1 OPTIMIZATION: Array-based listeners
   if (zen._listeners?.length) {
@@ -240,8 +307,15 @@ function computedSourceChanged<T>(zen: ComputedZen<T>): void {
 function _subscribeToSingleSource(
   source: AnyZen | undefined,
   onChangeHandler: () => void,
+  computedZen?: ComputedZen<unknown>,
 ): Unsubscribe | undefined {
   if (!source) return undefined;
+
+  // ✅ PHASE 6 OPTIMIZATION: Attach computed zen reference to handler
+  // This allows markDirty() to find the computed zen and mark it GREEN
+  if (computedZen) {
+    (onChangeHandler as any)._computedZen = computedZen;
+  }
 
   const baseSource = source as ZenWithValue<unknown>;
   const isFirstSourceListener = !baseSource._listeners || baseSource._listeners.length === 0;
@@ -301,7 +375,8 @@ function subscribeComputedToSources<T>(zen: ComputedZen<T>): void {
   const onChangeHandler = () => computedSourceChanged(zen);
 
   for (let i = 0; i < sources.length; i++) {
-    const unsub = _subscribeToSingleSource(sources[i], onChangeHandler); // Call without computedZen
+    // ✅ PHASE 6: Pass zen reference so handler can be linked to computed
+    const unsub = _subscribeToSingleSource(sources[i], onChangeHandler, zen as ComputedZen<unknown>);
     if (unsub) {
       newUnsubscribers.push(unsub); // Add only valid unsub functions
     }

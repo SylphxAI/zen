@@ -32,6 +32,75 @@ export function incrementVersion(): number {
   return ++globalVersion;
 }
 
+// ============================================================================
+// ✅ PHASE 6 OPTIMIZATION: Graph Coloring Algorithm
+// ============================================================================
+
+/**
+ * Phase 1 (Down): Mark node as RED and dependents as GREEN
+ *
+ * Called when a value changes. Propagates "potentially affected" state
+ * to all dependent nodes without immediately recomputing them.
+ *
+ * @internal
+ */
+export function markDirty<A extends AnyZen>(zen: A): void {
+  const baseZen = zen as ZenWithValue<ZenValue<A>>;
+  baseZen._color = 2; // RED - definitely dirty
+
+  const listeners = baseZen._listeners;
+  if (!listeners) return;
+
+  // Fast path for single listener
+  const len = listeners.length;
+  if (len === 1) {
+    const listener = listeners[0] as any;
+    // ✅ PHASE 6: Check if listener is a zen with _color (computed/select)
+    // Regular callback functions won't have _color
+    const listenerZen = listener._computedZen || listener;
+    if (listenerZen._color !== undefined && listenerZen._color === 0) {
+      listenerZen._color = 1; // GREEN - potentially affected
+    }
+  } else if (len > 1) {
+    for (let i = 0; i < len; i++) {
+      const listener = listeners[i] as any;
+      const listenerZen = listener._computedZen || listener;
+      if (listenerZen._color !== undefined && listenerZen._color === 0) {
+        listenerZen._color = 1; // GREEN - potentially affected
+      }
+    }
+  }
+}
+
+/**
+ * Phase 2 (Up): Check if update is actually needed
+ *
+ * Called when accessing a value. Walks up the dependency graph
+ * to find actual changes, enabling lazy evaluation.
+ *
+ * Returns true if value changed after update.
+ *
+ * @internal
+ */
+export function updateIfNecessary<A extends AnyZen>(zen: A): boolean {
+  const baseZen = zen as ZenWithValue<ZenValue<A>>;
+
+  // CLEAN - no update needed
+  if (baseZen._color === 0) {
+    return false;
+  }
+
+  // For computed/select nodes, delegate to their _update method
+  if ((zen._kind === 'computed' || zen._kind === 'select') && '_update' in zen) {
+    // The _update method will handle color management
+    return (zen as any)._update();
+  }
+
+  // For simple zens, just mark clean
+  baseZen._color = 0;
+  return false;
+}
+
 // Internal notifyListeners function
 /**
  * Notifies all listeners of an zen about a value change.
@@ -98,6 +167,10 @@ export function get<T extends object>(zen: DeepMapZen<T>): T;
 export function get<T>(zen: KarmaZen<T>): KarmaState<T>; // Add KarmaZen overload back
 // General implementation signature using ZenValue
 export function get<A extends AnyZen>(zen: A): ZenValue<A> | null {
+  // ✅ PHASE 6 OPTIMIZATION: Pull-based lazy evaluation
+  // Check if update is needed before reading value
+  updateIfNecessary(zen);
+
   // Return includes null for computed initial state
   // Use switch for type narrowing and direct value access
   switch (zen._kind) {
@@ -113,9 +186,7 @@ export function get<A extends AnyZen>(zen: A): ZenValue<A> | null {
     case 'computed': {
       // Explicit cast needed for computed-specific logic
       const computed = zen as ComputedZen<ZenValue<A>>; // Value type is ZenValue<A>
-      if (computed._dirty || computed._value === null) {
-        computed._update();
-      }
+      // updateIfNecessary already called above
       // Computed value can be null initially
       return computed._value as ZenValue<A> | null;
       // No break needed here as return exits the function
@@ -123,9 +194,7 @@ export function get<A extends AnyZen>(zen: A): ZenValue<A> | null {
     case 'select': {
       // Handle select zen (lightweight single-source selector)
       const select = zen as SelectZen<ZenValue<A>>;
-      if (select._dirty || select._value === null) {
-        select._update();
-      }
+      // updateIfNecessary already called above
       return select._value as ZenValue<A> | null;
     }
     // Add case for batched, although get() shouldn't trigger its update
@@ -195,6 +264,8 @@ export function set<T>(zen: Zen<T>, value: T, force = false): void {
     zen._value = value;
     // ✅ PHASE 2 OPTIMIZATION: Increment global version on every update
     zen._version = incrementVersion();
+    // ✅ PHASE 6 OPTIMIZATION: Mark as RED and propagate GREEN to dependents
+    markDirty(zen as AnyZen);
 
     // Handle batching or immediate notification (inlined)
     if (batchDepth > 0) {

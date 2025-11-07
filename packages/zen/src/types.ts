@@ -11,6 +11,14 @@ export type Listener<T> = (value: T, oldValue?: T | null) => void;
 /** Function to unsubscribe a listener. */
 export type Unsubscribe = () => void;
 
+/**
+ * ✅ PHASE 6 OPTIMIZATION: Node color for graph coloring algorithm
+ * 0 = Clean (uncolored) - no changes detected
+ * 1 = Green (check) - potentially affected, needs validation
+ * 2 = Red (dirty) - definitely needs recomputation
+ */
+export type NodeColor = 0 | 1 | 2;
+
 /** Base structure for zens that directly hold value and listeners. */
 export type ZenWithValue<T> = {
   /** Distinguishes zen types for faster checks */
@@ -19,6 +27,8 @@ export type ZenWithValue<T> = {
   _value: T;
   /** ✅ PHASE 2 OPTIMIZATION: Version tracking for fast staleness checks */
   _version?: number;
+  /** ✅ PHASE 6 OPTIMIZATION: Graph coloring for lazy pull-based evaluation (0=clean, 1=check, 2=dirty) */
+  _color?: NodeColor;
   /** ✅ PHASE 1 OPTIMIZATION: Array-based listeners for better performance */
   _listeners?: Listener<T>[];
   // biome-ignore lint/suspicious/noExplicitAny: Listener arrays use any for simplicity
@@ -79,6 +89,8 @@ export type SelectZen<T = unknown, S = unknown> = {
   _dirty: boolean;
   /** ✅ PHASE 2 OPTIMIZATION: Version tracking for fast staleness checks */
   _version?: number;
+  /** ✅ PHASE 6 OPTIMIZATION: Graph coloring for lazy pull-based evaluation */
+  _color?: NodeColor;
   readonly _source: AnyZen;
   readonly _selector: (value: S) => T;
   readonly _equalityFn: (a: T, b: T) => boolean;

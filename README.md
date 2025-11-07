@@ -39,7 +39,7 @@ Zen is a **hyper-optimized** state management library that delivers **signal-lik
 ### **Developer Experience**
 - 💡 **Intuitive API** - Simple primitives, powerful composition
 - 🔒 **Type Safe** - Full TypeScript support with perfect inference
-- ⚙️ **Async Built-in** - First-class karma (task) support
+- ⚙️ **Reactive Async** - Karma with auto-caching, deduplication, and invalidation
 - 🌳 **Deep State** - Nested paths, maps, computed values
 - 🎨 **Immutable Updates** - Optional Immer-style mutations via zen-craft
 
@@ -251,29 +251,61 @@ setPath(settings, 'user.preferences.theme', 'dark');
 setPath(settings, ['data', 1], 25); // Update array element
 ```
 
-### Async State
+### Async State (Karma)
 
-#### `karma(asyncFunction)`
+#### `karma(asyncFunction, options)`
 
-Create async task (formerly called `task`):
+Create a **fully reactive async store** inspired by Riverpod AsyncProvider. Karma provides automatic caching, concurrent request deduplication, and reactive invalidation:
 
 ```typescript
-import { karma, runKarma, getKarmaState } from '@sylphx/zen';
+import { karma, runKarma, subscribeToKarma, karmaCache } from '@sylphx/zen';
 
-const fetchUser = async (id: number) => {
-  const res = await fetch(`/api/users/${id}`);
-  return res.json();
-};
+// Create karma with options
+const fetchUser = karma(
+  async (id: number) => {
+    const res = await fetch(`/api/users/${id}`);
+    return res.json();
+  },
+  {
+    cacheKey: (id) => ['user', id],  // Custom cache key
+    staleTime: 5000,                  // 5s before stale
+    cacheTime: 30000,                 // 30s before auto-dispose
+    keepAlive: false                  // Auto-dispose when no listeners
+  }
+);
 
-const userTask = karma(fetchUser);
+// Execute and cache (36x faster on cache hits!)
+const user1 = await runKarma(fetchUser, 123);  // Fetches
+const user2 = await runKarma(fetchUser, 123);  // Returns cache instantly
 
-// Execute async function
-await runKarma(userTask, 123);
+// Subscribe to reactive updates
+const unsub = subscribeToKarma(fetchUser, [123], (state) => {
+  if (state.loading) console.log('Loading...');
+  if (state.data) console.log('User:', state.data);
+  if (state.error) console.log('Error:', state.error);
+});
 
-// Get current state
-const state = getKarmaState(userTask);
-// { loading: false, data: {...}, error: undefined }
+// Reactive cache control
+karmaCache.invalidate(fetchUser, 123);  // Triggers re-fetch for active listeners
+karmaCache.set(fetchUser, [123], newData);  // Optimistic update
+karmaCache.get(fetchUser, 123);  // Get cached state
 ```
+
+**Key Features:**
+- ⚡ **36x faster** cache hits (avg ~0.04ms)
+- 🎯 **Perfect deduplication** - 100 concurrent requests → 1 execution
+- 🔄 **Reactive invalidation** - Auto re-fetch for active listeners
+- 🗑️ **Auto-dispose** - Cleans up unused cache entries
+- 📡 **Stale-while-revalidate** - Return cache + background refetch
+- 🎨 **Per-parameter caching** - Each argument combination cached separately
+
+**Performance:**
+- Cache hit: ~0.04ms (O(1) constant time)
+- 100 concurrent requests (same args): ~1.3ms (vs 100+ fetches)
+- 1000 listeners notification: ~4ms (~4μs per listener)
+- No degradation with 1000+ cache entries
+
+See [BENCHMARK_RESULTS.md](./packages/zen/BENCHMARK_RESULTS.md) for detailed benchmarks.
 
 ### Batch Updates
 
@@ -512,6 +544,21 @@ import { useStore } from '@sylphx/zen-preact';
 | **Bundle Size (full)** | **1.45 kB** | 265 B (atom only) |
 
 **Why settle for single-pattern libraries when you can have the complete package?**
+
+### **vs TanStack Query / SWR (Async State)**
+
+| Feature | Zen Karma | TanStack Query | SWR |
+|---------|-----------|----------------|-----|
+| **Cache Hit Speed** | **0.04ms** 🏆 | ~1ms | ~1ms |
+| **Concurrent Deduplication** | **100% effective** | ✅ Yes | ✅ Yes |
+| **Framework Support** | **5 frameworks** | React, Vue, Solid, Svelte | React focused |
+| **Bundle Size** | **Included in 1.45 kB** | 13.4 kB | 4.6 kB |
+| **Reactive Invalidation** | ✅ Built-in | ✅ Built-in | ✅ Built-in |
+| **Stale-While-Revalidate** | ✅ Built-in | ✅ Built-in | ✅ Built-in |
+| **Auto-Dispose** | ✅ Configurable | ✅ Built-in | ✅ Built-in |
+| **Learning Curve** | **Minimal** (same API as other Zen patterns) | Moderate | Moderate |
+
+**Karma is already included in Zen's 1.45 kB bundle - no extra bytes for async state!**
 
 ## 🌟 Ecosystem
 

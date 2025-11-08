@@ -1,7 +1,7 @@
 import { craft, craftWithPatches } from '@sylphx/craft';
 import { get, set } from '@sylphx/zen';
 import type { Zen } from '@sylphx/zen';
-import type { Patch } from './types';
+import type { CraftOptions, Patch } from './types';
 
 /**
  * Craft-powered immutable updates for Zen atoms.
@@ -18,13 +18,13 @@ export function craftZen<T>(targetZen: Zen<T>, recipe: (draft: T) => undefined):
 export function craftZen<T>(
   targetZen: Zen<T>,
   recipe: (draft: T) => undefined,
-  options: { patches?: boolean; inversePatches?: boolean; autoFreeze?: boolean },
+  options: CraftOptions,
 ): [Patch[], Patch[]];
 
 export function craftZen<T>(
   targetZen: Zen<T>,
   recipe: (draft: T) => undefined,
-  options?: { patches?: boolean; inversePatches?: boolean; autoFreeze?: boolean },
+  options?: CraftOptions,
 ): [Patch[], Patch[]] | undefined {
   const currentState = get(targetZen);
 

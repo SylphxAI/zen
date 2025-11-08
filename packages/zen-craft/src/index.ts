@@ -1,7 +1,7 @@
 // Export public API
 
 // Types
-export type { Patch } from './types';
+export type { Patch, CraftOptions } from './types';
 
 // Primary API: Update Zen stores with draft-style mutations
 export { craftZen as craft } from './zen';

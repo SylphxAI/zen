@@ -40,7 +40,7 @@ export function useRouter(): RouterState {
  */
 export function useHash(): string {
   const [hash, setHash] = useState(() =>
-    typeof window !== 'undefined' ? window.location.hash : ''
+    typeof window !== 'undefined' ? window.location.hash : '',
   );
 
   useEffect(() => {

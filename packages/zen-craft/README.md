@@ -2,9 +2,9 @@
 
 [![npm version](https://img.shields.io/npm/v/@sylphx/zen-craft)](https://www.npmjs.com/package/@sylphx/zen-craft)
 
-**Craft-powered immutable state updates for Zen** - Built with [Craft](https://github.com/sylphxltd/craft), our high-performance immer replacement.
+**Immutable state updates for Zen with draft-style mutations** - Built with [Craft](https://github.com/sylphxltd/craft), our ultra-fast structural sharing library.
 
-This package allows you to work with immutable state in Zen atoms using a convenient mutation-style API on draft objects, while automatically producing the next immutable state with structural sharing and optional JSON patch generation.
+Write mutable-style code on draft objects, automatically get immutable updates with structural sharing and optional JSON Patch generation.
 
 ## Installation
 
@@ -24,31 +24,31 @@ yarn add @sylphx/zen-craft @sylphx/zen
 
 ## Usage
 
-### `craftZen()`
+### `update()` - Primary API
 
-The main API for Zen integration. Updates a Zen atom immutably using a recipe function.
+Update Zen stores with draft-style mutations.
 
 ```typescript
-import { craftZen } from '@sylphx/zen-craft';
+import { update } from '@sylphx/zen-craft';
 import { zen, get } from '@sylphx/zen';
 
-const myStore = zen({
+const $store = zen({
   user: { name: 'Alice', age: 30 },
   tags: ['a', 'b']
 });
 
-// Basic usage - update atom with draft mutations
-craftZen(myStore, (draft) => {
+// Basic usage - mutate draft, get immutable update
+update($store, (draft) => {
   draft.user.age++;
   draft.tags.push('c');
 });
 
-console.log(get(myStore));
+console.log(get($store));
 // Output: { user: { name: 'Alice', age: 31 }, tags: ['a', 'b', 'c'] }
 
-// Advanced: Enable patch generation for undo/redo support
-const [patches, inversePatches] = craftZen(
-  myStore,
+// Advanced: Enable patch generation for undo/redo
+const [patches, inversePatches] = update(
+  $store,
   (draft) => {
     draft.user.age++;
   },
@@ -59,19 +59,19 @@ console.log(patches);
 // Output: [{ op: 'replace', path: ['user', 'age'], value: 32 }]
 ```
 
-### `produce()`
+### `craft()` - Low-level API
 
-Low-level API for non-Zen use cases. Takes a base state and recipe function, returns new state with patches.
+Transform plain objects immutably (non-Zen use cases).
 
 ```typescript
-import { produce } from '@sylphx/zen-craft';
+import { craft } from '@sylphx/zen-craft';
 
 const currentState = {
   user: { name: 'Alice', age: 30 },
   tags: ['a', 'b']
 };
 
-const [nextState, patches, inversePatches] = produce(
+const [nextState, patches, inversePatches] = craft(
   currentState,
   (draft) => {
     draft.user.age++;
@@ -108,12 +108,12 @@ console.log(nextState);
 Use the `nothing` symbol to delete properties:
 
 ```typescript
-import { craftZen, nothing } from '@sylphx/zen-craft';
+import { update, nothing } from '@sylphx/zen-craft';
 import { zen } from '@sylphx/zen';
 
-const store = zen({ name: 'Alice', age: 30 });
+const $store = zen({ name: 'Alice', age: 30 });
 
-craftZen(store, (draft) => {
+update($store, (draft) => {
   draft.age = nothing; // Delete age property
 });
 
@@ -122,21 +122,22 @@ craftZen(store, (draft) => {
 
 ## Features
 
-- 🚀 **1.4-35x faster than immer** - Powered by [Craft](https://github.com/sylphxltd/craft)
+- 🚀 **Ultra-fast** - Powered by [Craft](https://github.com/sylphxltd/craft) structural sharing engine
 - 🎯 **Structural sharing** - Unchanged parts maintain references
 - 📝 **JSON Patches (RFC 6902)** - Track changes for undo/redo
 - 🗺️ **Map/Set support** - Full support for ES6 collections
-- ⚡ **Zero dependencies** - Except Craft and Zen
+- ⚡ **Minimal** - Just Craft + Zen, no bloat
 - 🔒 **Type-safe** - Full TypeScript support
+- 🎨 **Zen philosophy** - Simple, focused, performant
 
-## Why Craft?
+## Powered by Craft
 
-zen-craft is powered by **[Craft](https://github.com/sylphxltd/craft)**, our in-house high-performance immer replacement:
+zen-craft uses **[Craft](https://github.com/sylphxltd/craft)**, our structural sharing library:
 
-- **1.4-35x faster** than immer across all operations
-- **2.9 KB gzipped** - 39% smaller than immer
-- **100% API compatible** - Drop-in replacement
-- **Built by us** - Same team, same performance obsession
+- **Ultra-fast** - Optimized for performance
+- **2.9 KB gzipped** - Tiny footprint
+- **Structural sharing** - Efficient immutable updates
+- **Built in-house** - Same performance-first philosophy
 
 [Learn more about Craft →](https://github.com/sylphxltd/craft)
 

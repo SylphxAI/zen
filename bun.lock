@@ -47,7 +47,7 @@
     },
     "packages/zen-craft": {
       "name": "@sylphx/zen-craft",
-      "version": "1.0.2",
+      "version": "1.0.4",
       "dependencies": {
         "@sylphx/craft": "^1.0.0",
         "@sylphx/zen": "workspace:*",
@@ -61,21 +61,21 @@
     },
     "packages/zen-persistent": {
       "name": "@sylphx/zen-persistent",
-      "version": "1.0.0",
+      "version": "1.0.2",
       "dependencies": {
-        "@sylphx/zen": "workspace:*",
+        "@sylphx/zen": "^1.2.1",
       },
       "devDependencies": {
         "bunup": "^0.15.13",
         "typescript": "^5.5.3",
       },
       "peerDependencies": {
-        "@sylphx/zen": "workspace:*",
+        "@sylphx/zen": "^1.2.1",
       },
     },
     "packages/zen-preact": {
       "name": "@sylphx/zen-preact",
-      "version": "1.0.0",
+      "version": "1.0.2",
       "dependencies": {
         "@sylphx/zen": "workspace:*",
       },
@@ -90,7 +90,7 @@
     },
     "packages/zen-react": {
       "name": "@sylphx/zen-react",
-      "version": "1.0.0",
+      "version": "1.0.2",
       "dependencies": {
         "@sylphx/zen": "workspace:*",
       },
@@ -106,7 +106,7 @@
     },
     "packages/zen-router": {
       "name": "@sylphx/zen-router",
-      "version": "1.0.0",
+      "version": "1.0.2",
       "dependencies": {
         "@sylphx/zen": "workspace:*",
       },
@@ -117,7 +117,7 @@
     },
     "packages/zen-router-preact": {
       "name": "@sylphx/zen-router-preact",
-      "version": "1.0.0",
+      "version": "1.0.2",
       "dependencies": {
         "@sylphx/zen": "workspace:*",
         "@sylphx/zen-router": "workspace:*",
@@ -136,7 +136,7 @@
     },
     "packages/zen-router-react": {
       "name": "@sylphx/zen-router-react",
-      "version": "1.0.0",
+      "version": "1.0.2",
       "dependencies": {
         "@sylphx/zen": "workspace:*",
         "@sylphx/zen-router": "workspace:*",
@@ -159,7 +159,7 @@
     },
     "packages/zen-solid": {
       "name": "@sylphx/zen-solid",
-      "version": "1.0.0",
+      "version": "1.0.2",
       "dependencies": {
         "@sylphx/zen": "workspace:*",
       },
@@ -174,7 +174,7 @@
     },
     "packages/zen-svelte": {
       "name": "@sylphx/zen-svelte",
-      "version": "1.0.0",
+      "version": "1.0.2",
       "dependencies": {
         "@sylphx/zen": "workspace:*",
       },
@@ -189,7 +189,7 @@
     },
     "packages/zen-vue": {
       "name": "@sylphx/zen-vue",
-      "version": "1.0.0",
+      "version": "1.0.2",
       "dependencies": {
         "@sylphx/zen": "workspace:*",
       },
@@ -1162,7 +1162,7 @@
 
     "loupe": ["loupe@3.2.1", "", {}, "sha512-CdzqowRJCeLU72bHvWqwRBBlLcMEtIvGrlvef74kMnV2AolS9Y8xUv1I0U/MNAWMhBlKIoyuEgoJ0t/bbwHbLQ=="],
 
-    "lru-cache": ["lru-cache@10.4.3", "", {}, "sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ=="],
+    "lru-cache": ["lru-cache@5.1.1", "", { "dependencies": { "yallist": "^3.0.2" } }, "sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w=="],
 
     "lunr": ["lunr@2.3.9", "", {}, "sha512-zTU3DaZaF3Rt9rhN3uBMGQD3dD2/vFQqnvZCDv4dl5iOzq2IZQqTxu90r4E5J+nP70J3ilqVCrbho2eWaeW8Ow=="],
 
@@ -1586,11 +1586,11 @@
 
     "zustand": ["zustand@5.0.8", "", { "peerDependencies": { "@types/react": ">=18.0.0", "immer": ">=9.0.6", "react": ">=18.0.0", "use-sync-external-store": ">=1.2.0" }, "optionalPeers": ["@types/react", "immer", "react", "use-sync-external-store"] }, "sha512-gyPKpIaxY9XcO2vSMrLbiER7QMAMGOQZVRdJ6Zi782jkbzZygq5GI9nG8g+sMgitRtndwaBSl7uiqC49o1SSiw=="],
 
+    "@asamuzakjp/css-color/lru-cache": ["lru-cache@10.4.3", "", {}, "sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ=="],
+
     "@babel/code-frame/js-tokens": ["js-tokens@4.0.0", "", {}, "sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ=="],
 
     "@babel/core/semver": ["semver@6.3.1", "", { "bin": { "semver": "bin/semver.js" } }, "sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA=="],
-
-    "@babel/helper-compilation-targets/lru-cache": ["lru-cache@5.1.1", "", { "dependencies": { "yallist": "^3.0.2" } }, "sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w=="],
 
     "@babel/helper-compilation-targets/semver": ["semver@6.3.1", "", { "bin": { "semver": "bin/semver.js" } }, "sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA=="],
 
@@ -1806,7 +1806,13 @@
 
     "@sylphx/zen-craft/vitest/chai/pathval": ["pathval@1.1.1", "", {}, "sha512-Dp6zGqpTdETdR63lehJYPeIOqpiNBNtc7BpWSLrOje7UaIsE5aY92r/AunQA7rsXvet3lrJ3JnZX29UPTKXyKQ=="],
 
+    "js-beautify/glob/path-scurry/lru-cache": ["lru-cache@10.4.3", "", {}, "sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ=="],
+
     "read-pkg-up/find-up/locate-path/p-locate": ["p-locate@5.0.0", "", { "dependencies": { "p-limit": "^3.0.2" } }, "sha512-LaNjtRWUBY++zB5nE/NwcaoMylSPk+S+ZHNB1TzdbMJMny6dynpAGt7X/tl/QYq3TIeE6nxHppbo2LGymrG5Pw=="],
+
+    "sucrase/glob/path-scurry/lru-cache": ["lru-cache@10.4.3", "", {}, "sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ=="],
+
+    "test-exclude/glob/path-scurry/lru-cache": ["lru-cache@10.4.3", "", {}, "sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ=="],
 
     "@sylphx/zen-craft/vitest/@vitest/snapshot/pretty-format/ansi-styles": ["ansi-styles@5.2.0", "", {}, "sha512-Cxwpt2SfTzTtXcfOlzGEee8O+c+MmUgGrNiBcXnuWxuFJHe6a5Hz7qwhwe5OgaSYI0IJvkLqWX1ASG+cJOkEiA=="],
 

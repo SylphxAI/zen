@@ -1,3 +1,6 @@
+/**
+ * @vitest-environment jsdom
+ */
 import { setKey } from '@sylphx/zen'; // To update the store
 import { $router } from '@sylphx/zen-router'; // The store the hook reads from
 import { act, renderHook } from '@testing-library/react';

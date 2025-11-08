@@ -1,3 +1,6 @@
+/**
+ * @vitest-environment jsdom
+ */
 // Import get/subscribe normally - they will be mocked by vi.mock below
 import { type MapZen, type Unsubscribe, get, map, subscribe } from '@sylphx/zen';
 import { $router, type RouterState } from '@sylphx/zen-router'; // Import real $router

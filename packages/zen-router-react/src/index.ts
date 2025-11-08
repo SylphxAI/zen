@@ -22,17 +22,39 @@ export function useRouter(): RouterState {
       setState(newState);
     });
 
-    // Initial sync check after mount, in case state changed between initial get() and subscribe()
-    const currentState = get($router);
-    if (currentState !== state) {
-      setState(currentState);
-    }
-
     // Unsubscribe on component unmount
     return unsubscribe;
-  }, [state]); // Dependency array includes state to ensure re-sync if needed, though typically subscription handles it.
+  }, []); // Empty dependency array: subscribe only on mount, unsubscribe on unmount.
 
   return state;
+}
+
+/**
+ * React hook to track URL hash changes.
+ *
+ * Returns the current hash (e.g., '#section' or '').
+ * This is a standalone utility that listens to browser's hashchange event.
+ * Does NOT depend on router state - works with any hash changes.
+ *
+ * @returns The current hash string.
+ */
+export function useHash(): string {
+  const [hash, setHash] = useState(() =>
+    typeof window !== 'undefined' ? window.location.hash : ''
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleHashChange = () => setHash(window.location.hash);
+
+    // Listen to browser's native hashchange event
+    window.addEventListener('hashchange', handleHashChange);
+
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  return hash;
 }
 
 // Re-export core types for convenience if needed

@@ -22,7 +22,7 @@ export type NodeColor = 0 | 1 | 2;
 /** Base structure for zens that directly hold value and listeners. */
 export type ZenWithValue<T> = {
   /** Distinguishes zen types for faster checks */
-  _kind: 'zen' | 'computed' | 'select' | 'map' | 'deepMap' | 'karma' | 'batched';
+  _kind: 'zen' | 'computed' | 'select' | 'map' | 'deepMap' | 'zenAsync' | 'batched' | 'karma';
   /** Current value */
   _value: T;
   /** ✅ PHASE 6 OPTIMIZATION: Graph coloring for lazy pull-based evaluation (0=clean, 1=check, 2=dirty) */
@@ -47,12 +47,15 @@ export type ZenWithValue<T> = {
   _mountCleanups?: Map<any, (() => void) | undefined>;
 };
 
-/** Represents the possible states of a KarmaZen. */
-export type KarmaState<T = unknown> =
+/** Represents the possible states of a ZenAsync. */
+export type ZenAsyncState<T = unknown> =
   | { loading: true; error?: undefined; data?: undefined }
   | { loading: false; error: Error; data?: undefined }
   | { loading: false; error?: undefined; data: T }
   | { loading: false; error?: undefined; data?: undefined }; // Initial state
+
+/** @deprecated Use ZenAsyncState instead */
+export type KarmaState<T = unknown> = ZenAsyncState<T>;
 
 // --- Merged Zen Type Definitions ---
 
@@ -70,15 +73,18 @@ export type DeepMapZen<T extends object = object> = ZenWithValue<T> & {
   // No extra properties needed, structure matches ZenWithValue<Object>
 };
 
-/** Represents a Karma Zen holding state and the async function. */
-export type KarmaZen<T = void, Args extends unknown[] = unknown[]> = ZenWithValue<KarmaState<T>> & {
-  _kind: 'karma';
+/** Represents a ZenAsync atom holding state and the async function. */
+export type ZenAsync<T = void, Args extends unknown[] = unknown[]> = ZenWithValue<ZenAsyncState<T>> & {
+  _kind: 'zenAsync';
   _asyncFn: (...args: Args) => Promise<T>;
   _cacheKeyFn?: (...args: Args) => readonly unknown[]; // QueryKey format
   _keepAlive?: boolean;
   _cacheTime?: number;
   _staleTime?: number;
 };
+
+/** @deprecated Use ZenAsync instead */
+export type KarmaZen<T = void, Args extends unknown[] = unknown[]> = ZenAsync<T, Args>;
 
 /** Represents a Select Zen (lightweight single-source selector). */
 export type SelectZen<T = unknown, S = unknown> = {
@@ -117,6 +123,6 @@ export type AnyZen =
   | MapZen<object>
   | DeepMapZen<object>
   // biome-ignore lint/suspicious/noExplicitAny: Base union type requires any
-  | KarmaZen<any, any>
+  | ZenAsync<any, any>
   // biome-ignore lint/suspicious/noExplicitAny: Base union type requires any
-  | BatchedZen<any>; // Add SelectZen<any, any> and BatchedZen<any>
+  | BatchedZen<any>;

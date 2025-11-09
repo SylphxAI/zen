@@ -167,7 +167,8 @@ export function get<A extends AnyZen>(zen: A): ZenValue<A> | null {
     case 'zen':
     case 'map': // Add 'map' case back
     case 'deepMap':
-    case 'karma': // Add 'task' case back
+    case 'zenAsync':
+    case 'karma': // Backward compatibility
       // For these types, _value directly matches ZenValue<A>
       // Cast needed as TS struggles with inference within generic function.
       return zen._value as ZenValue<A>;

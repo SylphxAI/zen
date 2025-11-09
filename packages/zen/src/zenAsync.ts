@@ -1,11 +1,11 @@
-// Karma: Full Reactive Async Store (like Riverpod AsyncProvider)
-import type { AnyZen, KarmaState, KarmaZen, Listener, Unsubscribe } from './types';
+// ZenAsync: Full Reactive Async Store (like Riverpod AsyncProvider)
+import type { AnyZen, ZenAsyncState, ZenAsync, Listener, Unsubscribe } from './types';
 
 // --- Type Definitions ---
 
 export type QueryKey = readonly unknown[];
 
-export interface KarmaOptions<Args extends unknown[] = unknown[]> {
+export interface ZenAsyncOptions<Args extends unknown[] = unknown[]> {
   /** Function to generate cache key. Returns array like ['user', id]. Default: JSON.stringify(args) */
   cacheKey?: (...args: Args) => QueryKey;
 
@@ -19,6 +19,9 @@ export interface KarmaOptions<Args extends unknown[] = unknown[]> {
   staleTime?: number;
 }
 
+/** @deprecated Use ZenAsyncOptions instead */
+export type KarmaOptions<Args extends unknown[] = unknown[]> = ZenAsyncOptions<Args>;
+
 // Per-parameter cache entry (reactive!)
 interface CacheEntry<T> {
   // Cached data
@@ -28,7 +31,7 @@ interface CacheEntry<T> {
   timestamp: number;
 
   // Reactive state
-  listeners: Set<Listener<KarmaState<T>>>;
+  listeners: Set<Listener<ZenAsyncState<T>>>;
   runningPromise: Promise<T> | undefined;
 
   // Lifecycle
@@ -37,8 +40,8 @@ interface CacheEntry<T> {
 
 // --- Global Cache (all karma instances share by default) ---
 
-const globalKarmaCache = new WeakMap<
-  KarmaZen<unknown, unknown[]>,
+const globalZenAsyncCache = new WeakMap<
+  ZenAsync<unknown, unknown[]>,
   Map<string, CacheEntry<unknown>>
 >();
 
@@ -46,14 +49,14 @@ const globalKarmaCache = new WeakMap<
 
 /** Get cache map for a karma instance */
 function getCacheMap<T, Args extends unknown[]>(
-  karma: KarmaZen<T, Args>,
+  karma: ZenAsync<T, Args>,
 ): Map<string, CacheEntry<T>> {
-  const k = karma as KarmaZen<unknown, unknown[]>;
-  let cache = globalKarmaCache.get(k) as Map<string, CacheEntry<T>> | undefined;
+  const k = karma as ZenAsync<unknown, unknown[]>;
+  let cache = globalZenAsyncCache.get(k) as Map<string, CacheEntry<T>> | undefined;
 
   if (!cache) {
     cache = new Map<string, CacheEntry<T>>();
-    globalKarmaCache.set(k, cache as Map<string, CacheEntry<unknown>>);
+    globalZenAsyncCache.set(k, cache as Map<string, CacheEntry<unknown>>);
   }
 
   return cache;
@@ -61,7 +64,7 @@ function getCacheMap<T, Args extends unknown[]>(
 
 /** Generate cache key string from args */
 function generateCacheKey<Args extends unknown[]>(
-  karma: KarmaZen<unknown, Args>,
+  karma: ZenAsync<unknown, Args>,
   args: Args,
 ): string {
   if (karma._cacheKeyFn) {
@@ -73,7 +76,7 @@ function generateCacheKey<Args extends unknown[]>(
 
 /** Get or create cache entry for specific args */
 function getOrCreateCacheEntry<T, Args extends unknown[]>(
-  karma: KarmaZen<T, Args>,
+  karma: ZenAsync<T, Args>,
   args: Args,
 ): CacheEntry<T> {
   const cache = getCacheMap(karma);
@@ -97,7 +100,7 @@ function getOrCreateCacheEntry<T, Args extends unknown[]>(
 }
 
 /** Get current state from cache entry */
-function getStateFromEntry<T>(entry: CacheEntry<T>): KarmaState<T> {
+function getStateFromEntry<T>(entry: CacheEntry<T>): ZenAsyncState<T> {
   if (entry.loading) {
     return { loading: true, error: undefined, data: undefined };
   }
@@ -116,7 +119,7 @@ function getStateFromEntry<T>(entry: CacheEntry<T>): KarmaState<T> {
  * Execute async function and update cache entry (reactive!)
  */
 async function executeFetch<T, Args extends unknown[]>(
-  karma: KarmaZen<T, Args>,
+  karma: ZenAsync<T, Args>,
   args: Args,
   entry: CacheEntry<T>,
 ): Promise<T> {
@@ -132,7 +135,7 @@ async function executeFetch<T, Args extends unknown[]>(
 
   // Notify all listeners of loading state (if changed)
   if (!oldLoading) {
-    const loadingState: KarmaState<T> = { loading: true, error: undefined, data: undefined };
+    const loadingState: ZenAsyncState<T> = { loading: true, error: undefined, data: undefined };
     for (const listener of entry.listeners) {
       listener(loadingState);
     }
@@ -155,7 +158,7 @@ async function executeFetch<T, Args extends unknown[]>(
       entry.runningPromise = undefined;
 
       // Notify all listeners of success (if data changed)
-      const successState: KarmaState<T> = { loading: false, error: undefined, data: result };
+      const successState: ZenAsyncState<T> = { loading: false, error: undefined, data: result };
       for (const listener of entry.listeners) {
         listener(successState);
       }
@@ -173,7 +176,7 @@ async function executeFetch<T, Args extends unknown[]>(
       entry.runningPromise = undefined;
 
       // Notify all listeners of error
-      const errorState: KarmaState<T> = { loading: false, error: errorObj, data: undefined };
+      const errorState: ZenAsyncState<T> = { loading: false, error: errorObj, data: undefined };
       for (const listener of entry.listeners) {
         listener(errorState);
       }
@@ -186,7 +189,7 @@ async function executeFetch<T, Args extends unknown[]>(
 /**
  * Subscribe to cache entry (reactive!)
  */
-function subscribeToEntry<T>(entry: CacheEntry<T>, listener: Listener<KarmaState<T>>): Unsubscribe {
+function subscribeToEntry<T>(entry: CacheEntry<T>, listener: Listener<ZenAsyncState<T>>): Unsubscribe {
   // Add listener
   entry.listeners.add(listener);
 
@@ -210,7 +213,7 @@ function subscribeToEntry<T>(entry: CacheEntry<T>, listener: Listener<KarmaState
  * Schedule disposal of cache entry (auto-dispose)
  */
 function scheduleDispose<T, Args extends unknown[]>(
-  karma: KarmaZen<T, Args>,
+  karma: ZenAsync<T, Args>,
   entry: CacheEntry<T>,
   cacheKey: string,
 ): void {
@@ -248,7 +251,7 @@ function scheduleDispose<T, Args extends unknown[]>(
  * @template T The type of data returned by async function
  * @param asyncFn The async function to execute
  * @param options Configuration options
- * @returns KarmaZen instance with reactive caching
+ * @returns ZenAsync instance with reactive caching
  *
  * @example
  * ```typescript
@@ -263,12 +266,12 @@ function scheduleDispose<T, Args extends unknown[]>(
  * );
  * ```
  */
-export function karma<T = void, Args extends unknown[] = unknown[]>(
+export function zenAsync<T = void, Args extends unknown[] = unknown[]>(
   asyncFn: (...args: Args) => Promise<T>,
-  options?: KarmaOptions<Args>,
-): KarmaZen<T, Args> {
-  const karmaZen: KarmaZen<T, Args> = {
-    _kind: 'karma',
+  options?: ZenAsyncOptions<Args>,
+): ZenAsync<T, Args> {
+  const zenAsyncInstance: ZenAsync<T, Args> = {
+    _kind: 'zenAsync',
     _value: { loading: false }, // Legacy, not used in v2
     _asyncFn: asyncFn,
     _cacheKeyFn: options?.cacheKey,
@@ -277,7 +280,7 @@ export function karma<T = void, Args extends unknown[] = unknown[]>(
     _staleTime: options?.staleTime,
   };
 
-  return karmaZen;
+  return zenAsyncInstance;
 }
 
 // --- API ---
@@ -294,17 +297,17 @@ export function karma<T = void, Args extends unknown[] = unknown[]>(
  * @example
  * ```typescript
  * // First call: fetches
- * await runKarma(fetchUser, 1);
+ * await runZenAsync(fetchUser, 1);
  *
  * // Second call: returns cache immediately (no refetch!)
- * await runKarma(fetchUser, 1);
+ * await runZenAsync(fetchUser, 1);
  *
  * // Different args: fetches
- * await runKarma(fetchUser, 2);
+ * await runZenAsync(fetchUser, 2);
  * ```
  */
-export function runKarma<T, Args extends unknown[]>(
-  karma: KarmaZen<T, Args>,
+export function runZenAsync<T, Args extends unknown[]>(
+  karma: ZenAsync<T, Args>,
   ...args: Args
 ): Promise<T> {
   const entry = getOrCreateCacheEntry(karma, args);
@@ -344,7 +347,7 @@ export function runKarma<T, Args extends unknown[]>(
  *
  * @example
  * ```typescript
- * const unsub = subscribeToKarma(fetchUser, [1], (state) => {
+ * const unsub = subscribeToZenAsync(fetchUser, [1], (state) => {
  *   if (state.loading) console.log('Loading...');
  *   if (state.data) console.log('User:', state.data);
  *   if (state.error) console.log('Error:', state.error);
@@ -354,10 +357,10 @@ export function runKarma<T, Args extends unknown[]>(
  * unsub(); // Auto-dispose after cacheTime
  * ```
  */
-export function subscribeToKarma<T, Args extends unknown[]>(
-  karma: KarmaZen<T, Args>,
+export function subscribeToZenAsync<T, Args extends unknown[]>(
+  karma: ZenAsync<T, Args>,
   args: Args,
-  listener: Listener<KarmaState<T>>,
+  listener: Listener<ZenAsyncState<T>>,
 ): Unsubscribe {
   const entry = getOrCreateCacheEntry(karma, args);
   const key = generateCacheKey(karma, args);
@@ -385,10 +388,10 @@ export function subscribeToKarma<T, Args extends unknown[]>(
  * @param args Arguments for the async function
  * @returns Current state snapshot
  */
-export function getKarmaState<T, Args extends unknown[]>(
-  karma: KarmaZen<T, Args>,
+export function getZenAsyncState<T, Args extends unknown[]>(
+  karma: ZenAsync<T, Args>,
   args: Args,
-): KarmaState<T> {
+): ZenAsyncState<T> {
   const entry = getOrCreateCacheEntry(karma, args);
   return getStateFromEntry(entry);
 }
@@ -398,14 +401,14 @@ export function getKarmaState<T, Args extends unknown[]>(
 /**
  * Global cache control API for karma instances
  */
-export const karmaCache = {
+export const zenAsyncCache = {
   /**
    * Get current cached state (no fetch, no subscription)
    */
   get<T, Args extends unknown[]>(
-    karma: KarmaZen<T, Args>,
+    karma: ZenAsync<T, Args>,
     ...args: Args
-  ): KarmaState<T> | undefined {
+  ): ZenAsyncState<T> | undefined {
     const cache = getCacheMap(karma);
     const key = generateCacheKey(karma, args);
     const entry = cache.get(key) as CacheEntry<T> | undefined;
@@ -418,7 +421,7 @@ export const karmaCache = {
    *
    * Notifies all active listeners immediately.
    */
-  set<T, Args extends unknown[]>(karma: KarmaZen<T, Args>, args: Args, data: T): void {
+  set<T, Args extends unknown[]>(karma: ZenAsync<T, Args>, args: Args, data: T): void {
     const entry = getOrCreateCacheEntry(karma, args);
 
     entry.data = data;
@@ -427,7 +430,7 @@ export const karmaCache = {
     entry.timestamp = Date.now();
 
     // Notify all listeners (reactive!)
-    const state: KarmaState<T> = { loading: false, error: undefined, data };
+    const state: ZenAsyncState<T> = { loading: false, error: undefined, data };
     for (const listener of entry.listeners) {
       listener(state);
     }
@@ -439,7 +442,7 @@ export const karmaCache = {
    * If entry has active listeners, immediately triggers refetch.
    * If no listeners, just clears cache.
    */
-  invalidate<T, Args extends unknown[]>(karma: KarmaZen<T, Args>, ...args: Args): void {
+  invalidate<T, Args extends unknown[]>(karma: ZenAsync<T, Args>, ...args: Args): void {
     const cache = getCacheMap(karma);
     const key = generateCacheKey(karma, args);
     const entry = cache.get(key) as CacheEntry<T> | undefined;
@@ -464,7 +467,7 @@ export const karmaCache = {
   /**
    * Invalidate all cache entries for this karma
    */
-  invalidateAll<T>(karma: KarmaZen<T, unknown[]>): void {
+  invalidateAll<T>(karma: ZenAsync<T, unknown[]>): void {
     const cache = getCacheMap(karma);
 
     // Clear all entries
@@ -475,7 +478,7 @@ export const karmaCache = {
   /**
    * Force dispose cache entry (even if has listeners)
    */
-  dispose<T, Args extends unknown[]>(karma: KarmaZen<T, Args>, ...args: Args): void {
+  dispose<T, Args extends unknown[]>(karma: ZenAsync<T, Args>, ...args: Args): void {
     const cache = getCacheMap(karma);
     const key = generateCacheKey(karma, args);
     const entry = cache.get(key) as CacheEntry<T> | undefined;
@@ -490,7 +493,7 @@ export const karmaCache = {
   /**
    * Get cache statistics (debug)
    */
-  stats<T>(karma: KarmaZen<T, unknown[]>): {
+  stats<T>(karma: ZenAsync<T, unknown[]>): {
     entries: number;
     totalListeners: number;
     cacheKeys: string[];

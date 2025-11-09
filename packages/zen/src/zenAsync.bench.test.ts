@@ -1,33 +1,33 @@
 import { describe, expect, it } from 'vitest';
-import { karma, runKarma, subscribeToKarma, karmaCache } from './karma';
+import { zenAsync, runZenAsync, subscribeToZenAsync, karmaCache } from './zenAsync';
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe('karma performance benchmarks', () => {
   describe('Cache performance', () => {
     it('cache miss (first call)', async () => {
-      const fetchData = karma(async (id: number) => {
+      const fetchData = zenAsync(async (id: number) => {
         await tick();
         return { id, data: `Data ${id}` };
       });
 
-      await runKarma(fetchData, Math.random());
+      await runZenAsync(fetchData, Math.random());
     });
 
     it('cache hit (immediate return)', async () => {
-      const fetchData = karma(async (id: number) => {
+      const fetchData = zenAsync(async (id: number) => {
         await tick();
         return { id, data: `Data ${id}` };
       });
 
       // Prime cache
       const missStart = performance.now();
-      await runKarma(fetchData, 1);
+      await runZenAsync(fetchData, 1);
       const missDuration = performance.now() - missStart;
 
       // Benchmark cache hit
       const hitStart = performance.now();
-      await runKarma(fetchData, 1);
+      await runZenAsync(fetchData, 1);
       const hitDuration = performance.now() - hitStart;
 
       console.log(`  Cache miss: ${missDuration.toFixed(2)}ms, Cache hit: ${hitDuration.toFixed(2)}ms (${(missDuration / hitDuration).toFixed(0)}x faster)`);
@@ -35,34 +35,34 @@ describe('karma performance benchmarks', () => {
     });
 
     it('cache hit with 100 entries', async () => {
-      const fetchData = karma(async (id: number) => {
+      const fetchData = zenAsync(async (id: number) => {
         await tick();
         return { id };
       });
 
       // Prime cache with 100 entries
       for (let i = 0; i < 100; i++) {
-        await runKarma(fetchData, i);
+        await runZenAsync(fetchData, i);
       }
 
       // Benchmark cache hit
-      await runKarma(fetchData, 50);
+      await runZenAsync(fetchData, 50);
     });
 
     it('cache hit with 1000 entries', async () => {
-      const fetchData = karma(async (id: number) => {
+      const fetchData = zenAsync(async (id: number) => {
         await tick();
         return { id };
       });
 
       // Prime cache with 1000 entries
       for (let i = 0; i < 1000; i++) {
-        await runKarma(fetchData, i);
+        await runZenAsync(fetchData, i);
       }
 
       // Benchmark cache hit
       const start = performance.now();
-      await runKarma(fetchData, 500);
+      await runZenAsync(fetchData, 500);
       const duration = performance.now() - start;
 
       console.log(`  Cache hit with 1000 entries: ${duration.toFixed(2)}ms`);
@@ -72,25 +72,25 @@ describe('karma performance benchmarks', () => {
 
   describe('Concurrent requests', () => {
     it('10 concurrent requests (same args)', async () => {
-      const fetchData = karma(async (id: number) => {
+      const fetchData = zenAsync(async (id: number) => {
         await tick();
         return { id };
       });
 
-      const promises = Array(10).fill(0).map(() => runKarma(fetchData, 1));
+      const promises = Array(10).fill(0).map(() => runZenAsync(fetchData, 1));
       await Promise.all(promises);
     });
 
     it('100 concurrent requests (same args)', async () => {
       let execCount = 0;
-      const fetchData = karma(async (id: number) => {
+      const fetchData = zenAsync(async (id: number) => {
         execCount++;
         await tick();
         return { id };
       });
 
       const start = performance.now();
-      const promises = Array(100).fill(0).map(() => runKarma(fetchData, 1));
+      const promises = Array(100).fill(0).map(() => runZenAsync(fetchData, 1));
       await Promise.all(promises);
       const duration = performance.now() - start;
 
@@ -99,47 +99,47 @@ describe('karma performance benchmarks', () => {
     });
 
     it('10 concurrent requests (different args)', async () => {
-      const fetchData = karma(async (id: number) => {
+      const fetchData = zenAsync(async (id: number) => {
         await tick();
         return { id };
       });
 
-      const promises = Array(10).fill(0).map((_, i) => runKarma(fetchData, i));
+      const promises = Array(10).fill(0).map((_, i) => runZenAsync(fetchData, i));
       await Promise.all(promises);
     });
 
     it('100 concurrent requests (different args)', async () => {
-      const fetchData = karma(async (id: number) => {
+      const fetchData = zenAsync(async (id: number) => {
         await tick();
         return { id };
       });
 
-      const promises = Array(100).fill(0).map((_, i) => runKarma(fetchData, i));
+      const promises = Array(100).fill(0).map((_, i) => runZenAsync(fetchData, i));
       await Promise.all(promises);
     });
   });
 
   describe('Listener notifications', () => {
     it('1 listener notification', async () => {
-      const fetchData = karma(async (id: number) => {
+      const fetchData = zenAsync(async (id: number) => {
         await tick();
         return { id };
       });
 
-      const unsub = subscribeToKarma(fetchData, [1], () => {});
+      const unsub = subscribeToZenAsync(fetchData, [1], () => {});
       await tick();
       await tick();
       unsub();
     });
 
     it('10 listeners notification', async () => {
-      const fetchData = karma(async (id: number) => {
+      const fetchData = zenAsync(async (id: number) => {
         await tick();
         return { id };
       });
 
       const unsubs = Array(10).fill(0).map(() =>
-        subscribeToKarma(fetchData, [1], () => {})
+        subscribeToZenAsync(fetchData, [1], () => {})
       );
 
       await tick();
@@ -151,13 +151,13 @@ describe('karma performance benchmarks', () => {
     });
 
     it('100 listeners notification', async () => {
-      const fetchData = karma(async (id: number) => {
+      const fetchData = zenAsync(async (id: number) => {
         await tick();
         return { id };
       });
 
       const unsubs = Array(100).fill(0).map(() =>
-        subscribeToKarma(fetchData, [1], () => {})
+        subscribeToZenAsync(fetchData, [1], () => {})
       );
 
       await tick();
@@ -169,14 +169,14 @@ describe('karma performance benchmarks', () => {
     });
 
     it('1000 listeners notification', async () => {
-      const fetchData = karma(async (id: number) => {
+      const fetchData = zenAsync(async (id: number) => {
         await tick();
         return { id };
       });
 
       const start = performance.now();
       const unsubs = Array(1000).fill(0).map(() =>
-        subscribeToKarma(fetchData, [1], () => {})
+        subscribeToZenAsync(fetchData, [1], () => {})
       );
 
       await tick();
@@ -193,12 +193,12 @@ describe('karma performance benchmarks', () => {
 
   describe('Invalidation performance', () => {
     it('invalidate with 1 listener', async () => {
-      const fetchData = karma(async (id: number) => {
+      const fetchData = zenAsync(async (id: number) => {
         await tick();
         return { id };
       });
 
-      const unsub = subscribeToKarma(fetchData, [1], () => {});
+      const unsub = subscribeToZenAsync(fetchData, [1], () => {});
       await tick();
       await tick();
 
@@ -210,13 +210,13 @@ describe('karma performance benchmarks', () => {
     });
 
     it('invalidate with 10 listeners', async () => {
-      const fetchData = karma(async (id: number) => {
+      const fetchData = zenAsync(async (id: number) => {
         await tick();
         return { id };
       });
 
       const unsubs = Array(10).fill(0).map(() =>
-        subscribeToKarma(fetchData, [1], () => {})
+        subscribeToZenAsync(fetchData, [1], () => {})
       );
       await tick();
       await tick();
@@ -231,13 +231,13 @@ describe('karma performance benchmarks', () => {
     });
 
     it('invalidate with 100 listeners', async () => {
-      const fetchData = karma(async (id: number) => {
+      const fetchData = zenAsync(async (id: number) => {
         await tick();
         return { id };
       });
 
       const unsubs = Array(100).fill(0).map(() =>
-        subscribeToKarma(fetchData, [1], () => {})
+        subscribeToZenAsync(fetchData, [1], () => {})
       );
       await tick();
       await tick();
@@ -254,29 +254,29 @@ describe('karma performance benchmarks', () => {
 
   describe('Cache key generation', () => {
     it('JSON.stringify cache key (simple)', async () => {
-      const fetchData = karma(async (id: number) => {
+      const fetchData = zenAsync(async (id: number) => {
         await tick();
         return { id };
       });
 
-      await runKarma(fetchData, 1);
-      await runKarma(fetchData, 1);
+      await runZenAsync(fetchData, 1);
+      await runZenAsync(fetchData, 1);
     });
 
     it('JSON.stringify cache key (complex object)', async () => {
-      const fetchData = karma(async (obj: { id: number; name: string; tags: string[] }) => {
+      const fetchData = zenAsync(async (obj: { id: number; name: string; tags: string[] }) => {
         await tick();
         return { ...obj };
       });
 
       const complexObj = { id: 1, name: 'Test', tags: ['a', 'b', 'c'] };
 
-      await runKarma(fetchData, complexObj);
-      await runKarma(fetchData, complexObj);
+      await runZenAsync(fetchData, complexObj);
+      await runZenAsync(fetchData, complexObj);
     });
 
     it('custom cache key function', async () => {
-      const fetchData = karma(
+      const fetchData = zenAsync(
         async (obj: { id: number; name: string }) => {
           await tick();
           return { ...obj };
@@ -288,14 +288,14 @@ describe('karma performance benchmarks', () => {
 
       const obj = { id: 1, name: 'Test' };
 
-      await runKarma(fetchData, obj);
-      await runKarma(fetchData, obj);
+      await runZenAsync(fetchData, obj);
+      await runZenAsync(fetchData, obj);
     });
   });
 
   describe('Stale-while-revalidate', () => {
     it('stale cache (background refetch)', async () => {
-      const fetchData = karma(
+      const fetchData = zenAsync(
         async (id: number) => {
           await tick();
           return { id };
@@ -303,15 +303,15 @@ describe('karma performance benchmarks', () => {
         { staleTime: 0 }
       );
 
-      await runKarma(fetchData, 1);
+      await runZenAsync(fetchData, 1);
       await new Promise(r => setTimeout(r, 5));
-      await runKarma(fetchData, 1);
+      await runZenAsync(fetchData, 1);
     });
   });
 
   describe('Memory and cleanup', () => {
     it('auto-dispose (no listeners)', async () => {
-      const fetchData = karma(
+      const fetchData = zenAsync(
         async (id: number) => {
           await tick();
           return { id };
@@ -319,7 +319,7 @@ describe('karma performance benchmarks', () => {
         { cacheTime: 10 }
       );
 
-      const unsub = subscribeToKarma(fetchData, [1], () => {});
+      const unsub = subscribeToZenAsync(fetchData, [1], () => {});
       await tick();
       await tick();
       unsub();
@@ -328,7 +328,7 @@ describe('karma performance benchmarks', () => {
     });
 
     it('keepAlive (no disposal)', async () => {
-      const fetchData = karma(
+      const fetchData = zenAsync(
         async (id: number) => {
           await tick();
           return { id };
@@ -336,7 +336,7 @@ describe('karma performance benchmarks', () => {
         { keepAlive: true }
       );
 
-      const unsub = subscribeToKarma(fetchData, [1], () => {});
+      const unsub = subscribeToZenAsync(fetchData, [1], () => {});
       await tick();
       await tick();
       unsub();

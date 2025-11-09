@@ -46,7 +46,12 @@ export const listenKeys = _listenKeys;
 export { setPath as setDeepMapPath, set as setDeepMapValue } from './deepMap';
 export { runZenAsync, getZenAsyncState, subscribeToZenAsync, zenAsyncCache } from './zenAsync';
 /** @deprecated Use runZenAsync instead */
-export { runZenAsync as runKarma, getZenAsyncState as getKarmaState, subscribeToZenAsync as subscribeToKarma, zenAsyncCache as karmaCache } from './zenAsync';
+export {
+  runZenAsync as runKarma,
+  getZenAsyncState as getKarmaState,
+  subscribeToZenAsync as subscribeToKarma,
+  zenAsyncCache as karmaCache,
+} from './zenAsync';
 export { batchedUpdate } from './batchedUpdate';
 export { batched } from './batched';
 export { effect } from './effect';

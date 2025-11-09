@@ -74,7 +74,9 @@ export type DeepMapZen<T extends object = object> = ZenWithValue<T> & {
 };
 
 /** Represents a ZenAsync atom holding state and the async function. */
-export type ZenAsync<T = void, Args extends unknown[] = unknown[]> = ZenWithValue<ZenAsyncState<T>> & {
+export type ZenAsync<T = void, Args extends unknown[] = unknown[]> = ZenWithValue<
+  ZenAsyncState<T>
+> & {
   _kind: 'zenAsync';
   _asyncFn: (...args: Args) => Promise<T>;
   _cacheKeyFn?: (...args: Args) => readonly unknown[]; // QueryKey format

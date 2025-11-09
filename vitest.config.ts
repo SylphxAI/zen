@@ -2,7 +2,7 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    workspace: ['packages/*'],
+    projects: ['packages/*'],
     // Set default environment for all tests in the workspace
     environment: 'jsdom',
     // Optional: Add other global test configurations here

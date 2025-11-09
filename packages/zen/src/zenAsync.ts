@@ -1,5 +1,5 @@
 // ZenAsync: Full Reactive Async Store (like Riverpod AsyncProvider)
-import type { AnyZen, ZenAsyncState, ZenAsync, Listener, Unsubscribe } from './types';
+import type { AnyZen, Listener, Unsubscribe, ZenAsync, ZenAsyncState } from './types';
 
 // --- Type Definitions ---
 
@@ -189,7 +189,10 @@ async function executeFetch<T, Args extends unknown[]>(
 /**
  * Subscribe to cache entry (reactive!)
  */
-function subscribeToEntry<T>(entry: CacheEntry<T>, listener: Listener<ZenAsyncState<T>>): Unsubscribe {
+function subscribeToEntry<T>(
+  entry: CacheEntry<T>,
+  listener: Listener<ZenAsyncState<T>>,
+): Unsubscribe {
   // Add listener
   entry.listeners.add(listener);
 

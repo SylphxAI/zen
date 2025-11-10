@@ -12,9 +12,6 @@ hero:
     - theme: alt
       text: View on GitHub
       link: https://github.com/sylphxltd/zen
-  image:
-    src: /logo.svg
-    alt: Zen
 
 features:
   - icon: 🪶

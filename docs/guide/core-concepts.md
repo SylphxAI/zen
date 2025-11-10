@@ -209,7 +209,7 @@ setKey(user, 'name', 'Jane'); // Logs: "Name or email changed: ..."
 
 ## Batching
 
-Batch multiple updates to trigger subscribers only once.
+Batch multiple updates to notify subscribers only once.
 
 ```typescript
 import { zen, batch } from '@sylphx/zen';

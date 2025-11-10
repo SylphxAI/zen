@@ -2,7 +2,7 @@
 
 ## batch()
 
-Groups multiple updates to trigger subscribers only once.
+Groups multiple updates to notify subscribers only once.
 
 ```typescript
 function batch(fn: () => void): void

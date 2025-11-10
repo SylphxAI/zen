@@ -101,9 +101,7 @@ export default defineConfig({
       ],
     },
 
-    socialLinks: [
-      { icon: 'github', link: 'https://github.com/sylphxltd/zen' },
-    ],
+    socialLinks: [{ icon: 'github', link: 'https://github.com/sylphxltd/zen' }],
 
     footer: {
       message: 'Released under the MIT License.',

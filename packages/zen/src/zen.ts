@@ -91,7 +91,10 @@ export function updateIfNecessary<A extends AnyZen>(zen: A): boolean {
     return false;
   }
 
-  if ((zen._kind === 'computed' || zen._kind === 'computedAsync' || zen._kind === 'select') && '_update' in zen) {
+  if (
+    (zen._kind === 'computed' || zen._kind === 'computedAsync' || zen._kind === 'select') &&
+    '_update' in zen
+  ) {
     return (zen as any)._update();
   }
 
@@ -381,7 +384,11 @@ export function subscribe<A extends AnyZen>(zen: A, listener: Listener<ZenValue<
   // For computedAsync, trigger initial execution if not loaded
   if (kind === 'computedAsync') {
     const computedAsync = zen as ComputedAsyncZen<any>;
-    if (!computedAsync._value.loading && computedAsync._value.data === undefined && !computedAsync._runningPromise) {
+    if (
+      !computedAsync._value.loading &&
+      computedAsync._value.data === undefined &&
+      !computedAsync._runningPromise
+    ) {
       computedAsync._executeAsync().catch(() => {
         // Error already handled
       });

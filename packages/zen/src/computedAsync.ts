@@ -127,8 +127,7 @@ async function executeAsyncCalculation<T>(zen: ComputedAsyncZen<T>): Promise<voi
     }
 
     // Check if value actually changed
-    const dataChanged =
-      oldState.data === undefined || !zen._equalityFn(result, oldState.data as T);
+    const dataChanged = oldState.data === undefined || !zen._equalityFn(result, oldState.data as T);
 
     // Update to success state
     const newState: ZenAsyncState<T> = {

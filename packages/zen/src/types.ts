@@ -71,7 +71,6 @@ export type DeepMapZen<T extends object = object> = ZenWithValue<T> & {
   // No extra properties needed, structure matches ZenWithValue<Object>
 };
 
-
 /** Represents a Select Zen (lightweight single-source selector). */
 export type SelectZen<T = unknown, S = unknown> = {
   _kind: 'select';

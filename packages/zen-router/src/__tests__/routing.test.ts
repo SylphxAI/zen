@@ -1,4 +1,3 @@
-import { set } from '@sylphx/zen'; // Import the functional set
 import { beforeEach, describe, expect, it } from 'vitest';
 import { $router } from '../index';
 import { matchRoutes } from '../matcher'; // Assuming matchRoutes is exported or made available for testing
@@ -19,7 +18,7 @@ describe('Router - Routing Logic', () => {
     // Or ensure defineRoutes returns a fresh set
     defineRoutes(testRoutes);
     // Reset router store if needed
-    set($router, { path: '', params: {}, search: {} }); // Use functional set
+    $router.value = { path: '', params: {}, search: {} };
   });
 
   it('should define and retrieve routes', () => {

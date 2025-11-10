@@ -1,4 +1,4 @@
-import { type Zen, get, subscribe } from '@sylphx/zen';
+import { type Zen, subscribe } from '@sylphx/zen';
 
 /**
  * Svelte-compatible store interface
@@ -32,7 +32,7 @@ export function fromZen<Value>(store: Zen<Value>): Readable<Value> {
   return {
     subscribe(subscriber: (value: Value) => void): () => void {
       // Immediately call with current value (Svelte store contract)
-      subscriber(get(store));
+      subscriber(store.value);
 
       // Subscribe to future changes
       return subscribe(store, subscriber);
@@ -66,8 +66,3 @@ export function fromZen<Value>(store: Zen<Value>): Readable<Value> {
 export function useStore<Value>(store: Zen<Value>): Readable<Value> {
   return fromZen(store);
 }
-
-/**
- * Re-export Zen's get and set for convenience
- */
-export { get, set } from '@sylphx/zen';

@@ -1,4 +1,4 @@
-import { type Zen, get, subscribe } from '@sylphx/zen';
+import { type Zen, subscribe } from '@sylphx/zen';
 import { type Ref, onMounted, onUnmounted, ref } from 'vue';
 
 /**
@@ -10,7 +10,7 @@ import { type Ref, onMounted, onUnmounted, ref } from 'vue';
  */
 export function useStore<Value>(store: Zen<Value>): Ref<Value> {
   // Get the initial value synchronously
-  const initialValue: Value = get(store);
+  const initialValue: Value = store.value;
   // Create a reactive ref with the initial value
   const state = ref<Value>(initialValue) as Ref<Value>; // Cast needed for initial value type
 

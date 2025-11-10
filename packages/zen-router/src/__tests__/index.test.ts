@@ -1,4 +1,3 @@
-import { get } from '@sylphx/zen';
 import { describe, expect, it } from 'vitest';
 
 // Import core exports
@@ -23,7 +22,7 @@ describe('@sylph/router core exports', () => {
   });
 
   it('should initialize with default empty state', () => {
-    const initialState = get($router); // Use the imported get function
+    const initialState = $router.value;
     expect(initialState).toEqual({
       path: '',
       params: {},

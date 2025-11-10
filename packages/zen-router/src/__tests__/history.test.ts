@@ -1,4 +1,4 @@
-import { get, setKey } from '@sylphx/zen';
+import { setKey } from '@sylphx/zen';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   handleLinkClick,
@@ -7,7 +7,7 @@ import {
   startHistoryListener,
   stopHistoryListener,
 } from '../history'; // Import functions to test
-// We might need to import $router and setKey/get if tests interact with state
+// We might need to import $router and setKey if tests interact with state
 import { $router } from '../index';
 
 // Mock browser environment
@@ -93,7 +93,7 @@ describe('Router History', () => {
       expect(mockPushState).toHaveBeenCalledWith(null, '', '/test-path');
       // We should also test if updateStateFromLocation was called implicitly
       // This requires spying on it or checking the $router state change.
-      expect(get($router).path).toBe('/test-path');
+      expect($router.value.path).toBe('/test-path');
     });
 
     it('should not call history.pushState outside browser environment', () => {
@@ -120,7 +120,7 @@ describe('Router History', () => {
       redirect('/redirect-path');
       expect(mockReplaceState).toHaveBeenCalledOnce();
       expect(mockReplaceState).toHaveBeenCalledWith(null, '', '/redirect-path');
-      expect(get($router).path).toBe('/redirect-path');
+      expect($router.value.path).toBe('/redirect-path');
     });
 
     it('should not call history.replaceState outside browser environment', () => {
@@ -176,7 +176,7 @@ describe('Router History', () => {
       // expect(openSpy).toHaveBeenCalledOnce(); // REMOVED
       expect(mockPushState).toHaveBeenCalledOnce(); // Keep this check
       expect(mockPushState).toHaveBeenCalledWith(null, '', '/internal-link');
-      expect(get($router).path).toBe('/internal-link');
+      expect($router.value.path).toBe('/internal-link');
     });
     it('should ignore clicks with modifier keys', () => {
       const link = document.createElement('a');
@@ -312,7 +312,7 @@ describe('Router History', () => {
       expect(mockEvent.preventDefault).toHaveBeenCalledOnce(); // Re-enable this check
       expect(mockPushState).toHaveBeenCalledOnce();
       expect(mockPushState).toHaveBeenCalledWith(null, '', '/nested-link');
-      expect(get($router).path).toBe('/nested-link');
+      expect($router.value.path).toBe('/nested-link');
     });
   });
 });

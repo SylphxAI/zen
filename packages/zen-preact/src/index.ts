@@ -1,4 +1,4 @@
-import { type Zen, get, subscribe } from '@sylphx/zen';
+import { type Zen, subscribe } from '@sylphx/zen';
 import { useEffect, useState } from 'preact/hooks';
 
 /**
@@ -23,11 +23,11 @@ import { useEffect, useState } from 'preact/hooks';
  * ```
  */
 export function useStore<Value>(store: Zen<Value>): Value {
-  const [value, setValue] = useState(() => get(store));
+  const [value, setValue] = useState(() => store.value);
 
   useEffect(() => {
     // Sync check in case value changed between initial get() and subscribe()
-    setValue(get(store));
+    setValue(store.value);
 
     // Subscribe to future changes
     return subscribe(store, setValue);

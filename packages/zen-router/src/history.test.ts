@@ -1,4 +1,4 @@
-import { get, map, setKey } from '@sylphx/zen';
+import { map, setKey } from '@sylphx/zen';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   handleLinkClick,
@@ -119,7 +119,7 @@ beforeEach(async () => {
   vi.mocked(utils.parseQuery).mockReturnValue({});
 
   // Reset the state of the *real* $router store
-  core.set($router, { path: '', search: {}, params: {} });
+  $router.value = { path: '', search: {}, params: {} };
 
   // Spy on the actual setKey function if needed for assertions
   // vi.spyOn(core, 'setKey'); // Example: Add this if tests need to assert setKey calls
@@ -151,7 +151,7 @@ describe('History API', () => {
       startHistoryListener(); // Calls updateStateFromLocation
 
       // Assert using the real $router store's state
-      const finalState = core.get($router);
+      const finalState = $router.value;
       expect(finalState.path).toBe('/users/123');
       expect(finalState.search).toEqual(mockSearch);
       expect(finalState.params).toEqual(mockMatch.params);
@@ -164,7 +164,7 @@ describe('History API', () => {
       vi.mocked(routes.getRoutes).mockReturnValue([{ path: '/users/:id' }]);
       vi.mocked(matcher.matchRoutes).mockReturnValue(mockMatch);
       // Set initial state of the real $router store
-      core.set($router, { path: '/users/123', search: {}, params: { id: '123' } });
+      $router.value = { path: '/users/123', search: {}, params: { id: '123' } };
 
       // Spy on setKey to check it wasn't called
       const setKeySpy = vi.spyOn(core, 'setKey');
@@ -181,7 +181,7 @@ describe('History API', () => {
       startHistoryListener();
 
       // Assert using the real $router store's state
-      const finalState = core.get($router);
+      const finalState = $router.value;
       expect(finalState.path).toBe('/not-found');
       expect(finalState.search).toEqual({});
       expect(finalState.params).toEqual({});
@@ -271,7 +271,7 @@ describe('History API', () => {
       expect(mockPushState).toHaveBeenCalledWith(null, '', '/new-path');
       expect(vi.mocked(matcher.matchRoutes)).toHaveBeenCalledTimes(1); // update called
       // Assert state change on real $router
-      expect(core.get($router).path).toBe('/new-path');
+      expect($router.value.path).toBe('/new-path');
     });
 
     // Test non-browser behavior (should be no-op)
@@ -297,7 +297,7 @@ describe('History API', () => {
       expect(mockReplaceState).toHaveBeenCalledWith(null, '', '/another-path');
       expect(vi.mocked(matcher.matchRoutes)).toHaveBeenCalledTimes(1); // update called
       // Assert state change on real $router
-      expect(core.get($router).path).toBe('/another-path');
+      expect($router.value.path).toBe('/another-path');
     });
 
     // Test non-browser behavior (should be no-op)
@@ -375,7 +375,7 @@ describe('History API', () => {
       // Check that pushState mock (which updates location) was called
       expect(mockPushState).toHaveBeenCalledWith(null, '', '/internal');
       // Check that updateState was triggered after pushState (via open)
-      expect(core.get($router).path).toBe('/internal');
+      expect($router.value.path).toBe('/internal');
     });
 
     // --- Tests for ignoring clicks (modifiers, target, download, rel, origin, non-anchor) remain the same ---
@@ -447,7 +447,7 @@ describe('History API', () => {
       // Check that pushState mock (which updates location) was called
       expect(mockPushState).toHaveBeenCalledWith(null, '', '/fallback');
       // Check that updateState was triggered after pushState (via open)
-      expect(core.get($router).path).toBe('/fallback');
+      expect($router.value.path).toBe('/fallback');
     });
 
     it('should not call open via fallback if no parent anchor found', () => {

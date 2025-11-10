@@ -1,4 +1,4 @@
-import { get, subscribe } from '@sylphx/zen';
+import { subscribe } from '@sylphx/zen';
 import { $router, type RouterState } from '@sylphx/zen-router';
 import { useEffect, useState } from 'react';
 
@@ -12,7 +12,7 @@ import { useEffect, useState } from 'react';
  */
 export function useRouter(): RouterState {
   // Get the initial state synchronously
-  const [state, setState] = useState<RouterState>(get($router));
+  const [state, setState] = useState<RouterState>($router.value);
 
   useEffect(() => {
     // Subscribe to changes
@@ -22,8 +22,8 @@ export function useRouter(): RouterState {
       setState(newState);
     });
 
-    // Initial sync check after mount, in case state changed between initial get() and subscribe()
-    const currentState = get($router);
+    // Initial sync check after mount, in case state changed between initial .value read and subscribe()
+    const currentState = $router.value;
     if (currentState !== state) {
       setState(currentState);
     }

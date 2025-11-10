@@ -1,5 +1,4 @@
 import { craft, craftWithPatches } from '@sylphx/craft';
-import { get, set } from '@sylphx/zen';
 import type { Zen } from '@sylphx/zen';
 import type { CraftOptions, Patch } from './types';
 
@@ -26,7 +25,7 @@ export function craftZen<T>(
   recipe: (draft: T) => undefined,
   options?: CraftOptions,
 ): [Patch[], Patch[]] | undefined {
-  const currentState = get(targetZen);
+  const currentState = targetZen.value;
 
   // Directly use craftWithPatches or craft to avoid intermediate produce layer
   if (options?.patches || options?.inversePatches) {
@@ -35,7 +34,7 @@ export function craftZen<T>(
       recipe as (draft: T) => T | undefined,
     );
     if (nextState !== currentState) {
-      set(targetZen, nextState);
+      targetZen.value = nextState;
     }
     return [patches, inversePatches];
   }
@@ -43,6 +42,6 @@ export function craftZen<T>(
   // Fast path: no patches needed
   const nextState = craft(currentState, recipe as (draft: T) => T | undefined);
   if (nextState !== currentState) {
-    set(targetZen, nextState);
+    targetZen.value = nextState;
   }
 }

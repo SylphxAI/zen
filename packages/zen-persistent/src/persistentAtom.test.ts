@@ -1,4 +1,3 @@
-import { get, set } from '@sylphx/zen';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { persistentZen } from './index';
 
@@ -36,7 +35,7 @@ describe('persistentZen', () => {
   it('should initialize with initialValue if storage is empty', () => { // Remove async
     const initial = { count: 0 };
     const store = persistentZen(TEST_KEY, initial);
-    expect(get(store)).toEqual(initial);
+    expect(store.value).toEqual(initial);
     // Check if initial value was written to storage
     // await nextTick(); // Remove await
     expect(localStorageMock.getItem(TEST_KEY)).toBe(JSON.stringify(initial)); // Use mock
@@ -50,7 +49,7 @@ describe('persistentZen', () => {
     const store = persistentZen(TEST_KEY, initial);
 
     // Value should be loaded from storage, overriding initialValue
-    expect(get(store)).toEqual(storedValue);
+    expect(store.value).toEqual(storedValue);
   });
 
   it('should update storage when atom value is set', () => { // Remove async
@@ -58,9 +57,9 @@ describe('persistentZen', () => {
     const store = persistentZen(TEST_KEY, initial);
     const newValue = { count: 5 };
 
-    set(store, newValue);
+    store.value = newValue;
 
-    expect(get(store)).toEqual(newValue);
+    expect(store.value).toEqual(newValue);
     // await nextTick(); // Remove await
     expect(localStorageMock.getItem(TEST_KEY)).toBe(JSON.stringify(newValue)); // Use mock
   });

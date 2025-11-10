@@ -1,4 +1,4 @@
-import { type Zen, set, zen } from '@sylphx/zen';
+import { type Zen, zen } from '@sylphx/zen';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { defineComponent, nextTick } from 'vue';
@@ -49,7 +49,7 @@ describe('useStore', () => {
     expect(reactiveValue?.value).toBe(0);
 
     // Update the store
-    set(testAtom, 5);
+    testAtom.value = 5;
     await nextTick(); // Allow Vue reactivity to update
 
     // Check if the reactive ref updated

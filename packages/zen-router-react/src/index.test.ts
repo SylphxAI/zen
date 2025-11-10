@@ -1,16 +1,15 @@
-// Import get/subscribe normally - they will be mocked by vi.mock below
-import { type MapZen, type Unsubscribe, get, map, subscribe } from '@sylphx/zen';
+// Import subscribe normally - they will be mocked by vi.mock below
+import { type MapZen, type Unsubscribe, map, subscribe } from '@sylphx/zen';
 import { $router, type RouterState } from '@sylphx/zen-router'; // Import real $router
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useRouter } from './index'; // Import the hook
 
-// Mock the core get/subscribe functions
+// Mock the core subscribe function
 vi.mock('@sylphx/zen', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@sylphx/zen')>();
   return {
     ...actual,
-    get: vi.fn(),
     subscribe: vi.fn(),
   };
 });
@@ -26,7 +25,6 @@ vi.mock('@sylphx/zen', async (importOriginal) => {
 // });
 
 describe('useRouter', () => {
-  let mockGet: ReturnType<typeof vi.fn>;
   let mockSubscribe: ReturnType<typeof vi.fn>;
   let mockUnsubscribe: ReturnType<typeof vi.fn>;
   let listeners: Set<(state: RouterState) => void>;
@@ -39,19 +37,13 @@ describe('useRouter', () => {
     currentState = { path: '/', search: {}, params: {} }; // Initial state
 
     // Get mock functions using vi.mocked with the imported functions
-    mockGet = vi.mocked(get);
     mockSubscribe = vi.mocked(subscribe);
     mockUnsubscribe = vi.fn();
 
-    // Setup mock implementations
-    mockGet.mockImplementation((_store: MapZen<RouterState>) => {
-      // Assume $router is passed correctly due to module execution order
-      // if (store === $router) { // This check might be unreliable depending on mock strategy
-      return currentState;
-      // }
-      // return undefined; // Fallback
-    });
+    // Set the $router's value to match currentState
+    $router.value = currentState;
 
+    // Setup mock implementation for subscribe
     mockSubscribe.mockImplementation(
       (_store: MapZen<RouterState>, listener: (state: RouterState) => void): Unsubscribe => {
         // Assume $router is passed correctly
@@ -68,7 +60,6 @@ describe('useRouter', () => {
 
   it('should return the initial router state', () => {
     const { result } = renderHook(() => useRouter());
-    expect(mockGet).toHaveBeenCalledWith($router);
     expect(result.current).toEqual({ path: '/', search: {}, params: {} });
   });
 
@@ -91,22 +82,19 @@ describe('useRouter', () => {
     expect(result.current).toEqual(newState);
   });
 
-  it('should perform initial sync check if state changed between get and subscribe', () => {
-    // Simulate state changing immediately after initial get but before subscribe's effect runs
+  it('should perform initial sync check if state changed between .value read and subscribe', () => {
+    // Simulate state changing immediately after initial .value read but before subscribe's effect runs
     const initialState = { path: '/', search: {}, params: {} };
     const changedState = { path: '/changed', search: {}, params: {} };
 
-    // Ensure the first call to get (in useState) returns initial state
-    mockGet.mockImplementationOnce(() => initialState);
-    // Subsequent calls (e.g., in useEffect) will use the general mock returning currentState
-    mockGet.mockImplementation(() => currentState);
-
     currentState = initialState; // Start with initial state
+    $router.value = initialState;
 
     const { result } = renderHook(() => useRouter());
 
     // NOW simulate state changing *after* initial render but before effect runs
     currentState = changedState;
+    $router.value = changedState;
 
     // Initial render uses initialState
     expect(result.current).toEqual(initialState);
@@ -117,8 +105,6 @@ describe('useRouter', () => {
     // Let's verify the subscribe listener was called with the changed state eventually
     expect(mockSubscribe).toHaveBeenCalledWith($router, expect.any(Function));
     // Simulate the listener being called by the subscription *after* the state change
-    // Also simulate the sync check within useEffect calling get again
-    mockGet.mockReturnValue(changedState); // Subsequent calls to get return changed state
     act(() => {
       listeners.forEach((listener) => listener(currentState));
     });

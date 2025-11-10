@@ -3,10 +3,8 @@ import {
   type MapZen,
   type Unsubscribe, // Added missing import
   type Zen,
-  get,
   map,
   onMount,
-  set,
   subscribe,
   zen, // Change zen to zen
 } from '@sylphx/zen';
@@ -52,18 +50,17 @@ function _handleStorageEventUpdate<Value>(
 ): void {
   if (event.newValue === null) {
     // Key removed or cleared in another tab
-    set(baseZen, initialValue); // Use set() function
+    baseZen.value = initialValue;
   } else {
     try {
       const decodedValue = serializer.decode(event.newValue);
       // Check if the decoded value is different before setting to prevent loops
-      if (get(baseZen) !== decodedValue) {
-        // Use get() function
-        set(baseZen, decodedValue); // Use set() function
+      if (baseZen.value !== decodedValue) {
+        baseZen.value = decodedValue;
       }
     } catch (_error) {
       // Optionally reset to initial value on decode error
-      // set(baseZen, initialValue);
+      // baseZen.value = initialValue;
     }
   }
 }
@@ -246,12 +243,12 @@ export function persistentMap<Value extends object>(
       }
       if (event.newValue === null) {
         // Key removed or cleared in another tab
-        set(baseMap, initialValue); // Reset to initial value (updates the whole map)
+        baseMap.value = initialValue; // Reset to initial value (updates the whole map)
       } else {
         try {
           const decodedValue = serializer.decode(event.newValue);
           // Update the whole map. Consider deep comparison if performance becomes an issue.
-          set(baseMap, decodedValue);
+          baseMap.value = decodedValue;
         } catch (_error) {}
       }
     }
@@ -272,13 +269,13 @@ export function persistentMap<Value extends object>(
 
     // Set initial value from storage if different from current
     if (!storageIsEmpty && valueFromStorage !== undefined) {
-      // Use set() which replaces the whole map content
+      // Use .value which replaces the whole map content
       // Check if different before setting? Deep compare might be needed.
       // For simplicity, setting unconditionally if storage had value.
-      set(baseMap, valueFromStorage);
+      baseMap.value = valueFromStorage;
     } else if (storageIsEmpty) {
       // If nothing in storage, write the current (initial) value
-      writeToStorage(get(baseMap));
+      writeToStorage(baseMap.value);
     }
 
     // Start listening to core map changes (Now handled outside onMount)

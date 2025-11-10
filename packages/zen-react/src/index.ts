@@ -1,4 +1,4 @@
-import { type Zen, get, subscribe } from '@sylphx/zen';
+import { type Zen, subscribe } from '@sylphx/zen';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
 /**
@@ -27,17 +27,17 @@ export function useStore<Value>(store: Zen<Value>): Value {
   if (typeof useSyncExternalStore !== 'undefined') {
     return useSyncExternalStore(
       (onStoreChange) => subscribe(store, onStoreChange),
-      () => get(store),
-      () => get(store), // Server snapshot (SSR)
+      () => store.value,
+      () => store.value, // Server snapshot (SSR)
     );
   }
 
   // Fallback for React 16/17
-  const [value, setValue] = useState(() => get(store));
+  const [value, setValue] = useState(() => store.value);
 
   useEffect(() => {
     // Sync check in case value changed between initial get() and subscribe()
-    setValue(get(store));
+    setValue(store.value);
 
     // Subscribe to future changes
     return subscribe(store, setValue);

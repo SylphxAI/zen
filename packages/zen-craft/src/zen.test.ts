@@ -1,4 +1,4 @@
-import { zen as atom, get, subscribe } from '@sylphx/zen';
+import { zen as atom, subscribe } from '@sylphx/zen';
 import { describe, expect, it, vi } from 'vitest';
 import type { Patch } from './types';
 import { craftZen } from './zen';
@@ -31,7 +31,7 @@ describe('craftZen', () => {
       },
     );
 
-    const nextState = get(myZen);
+    const nextState = myZen.value;
     expect(nextState).not.toBe(baseState); // Ensure new root reference
     expect(nextState.b).not.toBe(baseState.b); // Ensure nested object is new reference
     expect(nextState).toEqual({ a: 10, b: { c: 20 } });
@@ -59,7 +59,7 @@ describe('craftZen', () => {
       },
     );
 
-    expect(get(myZen)).toBe(baseState); // Should be the exact same object
+    expect(myZen.value).toBe(baseState); // Should be the exact same object
     // TODO: Listener called 1x due to craft returning new ref always? Investigate zen-core set.
     expect(listener).toHaveBeenCalledTimes(1); // Adjusted expectation
     // Note: Patch verification removed - craft doesn't support patches yet
@@ -86,7 +86,7 @@ describe('craftZen', () => {
       },
     );
 
-    expect(get(myZen)).toBe(newState); // Should be the exact new object returned
+    expect(myZen.value).toBe(newState); // Should be the exact new object returned
     // TODO: Listener called 2x due to subscribe + set. Check 2nd call args.
     expect(listener).toHaveBeenCalledTimes(2); // Adjusted expectation
     expect(listener).toHaveBeenNthCalledWith(2, newState, baseState); // Check 2nd call (new state, old state)
@@ -111,7 +111,7 @@ describe('craftZen', () => {
       },
     );
 
-    const nextState = get(myZen);
+    const nextState = myZen.value;
     expect(nextState).not.toBe(baseState);
     expect(nextState.data).not.toBe(baseState.data);
     expect(nextState.data.items).not.toBe(baseState.data.items);
@@ -138,7 +138,7 @@ describe('craftZen', () => {
       { patches: true, inversePatches: true }, // Request patches (will be empty with craft)
     );
 
-    expect(get(myZen)).toEqual({ count: 1 });
+    expect(myZen.value).toEqual({ count: 1 });
     // Note: Patch verification removed - craft doesn't support patches yet
   });
 

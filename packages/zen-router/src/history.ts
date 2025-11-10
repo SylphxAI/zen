@@ -1,4 +1,4 @@
-import { get, setKey } from '@sylphx/zen'; // Import get and setKey
+import { setKey } from '@sylphx/zen';
 import { $router } from './index'; // Removed unused RouterState
 import { matchRoutes } from './matcher'; // Import matcher, removed unused RouteConfig
 import { getRoutes } from './routes'; // Import route getter
@@ -23,16 +23,16 @@ function updateStateFromLocation(): void {
   // Update the store - use setKey for potential performance benefits if only parts change
   // Although for initial load or full navigation, a single `set` might be okay too.
   // Let's use setKey for now.
-  const currentState = get($router); // Use get($router)
+  const currentState = $router.value;
   if (currentState.path !== currentPath) {
-    setKey($router, 'path', currentPath); // Use setKey($router, ...)
+    setKey($router, 'path', currentPath);
   }
   // Simple comparison; deep comparison might be needed for objects later
   if (JSON.stringify(currentState.search) !== JSON.stringify(currentSearch)) {
-    setKey($router, 'search', currentSearch); // Use setKey($router, ...)
+    setKey($router, 'search', currentSearch);
   }
   if (JSON.stringify(currentState.params) !== JSON.stringify(currentParams)) {
-    setKey($router, 'params', currentParams); // Use setKey($router, ...)
+    setKey($router, 'params', currentParams);
   }
 }
 

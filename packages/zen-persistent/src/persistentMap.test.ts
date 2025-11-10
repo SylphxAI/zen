@@ -1,4 +1,3 @@
-import { get, set } from '@sylphx/zen';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { persistentMap } from './index';
 
@@ -34,7 +33,7 @@ describe('persistentMap', () => {
   it('should initialize with initialValue if storage is empty', () => { // Remove async
     const initial = { name: 'Anon', age: 0 };
     const store = persistentMap(TEST_KEY, initial);
-    expect(get(store)).toEqual(initial);
+    expect(store.value).toEqual(initial);
     // await nextTick(); // Remove await
     expect(localStorageMock.getItem(TEST_KEY)).toBe(JSON.stringify(initial)); // Use mock
   });
@@ -46,7 +45,7 @@ describe('persistentMap', () => {
     const initial = { name: 'Anon', age: 0 }; // Different initial value
     const store = persistentMap(TEST_KEY, initial);
 
-    expect(get(store)).toEqual(storedValue);
+    expect(store.value).toEqual(storedValue);
   });
 
   it('should update storage when the whole map value is set', () => { // Remove async
@@ -54,9 +53,9 @@ describe('persistentMap', () => {
     const store = persistentMap(TEST_KEY, initial);
     const newValue = { name: 'Zen Master', age: 99, location: 'Cloud' };
 
-    set(store, newValue); // Use core set function for maps
+    store.value = newValue; // Use core .value property for maps
 
-    expect(get(store)).toEqual(newValue);
+    expect(store.value).toEqual(newValue);
     // await nextTick(); // Remove await
     expect(localStorageMock.getItem(TEST_KEY)).toBe(JSON.stringify(newValue)); // Use mock
   });

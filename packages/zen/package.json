@@ -11,28 +11,14 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
-    },
-    "./v2": {
-      "types": "./dist/v2/zen-v2.d.ts",
-      "import": "./dist/v2/zen-v2.js",
-      "require": "./dist/v2/zen-v2.cjs"
-    },
-    "./v1": {
-      "types": "./dist/v1/index.d.ts",
-      "import": "./dist/v1/index.js",
-      "require": "./dist/v1/index.cjs"
     }
   },
   "files": ["dist"],
   "scripts": {
-    "build": "bunup src/zen-ultra.ts --format esm,cjs --dts --target node --minify && mv dist/zen-ultra.js dist/index.js && mv dist/zen-ultra.cjs dist/index.cjs && mv dist/zen-ultra.d.ts dist/index.d.ts && mv dist/zen-ultra.d.cts dist/index.d.cts",
-    "build:v2": "bunup src/zen-optimized.ts --format esm,cjs --dts --target node --minify --out-dir dist/v2 && mv dist/v2/zen-optimized.js dist/v2/zen-v2.js && mv dist/v2/zen-optimized.cjs dist/v2/zen-v2.cjs && mv dist/v2/zen-optimized.d.ts dist/v2/zen-v2.d.ts && mv dist/v2/zen-optimized.d.cts dist/v2/zen-v2.d.cts",
-    "build:v1": "bunup src/zen-v1.ts --format esm,cjs --dts --target node --minify --out-dir dist/v1 && mv dist/v1/zen-v1.js dist/v1/index.js && mv dist/v1/zen-v1.cjs dist/v1/index.cjs && mv dist/v1/zen-v1.d.ts dist/v1/index.d.ts && mv dist/v1/zen-v1.d.cts dist/v1/index.d.cts",
-    "build:all": "bun run build && bun run build:v2 && bun run build:v1",
-    "compare:size": "bun run build:all && bun scripts/compare-builds.ts",
-    "compare:perf": "bun scripts/benchmark-comparison.ts",
-    "compare": "bun run compare:size && bun run compare:perf",
+    "build": "bunup src/zen.ts --format esm,cjs --dts --target node --minify && mv dist/zen.js dist/index.js && mv dist/zen.cjs dist/index.cjs && mv dist/zen.d.ts dist/index.d.ts && mv dist/zen.d.cts dist/index.d.cts",
     "size": "bun size-limit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "lint": "echo 'Lint script not implemented yet'"
   },
   "size-limit": [

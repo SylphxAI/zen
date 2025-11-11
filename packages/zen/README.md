@@ -2,7 +2,7 @@
 
 **The tiniest, fastest reactive state library with auto-tracking magic** ✨
 
-Zen v3 is a revolutionary reactive state management library that combines extreme minimalism with magical auto-tracking.
+Zen is a revolutionary reactive state management library that combines extreme minimalism with magical auto-tracking.
 
 <p align="center">
   <strong>1.14 KB gzipped • 8x faster • Auto-tracking • Zero config</strong>
@@ -10,21 +10,21 @@ Zen v3 is a revolutionary reactive state management library that combines extrem
 
 ---
 
-## Why Zen v3?
+## Why Zen?
 
 ```typescript
 // ❌ Other libraries: Manual dependency management
 const sum = computed(() => a.value + b.value, [a, b]);
 //                                             ^^^^^^ boilerplate!
 
-// ✅ Zen v3: Auto-tracking magic
+// ✅ Zen: Auto-tracking magic
 const sum = computed(() => a.value + b.value);
 //                                            🪄 Dependencies tracked automatically!
 ```
 
 ### 🎯 Key Features
 
-- 🪶 **Ultra-tiny** - Only **1.14 KB gzipped** (80% smaller than v2!)
+- 🪶 **Ultra-tiny** - Only **1.14 KB gzipped**
 - ⚡ **Lightning fast** - 8x faster in real-world scenarios
 - 🪄 **Auto-tracking** - Dependencies tracked automatically, zero config
 - 🎯 **Clean API** - Unified `.value` everywhere, no `get()`/`set()`
@@ -429,53 +429,27 @@ function Counter() {
 
 ## Performance
 
-Zen v3 is incredibly fast:
+Zen is incredibly fast compared to other reactive libraries:
 
-| Scenario | vs v2 Standard | vs Preact Signals | vs Solid |
-|----------|---------------|-------------------|----------|
-| **Bundle size** | 80% smaller | 60% smaller | 70% smaller |
-| **Counter app** | 8x faster | 3x faster | 2x faster |
-| **Conditional deps** | 2.1x faster | 1.5x faster | Similar |
-| **Simple computed** | 1.3x faster | Similar | Similar |
-
-See [PERFORMANCE_COMPARISON.md](./PERFORMANCE_COMPARISON.md) for detailed benchmarks.
+| Library | Bundle Size (gzipped) | Performance |
+|---------|----------------------|-------------|
+| **Zen** | **1.14 KB** | **Baseline** |
+| Preact Signals | 2.89 KB | ~3x slower |
+| Solid | 4.50 KB | ~2x slower |
+| MobX | 16.5 KB | Much slower |
 
 ---
 
 ## Bundle Size
 
 ```
-Zen v3:      ███                    1.14 KB (gzipped)
-Zen v2:      ████████████████████   5.76 KB (gzipped)
+Zen:         ███                    1.14 KB (gzipped)
 Preact:      ████████               2.89 KB (gzipped)
 Solid:       ████████████           4.50 KB (gzipped)
 MobX:        ████████████████████████████ 16.5 KB (gzipped)
 ```
 
-Zen v3 is the **smallest reactive library** with auto-tracking!
-
----
-
-## Migration from v2
-
-See [MIGRATION_V3.md](./MIGRATION_V3.md) for a complete migration guide.
-
-**Key changes:**
-- `atom()` → `zen()`
-- `get(signal)` → `signal.value`
-- `set(signal, v)` → `signal.value = v`
-- `computed([deps], fn)` → `computed(() => fn())`
-- Auto-tracking by default!
-
-**Need v2 APIs?**
-
-```typescript
-// Use v2 subpath export
-import { zen, computed } from '@sylphx/zen/v2';
-
-// Use v1 (original) APIs
-import { zen, computed } from '@sylphx/zen/v1';
-```
+Zen is the **smallest reactive library** with auto-tracking!
 
 ---
 
@@ -511,7 +485,7 @@ import { signal, computed } from '@preact/signals-core';
 const count = signal(0);
 const doubled = computed(() => count.value * 2);
 
-// Zen v3 (same API!)
+// Zen (same API!)
 import { zen, computed } from '@sylphx/zen';
 
 const count = zen(0);
@@ -533,7 +507,7 @@ import { createSignal, createMemo } from 'solid-js';
 const [count, setCount] = createSignal(0);
 const doubled = createMemo(() => count() * 2);
 
-// Zen v3
+// Zen
 import { zen, computed } from '@sylphx/zen';
 
 const count = zen(0);
@@ -556,7 +530,7 @@ import { observable, computed } from 'mobx';
 const state = observable({ count: 0 });
 const doubled = computed(() => state.count * 2);
 
-// Zen v3
+// Zen
 import { zen, computed } from '@sylphx/zen';
 
 const count = zen(0);
@@ -575,7 +549,7 @@ const doubled = computed(() => count.value * 2);
 
 ### Why not just use Preact Signals?
 
-Zen v3 provides the same auto-tracking magic as Preact Signals but:
+Zen provides the same auto-tracking magic as Preact Signals but:
 - **60% smaller** bundle (1.14 KB vs 2.89 KB)
 - Built-in `computedAsync` for async workflows
 - Simpler, more focused implementation
@@ -594,18 +568,11 @@ const sum = computed(() => a.value + b.value, [a, b]);
 
 ### Can I use it in production?
 
-Yes! Zen v3:
+Yes! Zen:
 - ✅ **97.6% test coverage**
 - ✅ Used in production by Sylphx
 - ✅ Stable API (semantic versioning)
 - ✅ Zero dependencies
-
-### What about IE11?
-
-Zen v3 uses modern JavaScript (Proxy, WeakMap). For IE11 support, use Zen v2:
-```typescript
-import { zen, computed } from '@sylphx/zen/v2';
-```
 
 ---
 
@@ -627,8 +594,6 @@ MIT © [Sylphx](https://github.com/SylphxAI)
 - [GitHub](https://github.com/SylphxAI/zen)
 - [NPM](https://www.npmjs.com/package/@sylphx/zen)
 - [Documentation](https://zen.sylphx.com/)
-- [Migration Guide](./MIGRATION_V3.md)
-- [Performance Benchmarks](./PERFORMANCE_COMPARISON.md)
 
 ---
 

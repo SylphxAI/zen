@@ -79,11 +79,15 @@ export default defineConfig({
           ],
         },
         {
-          text: 'Other',
+          text: 'Migration Guides',
           items: [
-            { text: 'Migration from v1', link: '/guide/migration' },
-            { text: 'Changelog', link: '/guide/changelog' },
+            { text: 'From Zustand', link: '/guide/migration-from-zustand' },
+            { text: 'From v1 to v2', link: '/guide/migration' },
           ],
+        },
+        {
+          text: 'Other',
+          items: [{ text: 'Changelog', link: '/guide/changelog' }],
         },
       ],
       '/api/': [

@@ -6,19 +6,30 @@ Zen stands on the shoulders of giants. This page acknowledges the technologies, 
 
 ## Technologies & Tools
 
-### Build & Development
+### Runtime & Build
 
+- **[Bun](https://bun.sh/)** - Ultra-fast JavaScript runtime and package manager
 - **[TypeScript](https://www.typescriptlang.org/)** - Type-safe development
+- **[bunup](https://github.com/okikio/bunup)** - Simple, fast bundler for building packages
 - **[Turborepo](https://turbo.build/)** - High-performance monorepo build system
-- **[Vite](https://vitejs.dev/)** - Lightning-fast build tool
-- **[Vitest](https://vitest.dev/)** - Blazing fast unit testing
+
+### Testing & Quality
+
+- **[Vitest](https://vitest.dev/)** - Blazing fast unit testing framework
+- **[jsdom](https://github.com/jsdom/jsdom)** - DOM implementation for testing
+- **[@testing-library](https://testing-library.com/)** - React & Preact testing utilities
 - **[Biome](https://biomejs.dev/)** - Fast linter and formatter
-- **[Changesets](https://github.com/changesets/changesets)** - Version management and publishing
+- **[size-limit](https://github.com/ai/size-limit)** - Bundle size tracking
+- **[lefthook](https://github.com/evilmartians/lefthook)** - Fast Git hooks manager
+
+### Versioning & Release
+
+- **[Changesets](https://github.com/changesets/changesets)** - Version management and publishing workflow
 
 ### Documentation
 
-- **[VitePress](https://vitepress.dev/)** - Beautiful documentation site
-- **[Vercel](https://vercel.com/)** - Deployment and hosting
+- **[VitePress](https://vitepress.dev/)** - Beautiful Vue-powered static site generator
+- **[Vercel](https://vercel.com/)** - Deployment and hosting platform
 
 ---
 
@@ -69,10 +80,15 @@ Zen was inspired by the best ideas from the reactive state management ecosystem:
 
 ### Immutability
 
+**[@sylphx/craft](https://www.npmjs.com/package/@sylphx/craft)**
+- Powers `@sylphx/zen-craft` immutable updates
+- Immer-like API with JSON Patch support
+- Structural sharing and time-travel capabilities
+
 **[Immer](https://immerjs.github.io/immer/)** by Michel Weststrate
-- Inspiration for `@sylphx/zen-craft`
-- Structural sharing concepts
-- Immutable update patterns
+- Original inspiration for immutable update patterns
+- Mutable API for immutable updates concept
+- Structural sharing implementation
 
 ### Reactivity Concepts
 
@@ -85,6 +101,23 @@ Zen was inspired by the best ideas from the reactive state management ecosystem:
 - Simple store contract (`subscribe`)
 - Minimal API surface
 - Framework integration patterns
+
+---
+
+## Benchmarking & Comparison
+
+To ensure Zen's performance claims are valid, we benchmark against leading state management libraries:
+
+- **[Zustand](https://github.com/pmndrs/zustand)** - Simple store-based state management
+- **[Jotai](https://github.com/pmndrs/jotai)** - Primitive and flexible atomic state
+- **[@preact/signals](https://github.com/preactjs/signals)** - Fast signals with auto-tracking
+- **[Nanostores](https://github.com/nanostores/nanostores)** - Tiny atomic state manager
+- **[Valtio](https://github.com/pmndrs/valtio)** - Proxy-based state management
+- **[Redux Toolkit](https://redux-toolkit.js.org/)** - Official Redux toolset
+- **[Effector](https://effector.dev/)** - Reactive state management
+- **[Solid.js Store](https://www.solidjs.com/)** - Fine-grained reactive store
+
+These libraries represent the best-in-class approaches to state management. Comparing against them helps us identify performance bottlenecks and ensure Zen delivers on its promises.
 
 ---
 
@@ -108,17 +141,32 @@ Zen provides first-class support for major frameworks:
 - **State Management Pioneers** - For exploring and refining reactive patterns
 - **Early Adopters** - For trying Zen and providing feedback
 
-### Maintainers of Inspiration Libraries
+### Open Source Maintainers
 
-Special recognition to the maintainers and contributors of:
-- Poimandres team (Zustand, Jotai)
-- Preact team (@preact/signals)
-- Ryan Carniato (Solid.js)
-- Evan You (Vue.js)
-- Michel Weststrate (MobX, Immer)
-- Andrey Sitnik (Nanostores)
+Special recognition to the maintainers and contributors of the libraries that inspired Zen:
 
-Your work has shaped how we think about state management.
+- **Poimandres team** - [Zustand](https://github.com/pmndrs/zustand), [Jotai](https://github.com/pmndrs/jotai), [Valtio](https://github.com/pmndrs/valtio)
+- **[Jason Miller](https://github.com/developit)** & **Preact team** - [@preact/signals](https://github.com/preactjs/signals)
+- **[Ryan Carniato](https://github.com/ryansolid)** - [Solid.js](https://github.com/solidjs/solid)
+- **[Evan You](https://github.com/yyx990803)** - [Vue.js](https://github.com/vuejs/core)
+- **[Michel Weststrate](https://github.com/mweststrate)** - [MobX](https://github.com/mobxjs/mobx), [Immer](https://github.com/immerjs/immer)
+- **[Andrey Sitnik](https://github.com/ai)** - [Nanostores](https://github.com/nanostores/nanostores), size-limit
+- **[Mark Erikson](https://github.com/markerikson)** - [Redux Toolkit](https://github.com/reduxjs/redux-toolkit)
+- **[Dmitry Boldyriev](https://github.com/zerobias)** - [Effector](https://github.com/effector/effector)
+
+### Tool Creators
+
+Thank you to the creators of the tools that make Zen possible:
+
+- **[Jarred Sumner](https://github.com/Jarred-Sumner)** - [Bun](https://github.com/oven-sh/bun) runtime
+- **[Okiki Ojo](https://github.com/okikio)** - [bunup](https://github.com/okikio/bunup) bundler
+- **[Anthony Fu](https://github.com/antfu)** - [Vitest](https://github.com/vitest-dev/vitest), countless dev tools
+- **[Evan You](https://github.com/yyx990803)** - [VitePress](https://github.com/vuejs/vitepress)
+- **[Nate Moore](https://github.com/natemoo-re)** & team - [Changesets](https://github.com/changesets/changesets)
+- **[Emanuele Stoppa](https://github.com/emilioastarita)** & team - [Biome](https://github.com/biomejs/biome)
+- **[Egor Gumenyuk](https://github.com/evilmartians)** & Evil Martians - [lefthook](https://github.com/evilmartians/lefthook)
+
+Your work has shaped how we think about state management and build modern software.
 
 ---
 

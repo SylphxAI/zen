@@ -40,7 +40,7 @@ export default defineConfig({
         ],
       },
       {
-        text: 'v2.0.0',
+        text: 'v3.0.0',
         items: [
           { text: 'Changelog', link: '/guide/changelog' },
           { text: 'Migration Guide', link: '/guide/migration' },
@@ -81,10 +81,12 @@ export default defineConfig({
         {
           text: 'Migration Guides',
           items: [
+            { text: 'Migration Overview', link: '/guide/migration' },
+            { text: 'From v2 to v3', link: '/guide/migration-v2-to-v3' },
+            { text: 'From v1 to v2', link: '/guide/migration-v1-to-v2' },
             { text: 'From Zustand', link: '/guide/migration-from-zustand' },
             { text: 'From Jotai', link: '/guide/migration-from-jotai' },
             { text: 'From @preact/signals', link: '/guide/migration-from-signals' },
-            { text: 'From v1 to v2', link: '/guide/migration' },
           ],
         },
         {

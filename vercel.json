@@ -1,5 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "vitepress build docs && ls -la docs/.vitepress/ && cp -r docs/.vitepress/dist ./dist",
-  "outputDirectory": "dist"
+  "buildCommand": "vitepress build docs",
+  "outputDirectory": "docs/.vitepress/dist"
 }

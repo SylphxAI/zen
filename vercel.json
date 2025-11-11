@@ -1,3 +1,5 @@
 {
-  "framework": "vitepress"
+  "buildCommand": "bun run docs:build",
+  "outputDirectory": "docs/.vitepress/dist",
+  "installCommand": "bun install"
 }

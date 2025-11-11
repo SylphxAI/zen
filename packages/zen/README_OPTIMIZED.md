@@ -217,4 +217,4 @@ bun run compare
 
 ## License
 
-MIT © SylphX
+MIT © Sylphx

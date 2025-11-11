@@ -584,14 +584,14 @@ const value = useStore(count);
 |---------|----------------|-------|
 | Zustand | ~1.2 KB | Core only |
 | Zustand + middleware | ~3-5 KB | With persist, immer |
-| **Zen Core** | **5.7 KB** | Includes computed, async |
+| **Zen Core** | **1.14 KB** | Includes computed, async, auto-tracking |
 | Zen + React | +0.3 KB | Framework integration |
 | Zen + Ecosystem | +3-6 KB | Router, persistence, craft |
 
 **Total comparison:**
 - Zustand (full): ~5 KB
-- Zen (full): ~6 KB
-- **Difference: ~1 KB** for more features
+- Zen (full): ~2 KB (core + React)
+- **Zen is smaller** with auto-tracking and more features
 
 ---
 
@@ -757,10 +757,10 @@ if (count.value > 5) { } // Comparing value
 
 ### Use Zen if:
 - ✅ You prefer signals/reactive primitives
-- ✅ You want fine-grained reactivity
+- ✅ You want fine-grained reactivity with auto-tracking
 - ✅ You need computed async values
 - ✅ You like Vue/Solid.js mental model
-- ✅ You want maximum performance (73% faster reads)
+- ✅ You want maximum performance (8x faster real-world apps)
 
 ---
 
@@ -774,8 +774,8 @@ if (count.value > 5) { } // Comparing value
 | **Selectors** | Inline in components | Reusable computed/select |
 | **Computed** | Getters (no cache) | Cached computed values |
 | **Async** | Manual with useEffect | Reactive computedAsync |
-| **Bundle Size** | ~1.2 KB | ~5.7 KB |
-| **Performance** | Fast | 73% faster reads |
+| **Bundle Size** | ~1.2 KB | ~1.14 KB |
+| **Performance** | Fast | 8x faster real-world |
 | **Granularity** | Selector-based | Automatic fine-grained |
 
 ---

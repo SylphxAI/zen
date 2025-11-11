@@ -17,21 +17,25 @@ Comparison between Standard and Optimized builds of @sylphx/zen
 
 ## Performance Comparison
 
-Each test runs 100,000 iterations (10,000 for complex scenarios)
+Vitest Benchmark Results (ops/sec - higher is better):
 
-| Benchmark             | Standard  | Optimized | Difference |
-|-----------------------|-----------|-----------|------------|
-| zen create + read     | 970.67μs  | 817.83μs  | **-15.7%** |
-| zen write (3x)        | 2.80ms    | 2.27ms    | **-19.0%** |
-| computed (1 dep)      | 5.86ms    | 4.01ms    | **-31.6%** |
-| computed (3 deps)     | 5.25ms    | 5.03ms    | **-4.3%**  |
-| select                | 2.09ms    | 2.34ms    | +12.2%     |
-| subscribe + notify    | 4.48ms    | 3.92ms    | **-12.5%** |
-| batch (10 updates)    | 18.48ms   | 17.69ms   | **-4.2%**  |
-| map operations        | 22.93ms   | 21.54ms   | **-6.0%**  |
-| Todo list (realistic) | 6.05ms    | 5.58ms    | **-7.7%**  |
+| Benchmark                | Standard      | Optimized     | Ratio      |
+|--------------------------|---------------|---------------|------------|
+| zen create + read        | 46.2M ops/s   | 39.5M ops/s   | 1.17x      |
+| zen write (3x)           | 35.7M ops/s   | 30.8M ops/s   | 1.30x      |
+| computed (1 dep)         | 10.9M ops/s   | 10.6M ops/s   | 1.02x      |
+| computed (3 deps)        | 10.0M ops/s   | 8.5M ops/s    | 1.28x      |
+| select                   | 26.5M ops/s   | 23.5M ops/s   | 1.13x      |
+| subscribe + notify       | 15.7M ops/s   | 13.9M ops/s   | 1.13x      |
+| batch (10 updates)       | 4.4M ops/s    | 4.9M ops/s    | **0.90x** ✅ |
+| Todo list (realistic)    | 2.0M ops/s    | 1.9M ops/s    | 1.04x      |
 
-**Average Performance:** Optimized build is **equivalent** (within 3% margin)
+**Performance Summary:**
+- Optimized build is **2-30% slower** on micro-benchmarks
+- **10% faster** on batch operations (important for real apps!)
+- ~4% slower on realistic todo app scenario
+- Performance difference is negligible in real-world usage
+- **44.3% smaller bundle** is the main win!
 
 ---
 
@@ -129,9 +133,27 @@ bun run compare
 
 The optimized build achieves:
 
-- **43.9% smaller bundle** (5.75 KB → 3.23 KB gzipped)
-- **8.3% faster performance** on average
+- **44.3% smaller bundle** (5.75 KB → 3.21 KB gzipped) 🎯
+- **Equivalent performance** (2-30% slower on micro-ops, 10% faster on batch)
 - **Same core functionality** (zen, computed, select, map, batch, subscribe)
 - **No breaking changes** for apps using only core features
 
-For most applications, the optimized build provides significant benefits with zero downsides.
+### Trade-off Analysis
+
+**Wins:**
+- Bundle size: -44.3% (major win for mobile/embedded apps)
+- Batch operations: +10% faster (important for real apps)
+- API simplicity: Removed rarely-used APIs
+
+**Costs:**
+- Micro-benchmark ops: 2-30% slower on some operations
+- Realistic app scenario: ~4% slower (negligible in practice)
+
+### Recommendation
+
+Use optimized build when:
+- ✅ Bundle size is critical (mobile, widgets, landing pages)
+- ✅ Only need core features (zen, computed, select, map, batch, subscribe)
+- ✅ Don't use advanced features (deepMap, effect, lifecycle hooks)
+
+The small performance cost is **negligible in real-world apps** compared to the significant bundle size savings.

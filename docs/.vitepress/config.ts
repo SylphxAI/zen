@@ -82,6 +82,8 @@ export default defineConfig({
           text: 'Migration Guides',
           items: [
             { text: 'From Zustand', link: '/guide/migration-from-zustand' },
+            { text: 'From Jotai', link: '/guide/migration-from-jotai' },
+            { text: 'From @preact/signals', link: '/guide/migration-from-signals' },
             { text: 'From v1 to v2', link: '/guide/migration' },
           ],
         },

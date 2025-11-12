@@ -23,9 +23,7 @@ export { deepMap } from './deepMap';
 export { mapCreator } from './mapCreator';
 
 // Core Functions
-import { batch as _batch, get as _get, set as _set, subscribe as _subscribe } from './zen';
-export const get = _get;
-export const set = _set;
+import { batch as _batch, subscribe as _subscribe } from './zen';
 export const subscribe = _subscribe;
 export const batch = _batch;
 

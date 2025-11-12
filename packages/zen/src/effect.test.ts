@@ -3,7 +3,7 @@ import { batched } from './batched'; // Import batched for testing interaction
 import { computed } from './computed';
 import { effect } from './effect';
 import { subscribe } from './index'; // Use index subscribe
-import { set, zen } from './zen';
+import { zen } from './zen';
 
 // Helper to wait for the next microtask tick
 const nextTick = () => new Promise((resolve) => queueMicrotask(() => resolve(undefined)));
@@ -32,11 +32,11 @@ describe('effect', () => {
     const cancel = effect([atom1 as any, atom2 as any], callback); // Cast stores
     callback.mockClear(); // Clear initial call
 
-    set(atom1, 11);
+    atom1.value = 11;
     expect(callback).toHaveBeenCalledTimes(1);
     expect(callback).toHaveBeenCalledWith(11, 'hello');
 
-    set(atom2, 'world');
+    atom2.value = 'world';
     expect(callback).toHaveBeenCalledTimes(2);
     expect(callback).toHaveBeenCalledWith(11, 'world');
 
@@ -53,11 +53,11 @@ describe('effect', () => {
     expect(callback).toHaveBeenCalledTimes(1); // Initial run
     expect(cleanupFn).not.toHaveBeenCalled();
 
-    set(source, 1);
+    source.value = 1;
     expect(cleanupFn).toHaveBeenCalledTimes(1); // Cleanup from initial run
     expect(callback).toHaveBeenCalledTimes(2); // Second run
 
-    set(source, 2);
+    source.value = 2;
     expect(cleanupFn).toHaveBeenCalledTimes(2); // Cleanup from second run
     expect(callback).toHaveBeenCalledTimes(3); // Third run
 
@@ -74,7 +74,7 @@ describe('effect', () => {
     expect(callback).toHaveBeenCalledTimes(1);
     expect(cleanupFn).not.toHaveBeenCalled();
 
-    set(source, 1);
+    source.value = 1;
     expect(cleanupFn).toHaveBeenCalledTimes(1);
     expect(callback).toHaveBeenCalledTimes(2);
 
@@ -84,7 +84,7 @@ describe('effect', () => {
     // Ensure callback and cleanup don't run after cancel
     callback.mockClear();
     cleanupFn.mockClear();
-    set(source, 2);
+    source.value = 2;
     expect(callback).not.toHaveBeenCalled();
     expect(cleanupFn).not.toHaveBeenCalled();
   });
@@ -107,7 +107,7 @@ describe('effect', () => {
     expect(callback).toHaveBeenCalledWith(20);
     callback.mockClear();
 
-    set(base, 11);
+    base.value = 11;
     await nextTick(); // Allow computed to update
 
     expect(callback).toHaveBeenCalledTimes(1);
@@ -135,7 +135,7 @@ describe('effect', () => {
     expect(callback).toHaveBeenCalledWith(20);
     callback.mockClear();
 
-    set(base, 11);
+    base.value = 11;
     // Callback shouldn't run immediately
     expect(callback).not.toHaveBeenCalled();
 
@@ -160,7 +160,7 @@ describe('effect', () => {
 
     callback.mockClear(); // Clear the initial call before checking subsequent calls
 
-    set(source, 1);
+    source.value = 1;
     expect(callback).not.toHaveBeenCalled();
   });
 
@@ -186,25 +186,25 @@ describe('effect', () => {
     // NOTE: vi.spyOn(console, 'error') seems unreliable with --coverage, removing related checks.
     const cancel1 = effect([source as any], callback as (val: unknown) => undefined); // Cast store & callback type
     callback.mockClear();
-    expect(() => set(source, 1)).not.toThrow(); // Error should be caught internally
+    expect(() => source.value = 1)).not.toThrow(; // Error should be caught internally
     expect(callback).toHaveBeenCalledTimes(1);
     // expect(consoleErrorSpy).toHaveBeenCalledWith('Error during effect callback:', error); // Removed due to coverage issues
     cancel1();
 
     // Test with cleanup
-    set(source, 0); // Reset source
+    source.value = 0; // Reset source
     // biome-ignore lint/suspicious/noExplicitAny: Test setup requires cast
     const cancel2 = effect([source as any], callbackWithCleanup); // Cast store
     callbackWithCleanup.mockClear();
     cleanupFn.mockClear();
 
-    expect(() => set(source, 1)).not.toThrow(); // Error should be caught
+    expect(() => source.value = 1)).not.toThrow(; // Error should be caught
     expect(callbackWithCleanup).toHaveBeenCalledTimes(1);
     expect(cleanupFn).toHaveBeenCalledTimes(1); // Cleanup from initial run should still happen
     // expect(consoleErrorSpy).toHaveBeenCalledWith('Error during effect callback:', error); // Removed due to coverage issues
 
     // Check if effect continues after error
-    set(source, 2);
+    source.value = 2;
     expect(callbackWithCleanup).toHaveBeenCalledTimes(2); // Should run again
     expect(cleanupFn).toHaveBeenCalledTimes(1); // Cleanup from error run shouldn't exist
 
@@ -230,7 +230,7 @@ describe('effect', () => {
     callback.mockClear();
 
     // Trigger cleanup error
-    expect(() => set(source, 1)).not.toThrow();
+    expect(() => source.value = 1)).not.toThrow(;
     expect(callback).toHaveBeenCalledTimes(1);
     expect(cleanupFn).toHaveBeenCalledTimes(1);
     // expect(consoleErrorSpy).toHaveBeenCalledWith('Error during effect cleanup:', cleanupError); // Removed due to coverage issues

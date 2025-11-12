@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import { batched } from './batched';
 import { computed } from './computed';
 import { subscribe } from './index'; // Use index subscribe
-import { zen as atom, batch, set } from './zen'; // Alias zen to atom for minimal changes below
+import { zen as atom, batch } from './zen'; // Alias zen to atom for minimal changes below
 
 // Helper to wait for the next microtask tick
 const nextTick = () => new Promise((resolve) => queueMicrotask(() => resolve(undefined))); // Wrap resolve
@@ -53,7 +53,7 @@ describe('batched', () => {
     await nextTick(); // Initial calculation
     listener.mockClear();
 
-    set(source, 11);
+    source.value = 11;
 
     expect(derived._value).toBe(20); // Still old value
     expect(listener).not.toHaveBeenCalled(); // Listener not called yet
@@ -83,9 +83,9 @@ describe('batched', () => {
     listener.mockClear();
 
     // Multiple updates synchronously
-    set(source1, 11);
-    set(source2, 101);
-    set(source1, 12); // Overwrite previous change
+    source1.value = 11;
+    source2.value = 101;
+    source1.value = 12; // Overwrite previous change
 
     expect(derived._value).toBe(110); // Still old value
     expect(listener).not.toHaveBeenCalled();
@@ -116,8 +116,8 @@ describe('batched', () => {
 
     // Multiple updates within explicit batch
     batch(() => {
-      set(source1, 11);
-      set(source2, 101);
+      source1.value = 11;
+      source2.value = 101;
     });
 
     expect(derived._value).toBe(110); // Still old value
@@ -173,7 +173,7 @@ describe('batched', () => {
     listener.mockClear();
 
     // Update base, triggering comp and then batchedComp after tick
-    set(base, 6);
+    base.value = 6;
 
     expect(comp._value).toBe(12); // Computed updates immediately
     expect(batchedComp._value).toBe(11); // Batched waits for tick
@@ -226,7 +226,7 @@ describe('batched', () => {
     listener.mockClear();
 
     // Update source to id: 2 -> calculation returns stableRef
-    set(source, { id: 2 });
+    source.value = { id: 2 };
     await nextTick();
     // Listener called: (stableRef, value1)
     expect(listener).toHaveBeenCalledTimes(1);
@@ -235,7 +235,7 @@ describe('batched', () => {
     listener.mockClear();
 
     // Update source to id: 4 -> calculation returns stableRef AGAIN
-    set(source, { id: 4 });
+    source.value = { id: 4 };
     await nextTick();
     // Listener SHOULD NOT be called because result is same reference as before
     expect(listener).not.toHaveBeenCalled();
@@ -243,7 +243,7 @@ describe('batched', () => {
     listener.mockClear();
 
     // Update source to id: 3 -> calculation returns new object
-    set(source, { id: 3 });
+    source.value = { id: 3 };
     await nextTick();
     const value3 = get(derived); // { type: 'new', id: 3 }
     // Listener called: (value3, stableRef)
@@ -269,7 +269,7 @@ describe('batched', () => {
     // expect(derived._unsubscribers.length).toBeGreaterThan(0); // Remove check for internal property
     calculation.mockClear();
 
-    set(source, 11);
+    source.value = 11;
     await nextTick();
     expect(calculation).toHaveBeenCalledTimes(1); // Calculation runs
 
@@ -285,7 +285,7 @@ describe('batched', () => {
 
     // Further updates should not trigger calculation
     calculation.mockClear();
-    set(source, 12);
+    source.value = 12;
     await nextTick();
     expect(calculation).not.toHaveBeenCalled();
   });
@@ -307,7 +307,7 @@ describe('batched', () => {
     listener.mockClear();
 
     // Update source, making b1 dirty, which should make b2 unable to calculate immediately
-    set(source, 2);
+    source.value = 2;
 
     // b1 is marked dirty, update scheduled. b2 is NOT dirty yet.
     expect(b1._dirty).toBe(true);
@@ -351,7 +351,7 @@ describe('batched', () => {
 
     // Trigger error
     expect(() => {
-      set(source, 2);
+      source.value = 2;
     }).not.toThrow(); // Update itself shouldn't throw
 
     expect(derived._dirty).toBe(true); // Marked dirty
@@ -365,7 +365,7 @@ describe('batched', () => {
     expect(listener).not.toHaveBeenCalled(); // Listener should not have been called
 
     // Update source again to a non-error value
-    set(source, 3);
+    source.value = 3;
     expect(derived._dirty).toBe(true); // Still dirty
     expect(derived._value).toBe(10);
     expect(listener).not.toHaveBeenCalled();

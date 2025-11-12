@@ -28,7 +28,7 @@ const sum = computed(() => a.value + b.value);
 - ⚡ **Lightning fast** - 8x faster in real-world scenarios
 - 🪄 **Auto-tracking** - Dependencies tracked automatically, zero config
 - 🎯 **Clean API** - Unified `.value` everywhere, no `get()`/`set()`
-- 🔄 **Async support** - Built-in `computedAsync` with loading states
+- 🔄 **Effect API** - Built-in `effect()` for side effects with auto-tracking
 - 📦 **Tree-shakeable** - Import only what you need
 - 🎨 **TypeScript first** - Full type safety and inference
 - 🚀 **Framework-agnostic** - React, Vue, Svelte, Solid, vanilla JS
@@ -143,35 +143,40 @@ const sum = computed(() => a.value + b.value, [a, b]);
 - Conditional dependencies
 - Dynamic dependencies
 
-### `computedAsync(asyncFn)`
+### `effect(callback)`
 
-Create an async computed value with built-in loading states.
+Run side effects with auto-tracking dependencies.
 
 ```typescript
 const userId = zen(1);
+const user = zen(null);
+const loading = zen(false);
 
-const user = computedAsync(async () => {
-  // Dependencies tracked BEFORE first await
-  const id = userId.value;
+// Auto-tracks userId and runs when it changes
+effect(() => {
+  const id = userId.value; // Dependency tracked automatically
 
-  const res = await fetch(`/api/users/${id}`);
-  return res.json();
+  loading.value = true;
+  fetch(`/api/users/${id}`)
+    .then(res => res.json())
+    .then(data => {
+      user.value = data;
+      loading.value = false;
+    });
+
+  // Optional cleanup function
+  return () => console.log('Cleaning up effect');
 });
 
-// Access state
-console.log(user.value.loading); // true
-console.log(user.value.data);    // undefined | User
-console.log(user.value.error);   // undefined | Error
-
-// Auto-reloads when userId changes
-userId.value = 2; // Triggers new fetch
+// Auto-re-runs when userId changes
+userId.value = 2; // Triggers effect again
 ```
 
 **Features:**
-- ✨ Auto-tracks dependencies before first `await`
-- ⏳ Built-in loading/error states
-- 🔄 Automatic request cancellation
-- 📦 Preserves old data during reload
+- ✨ Auto-tracks dependencies
+- 🧹 Cleanup support
+- 📦 Batching support
+- 🎯 Explicit deps optional for hot paths
 
 ### `subscribe(signal, callback)`
 
@@ -307,19 +312,38 @@ subscribe(query, (q) => {
 });
 
 // Auto-fetch when query changes
-const results = computedAsync(async () => {
-  const q = debouncedQuery.value;
-  if (!q) return [];
+const results = zen([]);
+const loading = zen(false);
+const error = zen(null);
 
-  const res = await fetch(`/api/search?q=${q}`);
-  return res.json();
+effect(() => {
+  const q = debouncedQuery.value;
+  if (!q) {
+    results.value = [];
+    return;
+  }
+
+  loading.value = true;
+  fetch(`/api/search?q=${q}`)
+    .then(res => res.json())
+    .then(data => {
+      results.value = data;
+      loading.value = false;
+    })
+    .catch(err => {
+      error.value = err;
+      loading.value = false;
+    });
 });
 
 // Bind to UI
-subscribe(results, ({ loading, data, error }) => {
-  if (loading) showSpinner();
-  if (error) showError(error);
-  if (data) renderResults(data);
+subscribe(loading, (isLoading) => {
+  if (isLoading) showSpinner();
+  else hideSpinner();
+});
+subscribe(results, (data) => renderResults(data));
+subscribe(error, (err) => {
+  if (err) showError(err);
 });
 ```
 
@@ -463,10 +487,7 @@ const name = zen('Alice');   // Zen<string>
 
 const doubled = computed(() => count.value * 2);  // ComputedZen<number>
 
-const user = computedAsync(async () => {
-  return { id: 1, name: 'Bob' };
-});
-// ComputedAsyncZen<{ id: number; name: string }>
+const user = zen<{ id: number; name: string } | null>(null);  // Zen<User | null>
 
 // Type-safe!
 count.value = 'invalid'; // ❌ Type error
@@ -494,7 +515,7 @@ const doubled = computed(() => count.value * 2);
 
 **Advantages:**
 - ✅ 60% smaller (1.14 KB vs 2.89 KB)
-- ✅ Built-in `computedAsync`
+- ✅ Built-in `effect()` API
 - ✅ Simpler implementation
 - ✅ Same auto-tracking magic
 
@@ -551,7 +572,7 @@ const doubled = computed(() => count.value * 2);
 
 Zen provides the same auto-tracking magic as Preact Signals but:
 - **60% smaller** bundle (1.14 KB vs 2.89 KB)
-- Built-in `computedAsync` for async workflows
+- Built-in `effect()` API for side effects
 - Simpler, more focused implementation
 
 ### Is auto-tracking slower?

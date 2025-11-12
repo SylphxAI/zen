@@ -3,7 +3,8 @@
 // TODO: Implement router logic inspired by @nanostores/router
 // Goals: Tiny size, high performance, zen/FP principles
 
-import { type MapZen, map } from '@sylphx/zen';
+import { map } from '@sylphx/zen-patterns';
+import type { MapStore } from '@sylphx/zen-patterns';
 
 /** Route type placeholder (extend as needed) */
 export type Route = string;
@@ -26,7 +27,7 @@ export interface RouterState {
 // --- Public API ---
 
 // Store
-export const $router: MapZen<RouterState> = map({
+export const $router: MapStore<RouterState> = map({
   path: '',
   params: {},
   search: {},

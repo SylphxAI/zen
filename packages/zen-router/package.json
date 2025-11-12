@@ -37,6 +37,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@sylphx/zen": "workspace:*"
+    "@sylphx/zen": "workspace:*",
+    "@sylphx/zen-patterns": "workspace:*"
   }
 }

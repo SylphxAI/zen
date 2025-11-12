@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { computed } from './computed'; // Import computed
-import { subscribe as subscribeToAtom, zen } from './zen'; // Import updated functional API (get/set removed)
+import { computed, subscribe as subscribeToAtom, zen } from './zen'; // Use zen.ts's built-in computed with auto-tracking
 
 // // Mock the internal subscribe/unsubscribe functions for dependency tracking test - REMOVED due to vi.mock error
 // vi.mock('./atom', async (importOriginal) => {
@@ -20,38 +19,33 @@ describe('computed (functional)', () => {
   // });
 
   it('should compute initial value correctly', () => {
-    const count = zen(10); // Use zen
-    // biome-ignore lint/suspicious/noExplicitAny: Test setup requires cast
-    const double = computed([count as any], (value: unknown) => (value as number) * 2); // Use computed, accept unknown, cast inside
-    expect(double._value).toBe(20);
+    const count = zen(10);
+    const double = computed(() => count.value * 2); // Auto-tracking: accesses count.value inside
+    expect(double.value).toBe(20); // Use .value getter
   });
 
   it('should update when a dependency atom changes', () => {
-    const count = zen(10); // Use zen
-    // biome-ignore lint/suspicious/noExplicitAny: Test setup requires cast
-    const double = computed([count as any], (value: unknown) => (value as number) * 2); // Use computed, accept unknown, cast inside
+    const count = zen(10);
+    const double = computed(() => count.value * 2);
 
-    // Subscribe to activate dependency tracking, add cast
-    // biome-ignore lint/suspicious/noExplicitAny: Test setup requires cast
+    // Subscribe to activate dependency tracking
     const unsub = subscribeToAtom(double as any, () => {});
 
-    expect(double._value).toBe(20);
+    expect(double.value).toBe(20);
     count.value = 15;
-    expect(double._value).toBe(30);
+    expect(double.value).toBe(30);
 
     unsub();
   });
 
   it('should notify listeners when computed value changes', () => {
-    const count = zen(10); // Use zen
-    // biome-ignore lint/suspicious/noExplicitAny: Test setup requires cast
-    const double = computed([count as any], (value: unknown) => (value as number) * 2); // Use computed, accept unknown, cast inside
+    const count = zen(10);
+    const double = computed(() => count.value * 2);
     const listener = vi.fn();
 
-    // biome-ignore lint/suspicious/noExplicitAny: Test setup requires cast
-    const unsubscribe = subscribeToAtom(double as any, listener); // Use subscribeToAtom, add cast
+    const unsubscribe = subscribeToAtom(double as any, listener);
     // Initial call happens, store the value for comparison
-    const initialValue = double._value; // Should be 20
+    const initialValue = double.value; // Should be 20
     listener.mockClear(); // Reset after subscription
 
     // Test updates
@@ -63,48 +57,44 @@ describe('computed (functional)', () => {
   });
 
   it('should not notify listeners if computed value does not change', () => {
-    const count = zen(10); // Use zen
-    // biome-ignore lint/suspicious/noExplicitAny: Test setup requires cast
-    const parity = computed([count as any], (value: unknown) =>
-      (value as number) % 2 === 0 ? 'even' : 'odd',
-    ); // Use computed, accept unknown, cast inside
-    const listener = vi.fn();
+    const count = zen(10);
+    const parity = computed(() =>
+      count.value % 2 === 0 ? 'even' : 'odd',
+    );
 
-    // biome-ignore lint/suspicious/noExplicitAny: Test setup requires cast
-    const unsubscribe = subscribeToAtom(parity as any, listener); // Use subscribeToAtom, add cast
+    // Force initial calculation before subscribing
+    expect(parity.value).toBe('even'); // 10 % 2 === 0
+
+    const listener = vi.fn();
+    const unsubscribe = subscribeToAtom(parity as any, listener);
     listener.mockClear(); // Clear call history after subscription
 
     count.value = 12; // Value changes, but computed result ('even') does not
-    expect(parity._value).toBe('even');
+    expect(parity.value).toBe('even');
     expect(listener).not.toHaveBeenCalled();
 
     unsubscribe();
   });
 
   it('should handle multiple dependencies', () => {
-    const num1 = zen(10); // Use zen
-    const num2 = zen(5); // Use zen
-    const sum = computed(
-      // biome-ignore lint/suspicious/noExplicitAny: Test setup requires cast
-      [num1 as any, num2 as any],
-      (n1: unknown, n2: unknown) => (n1 as number) + (n2 as number),
-    ); // Use computed, accept unknown, cast inside
+    const num1 = zen(10);
+    const num2 = zen(5);
+    const sum = computed(() => num1.value + num2.value); // Auto-tracking: accesses both values
     const listener = vi.fn();
 
-    // biome-ignore lint/suspicious/noExplicitAny: Test setup requires cast
-    const unsubscribe = subscribeToAtom(sum as any, listener); // Use subscribeToAtom, add cast
-    const initialSum = sum._value; // 15
+    const unsubscribe = subscribeToAtom(sum as any, listener);
+    const initialSum = sum.value; // 15
     listener.mockClear(); // Clear after subscription
 
     num1.value = 20; // sum changes from 15 to 25
-    expect(sum._value).toBe(25);
+    expect(sum.value).toBe(25);
     expect(listener).toHaveBeenCalledTimes(1);
     expect(listener).toHaveBeenCalledWith(25, initialSum);
     listener.mockClear();
 
-    const intermediateSum = sum._value; // 25
+    const intermediateSum = sum.value; // 25
     num2.value = 7; // sum changes from 25 to 27
-    expect(sum._value).toBe(27);
+    expect(sum.value).toBe(27);
     expect(listener).toHaveBeenCalledTimes(1);
     expect(listener).toHaveBeenCalledWith(27, intermediateSum);
 
@@ -112,24 +102,17 @@ describe('computed (functional)', () => {
   });
 
   it('should handle dependencies on other computed atoms', () => {
-    const base = zen(10); // Use zen
-    // Ensure null check is present, accept unknown, cast inside
-    // biome-ignore lint/suspicious/noExplicitAny: Test setup requires cast
-    const double = computed([base as any], (val: unknown) => ((val as number | null) ?? 0) * 2);
-    const quadruple = computed(
-      // biome-ignore lint/suspicious/noExplicitAny: Test setup requires cast
-      [double as any],
-      (val: unknown) => ((val as number | null) ?? 0) * 2,
-    );
+    const base = zen(10);
+    const double = computed(() => base.value * 2);
+    const quadruple = computed(() => double.value * 2); // Nested computed
     const listener = vi.fn();
 
-    // biome-ignore lint/suspicious/noExplicitAny: Test setup requires cast
-    const unsubscribe = subscribeToAtom(quadruple as any, listener); // Use subscribeToAtom, add cast
-    const initialQuad = quadruple._value; // 40
+    const unsubscribe = subscribeToAtom(quadruple as any, listener);
+    const initialQuad = quadruple.value; // 40
     listener.mockClear(); // Clear after subscription
 
     base.value = 5;
-    expect(quadruple._value).toBe(20); // 5 * 2 * 2
+    expect(quadruple.value).toBe(20); // 5 * 2 * 2
     expect(listener).toHaveBeenCalledTimes(1);
     expect(listener).toHaveBeenCalledWith(20, initialQuad);
 
@@ -137,40 +120,40 @@ describe('computed (functional)', () => {
   });
 
   it('should unsubscribe from dependencies when last listener unsubscribes', () => {
-    const dep1 = zen(1); // Use zen
-    const dep2 = zen(2); // Use zen
-    const computedSum = computed(
-      // biome-ignore lint/suspicious/noExplicitAny: Test setup requires cast
-      [dep1 as any, dep2 as any],
-      (d1: unknown, d2: unknown) => (d1 as number) + (d2 as number),
-    ); // Use computed, accept unknown, cast inside
+    const dep1 = zen(1);
+    const dep2 = zen(2);
+    const computedSum = computed(() => dep1.value + dep2.value); // Auto-tracking
     const listener = vi.fn();
 
     // Cast to access internal properties for testing
     // biome-ignore lint/suspicious/noExplicitAny: Test setup requires cast
     const internalComputed = computedSum as any;
 
-    // Initially, no unsubscribers
-    expect(internalComputed._unsubscribers).toBeUndefined();
+    // Initially, no unsubs (zen.ts uses _unsubs, not _unsubscribers)
+    expect(internalComputed._unsubs).toBeUndefined();
 
-    // First subscribe triggers dependency subscriptions, add cast
-    // biome-ignore lint/suspicious/noExplicitAny: Test setup requires cast
-    const unsub1 = subscribeToAtom(computedSum as any, listener); // Use subscribeToAtom
-    expect(internalComputed._unsubscribers).toBeInstanceOf(Array);
-    expect(internalComputed._unsubscribers.length).toBe(2); // Should have subscribed to both deps
+    // Access value to trigger initial calculation and auto-tracking
+    expect(computedSum.value).toBe(3); // 1 + 2
 
-    // Add a second listener - should NOT change unsubscribers array, add cast
-    // biome-ignore lint/suspicious/noExplicitAny: Test setup requires cast
-    const unsub2 = subscribeToAtom(computedSum as any, () => {}); // Use subscribeToAtom
-    expect(internalComputed._unsubscribers).toBeInstanceOf(Array);
-    expect(internalComputed._unsubscribers.length).toBe(2);
+    // After first calculation, sources should be tracked and subscriptions created
+    expect(internalComputed._unsubs).toBeInstanceOf(Array);
+    expect(internalComputed._unsubs.length).toBe(2); // Should have subscribed to both deps
+
+    // First subscribe adds a listener
+    const unsub1 = subscribeToAtom(computedSum as any, listener);
+    listener.mockClear();
+
+    // Add a second listener - should NOT change unsubs array
+    const unsub2 = subscribeToAtom(computedSum as any, () => {});
+    expect(internalComputed._unsubs).toBeInstanceOf(Array);
+    expect(internalComputed._unsubs.length).toBe(2);
 
     // Unsubscribe the second listener - should NOT unsubscribe from dependencies
     unsub2();
-    expect(internalComputed._unsubscribers).toBeInstanceOf(Array); // Still subscribed
+    expect(internalComputed._unsubs).toBeInstanceOf(Array); // Still subscribed
 
     // Unsubscribe the first (last) listener - should trigger unsubscribe from dependencies
     unsub1();
-    expect(internalComputed._unsubscribers).toBeUndefined(); // Should be cleaned up
+    expect(internalComputed._unsubs).toBeUndefined(); // Should be cleaned up
   });
 });

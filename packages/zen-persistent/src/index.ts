@@ -4,9 +4,8 @@ import {
   type Unsubscribe, // Added missing import
   type Zen,
   map,
-  onMount,
   subscribe,
-  zen, // Change zen to zen
+  zen,
 } from '@sylphx/zen';
 
 // --- Types ---
@@ -144,24 +143,10 @@ export function persistentZen<Value>(
     }
   };
 
-  // Use onMount to load initial value and set up listeners
-  // onMount is now only used for cross-tab sync setup/teardown
-  const _unmount = onMount(baseZen, () => {
-    // --- Mount ---
-
-    // Add cross-tab listener if enabled
-    if (shouldListen) {
-      window.addEventListener('storage', storageEventHandler);
-    }
-
-    // --- Unmount (runs shortly after the last listener unsubscribes) ---
-    return () => {
-      if (shouldListen) {
-        window.removeEventListener('storage', storageEventHandler); // Add semicolon
-      }
-      // Stop the core listener? No, persistence should continue.
-    };
-  }); // End of onMount call
+  // Setup cross-tab sync listener
+  if (shouldListen && typeof window !== 'undefined' && window.addEventListener) {
+    window.addEventListener('storage', storageEventHandler);
+  }
 
   return baseZen;
 }
@@ -254,45 +239,10 @@ export function persistentMap<Value extends object>(
     }
   };
 
-  // Use onMount to load initial value and set up listeners
-  const _unmount = onMount(baseMap, () => {
-    // --- Mount ---
-    let valueFromStorage: Value | undefined;
-    let storageIsEmpty = true; // Determine emptiness inside onMount now
-    try {
-      const raw = storage.getItem(key);
-      if (raw !== null) {
-        valueFromStorage = serializer.decode(raw);
-        storageIsEmpty = false;
-      }
-    } catch (_error) {}
-
-    // Set initial value from storage if different from current
-    if (!storageIsEmpty && valueFromStorage !== undefined) {
-      // Use .value which replaces the whole map content
-      // Check if different before setting? Deep compare might be needed.
-      // For simplicity, setting unconditionally if storage had value.
-      baseMap.value = valueFromStorage;
-    } else if (storageIsEmpty) {
-      // If nothing in storage, write the current (initial) value
-      writeToStorage(baseMap.value);
-    }
-
-    // Start listening to core map changes (Now handled outside onMount)
-
-    // Add cross-tab listener if enabled
-    if (shouldListen) {
-      window.addEventListener('storage', storageEventHandler);
-    }
-
-    // --- Unmount ---
-    return () => {
-      if (shouldListen) {
-        window.removeEventListener('storage', storageEventHandler);
-      }
-      // Stop the core listener? No, persistence should continue.
-    };
-  });
+  // Setup cross-tab sync listener
+  if (shouldListen && typeof window !== 'undefined' && window.addEventListener) {
+    window.addEventListener('storage', storageEventHandler);
+  }
 
   // Return the original map store. Its value is managed by the listeners.
   // Functions like setKey will modify the baseMap, triggering the subscribe listener.

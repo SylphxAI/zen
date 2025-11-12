@@ -64,7 +64,7 @@ console.log(count.value); // ✅ Direct access
 | **Computed** | `atom(get => ...)` | `computed([deps], fn)` |
 | **Async** | Built-in suspense | `computedAsync()` |
 | **Outside React** | ❌ Not recommended | ✅ Full support |
-| **Bundle Size** | ~3 KB | ~1.14 KB |
+| **Bundle Size** | ~3 KB | ~1.68 KB |
 
 ---
 
@@ -779,7 +779,7 @@ const user = computedAsync([userId], async (id) => fetchUser(id));
 - ✅ You need framework-agnostic state
 - ✅ You use state outside React (Node.js, vanilla JS)
 - ✅ You prefer direct `.value` access
-- ✅ You want 8x faster real-world performance
+- ✅ You want blazing fast real-world performance
 - ✅ You prefer explicit loading states over Suspense
 - ✅ You like signals (Solid.js, Vue style)
 

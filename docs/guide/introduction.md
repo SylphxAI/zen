@@ -2,8 +2,8 @@
 
 Zen is a revolutionary reactive state management library with **auto-tracking magic**. It's designed to be:
 
-- **Ultra-tiny** - Only **1.14 KB gzipped** (80% smaller than v2)
-- **Blazing fast** - 8x faster in real-world applications
+- **Ultra-tiny** - Only **1.68 KB gzipped** (80% smaller than v2)
+- **Blazing fast** - blazing fast in real-world applications
 - **Auto-tracking** - Dependencies tracked automatically, zero config
 - **Type-safe** - Full TypeScript support with excellent type inference
 - **Framework-agnostic** - Works with React, Vue, Svelte, Solid, Preact, and vanilla JS
@@ -38,7 +38,7 @@ console.log(fullName.value); // "John Doe"
 
 Zen v3 combines auto-tracking with zero-overhead reactivity:
 
-- **8x faster** in real-world applications vs v2
+- **blazing fast** in real-world applications vs v2
 - **2.12x faster** for conditional dependencies
 - **1.33x faster** for simple computed values
 - Native getters/setters for minimal overhead
@@ -154,16 +154,16 @@ count.value++; // Doesn't update display
 
 | Feature | Zen v3 | Preact Signals | Solid | MobX |
 |---------|--------|----------------|-------|------|
-| Bundle Size | **1.14 KB** | 2.89 KB | 4.5 KB | 16.5 KB |
+| Bundle Size | **1.68 KB** | 2.89 KB | 4.5 KB | 16.5 KB |
 | Auto-tracking | ✅ | ✅ | ✅ | ✅ |
-| Performance | **8x faster** | Baseline | ~2x slower | Much slower |
+| Performance | **blazing fast** | Baseline | ~2x slower | Much slower |
 | TypeScript | ✅ | ✅ | ✅ | ✅ |
 | Framework-agnostic | ✅ | ✅ | ❌ | ✅ |
 | Batching | ✅ | ✅ | ✅ | ✅ |
 
 **Why Zen over alternatives?**
 - **60% smaller** than Preact Signals with same auto-tracking magic
-- **8x faster** in real-world scenarios
+- **blazing fast** in real-world scenarios
 - Built-in `effect()` API for side effects
 - Optional explicit dependencies for performance-critical code
 - Zero dependencies, tree-shakeable
@@ -173,9 +173,9 @@ count.value++; // Doesn't update display
 Zen is a great choice when you need:
 
 - **Automatic dependency tracking** without manual arrays
-- **Ultra-lightweight** state management (1.14 KB!)
+- **Ultra-lightweight** state management (1.68 KB!)
 - **Framework-agnostic** solution that works everywhere
-- **High performance** with 8x faster real-world speed
+- **High performance** with blazing fast real-world speed
 - **Type-safe** state with excellent TypeScript support
 - **Built-in async support** with loading states
 
@@ -194,7 +194,7 @@ Consider alternatives if you need:
 
 Real-world benchmarks show dramatic improvements:
 
-- **Counter App:** 8x faster than Preact Signals
+- **Counter App:** blazing fast than Preact Signals
 - **Conditional Logic:** 2.12x faster than explicit dependencies
 - **Simple Computed:** 1.33x faster than v2
 - **Bundle Size:** 80% smaller than v2

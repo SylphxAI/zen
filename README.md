@@ -8,7 +8,7 @@
 [![pnpm](https://img.shields.io/badge/maintained%20with-pnpm-cc00ff?style=flat-square&logo=pnpm)](https://pnpm.io/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 
-**1.14 KB** • **8x faster** • **Auto-tracking** • **Zero config**
+**1.68 KB** • **Blazing fast** • **Auto-tracking** • **Zero config**
 
 [Core Package](#-core-package) • [Framework Integrations](#-framework-integrations) • [Utilities](#-utilities) • [Quick Start](#-quick-start)
 
@@ -32,10 +32,10 @@ Traditional state libraries:
 **The Solution:**
 ```
 Zen:
-- 1.14 KB gzipped ✅
+- 1.68 KB gzipped ✅
 - Automatic dependency tracking ✅
 - Clean, unified API ✅
-- 8x faster in real-world scenarios ✅
+- Blazing fast performance ✅
 ```
 
 **Result: Minimal footprint, maximum performance, zero configuration.**
@@ -48,8 +48,8 @@ Zen:
 
 | Feature | Description | Benefit |
 |---------|-------------|---------|
-| **Ultra-tiny** | Only **1.14 KB gzipped** | Minimal bundle impact |
-| **Lightning fast** | **8x faster** than alternatives | Better UX, less lag |
+| **Ultra-tiny** | Only **1.68 KB gzipped** | Minimal bundle impact |
+| **Lightning fast** | Blazing fast performance | Better UX, less lag |
 | **Zero overhead** | Auto-tracking with no runtime cost | Optimal performance |
 
 ### Developer Experience
@@ -199,7 +199,7 @@ settings.value.theme = 'light';
 
 | Library | Size (gzipped) | Difference |
 |---------|----------------|------------|
-| **Zen** | **1.14 KB** | Baseline |
+| **Zen** | **1.68 KB** | Baseline |
 | Zustand | 1.2 KB | +5% |
 | Jotai | 3.0 KB | +163% |
 | Valtio | 5.5 KB | +382% |
@@ -431,7 +431,7 @@ Built with:
 <p align="center">
   <strong>The tiniest, fastest reactive state library</strong>
   <br>
-  <sub>1.14 KB • 8x faster • Auto-tracking magic</sub>
+  <sub>1.68 KB • blazing fast • Auto-tracking magic</sub>
   <br><br>
   <a href="https://sylphx.com">sylphx.com</a> •
   <a href="https://x.com/SylphxAI">@SylphxAI</a> •

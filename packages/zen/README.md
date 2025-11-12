@@ -5,7 +5,7 @@
 Zen is a revolutionary reactive state management library that combines extreme minimalism with magical auto-tracking.
 
 <p align="center">
-  <strong>1.14 KB gzipped • 8x faster • Auto-tracking • Zero config</strong>
+  <strong>1.68 KB gzipped • Blazing fast • Auto-tracking • Zero config</strong>
 </p>
 
 ---
@@ -24,8 +24,8 @@ const sum = computed(() => a.value + b.value);
 
 ### 🎯 Key Features
 
-- 🪶 **Ultra-tiny** - Only **1.14 KB gzipped**
-- ⚡ **Lightning fast** - 8x faster in real-world scenarios
+- 🪶 **Ultra-tiny** - Only **1.68 KB gzipped**
+- ⚡ **Lightning fast** - Blazing fast performance
 - 🪄 **Auto-tracking** - Dependencies tracked automatically, zero config
 - 🎯 **Clean API** - Unified `.value` everywhere, no `get()`/`set()`
 - 🔄 **Effect API** - Built-in `effect()` for side effects with auto-tracking
@@ -457,7 +457,7 @@ Zen is incredibly fast compared to other reactive libraries:
 
 | Library | Bundle Size (gzipped) | Performance |
 |---------|----------------------|-------------|
-| **Zen** | **1.14 KB** | **Baseline** |
+| **Zen** | **1.68 KB** | **Baseline** |
 | Preact Signals | 2.89 KB | ~3x slower |
 | Solid | 4.50 KB | ~2x slower |
 | MobX | 16.5 KB | Much slower |
@@ -467,7 +467,7 @@ Zen is incredibly fast compared to other reactive libraries:
 ## Bundle Size
 
 ```
-Zen:         ███                    1.14 KB (gzipped)
+Zen:         ███                    1.68 KB (gzipped)
 Preact:      ████████               2.89 KB (gzipped)
 Solid:       ████████████           4.50 KB (gzipped)
 MobX:        ████████████████████████████ 16.5 KB (gzipped)
@@ -514,7 +514,7 @@ const doubled = computed(() => count.value * 2);
 ```
 
 **Advantages:**
-- ✅ 60% smaller (1.14 KB vs 2.89 KB)
+- ✅ 60% smaller (1.68 KB vs 2.89 KB)
 - ✅ Built-in `effect()` API
 - ✅ Simpler implementation
 - ✅ Same auto-tracking magic
@@ -559,7 +559,7 @@ const doubled = computed(() => count.value * 2);
 ```
 
 **Advantages:**
-- ✅ 93% smaller (1.14 KB vs 16.5 KB!)
+- ✅ 93% smaller (1.68 KB vs 16.5 KB!)
 - ✅ Simpler API
 - ✅ No decorators needed
 - ✅ Better tree-shaking
@@ -571,7 +571,7 @@ const doubled = computed(() => count.value * 2);
 ### Why not just use Preact Signals?
 
 Zen provides the same auto-tracking magic as Preact Signals but:
-- **60% smaller** bundle (1.14 KB vs 2.89 KB)
+- **60% smaller** bundle (1.68 KB vs 2.89 KB)
 - Built-in `effect()` API for side effects
 - Simpler, more focused implementation
 
@@ -580,7 +580,7 @@ Zen provides the same auto-tracking magic as Preact Signals but:
 No! In fact:
 - Simple computed: **Similar speed** or faster
 - Conditional deps: **2.1x faster** (smart subscriptions)
-- Real-world apps: **8x faster** (less overhead)
+- Real-world apps: **blazing fast** (less overhead)
 
 For the rare case where explicit deps are faster, you can still use them:
 ```typescript

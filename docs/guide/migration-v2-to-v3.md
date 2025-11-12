@@ -2,8 +2,8 @@
 
 Zen v3 introduces **auto-tracking reactivity** with massive improvements:
 
-- 🎉 **80% smaller bundle** - 1.14 KB vs 5.76 KB gzipped
-- ⚡ **8x faster** in real-world scenarios
+- 🎉 **80% smaller bundle** - 1.68 KB vs 5.76 KB gzipped
+- ⚡ **blazing fast** in real-world scenarios
 - 🪄 **Auto-tracking** - Dependencies tracked automatically
 - 🧹 **Cleaner API** - Less boilerplate, more magic
 
@@ -210,7 +210,7 @@ subscribe(filteredTodos, (todos) => {
 
 After migrating to v3:
 
-- **8x faster** in real-world counter apps
+- **blazing fast** in real-world counter apps
 - **2.12x faster** for conditional dependencies
 - **1.33x faster** for simple computed values
 - **80% smaller** bundle size
@@ -308,7 +308,7 @@ const sum = computed(() => a.value + b.value, [a, b]);
 - ✅ `computed([deps], fn)` → `computed(() => fn())`
 - ✅ Auto-tracking handles dependencies
 - ✅ New `computedAsync()` for async operations
-- ✅ 80% smaller, 8x faster
+- ✅ 80% smaller, blazing fast
 
 **Benefits:**
 - Less boilerplate

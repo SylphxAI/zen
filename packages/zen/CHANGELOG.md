@@ -100,7 +100,7 @@ const fullName = computed(() =>
 
 #### ⚡ Performance Improvements
 
-- **8x faster** in real-world applications (counter app: ~800K ops/s vs ~100K ops/s)
+- **blazing fast** in real-world applications (counter app: ~800K ops/s vs ~100K ops/s)
 - **2.12x faster** conditional dependencies with auto-tracking (~20M ops/s vs ~9.4M ops/s)
 - **1.33x faster** simple computed values (~15M ops/s vs ~11.3M ops/s)
 - **Lazy subscription** - computed values only subscribe when accessed
@@ -108,8 +108,8 @@ const fullName = computed(() =>
 
 #### 📦 Bundle Size
 
-- **80% smaller** than v2: **1.14 KB** gzipped (was 5.7 KB)
-- **60% smaller** than Preact Signals (1.14 KB vs 2.89 KB)
+- **80% smaller** than v2: **1.68 KB** gzipped (was 5.7 KB)
+- **60% smaller** than Preact Signals (1.68 KB vs 2.89 KB)
 - React integration: +0.3KB
 - Vue integration: +0.2KB
 

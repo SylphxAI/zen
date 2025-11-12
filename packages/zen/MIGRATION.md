@@ -3,8 +3,8 @@
 ## Quick Summary
 
 Zen v3 introduces auto-tracking reactivity with a simpler, more powerful API:
-- **80% smaller** bundle (1.14 KB vs 5.76 KB)
-- **8x faster** in real-world scenarios
+- **80% smaller** bundle (1.68 KB vs 5.76 KB)
+- **blazing fast** in real-world scenarios
 - **Auto-tracking** - no manual dependency arrays needed
 - **Cleaner API** - unified `.value` everywhere
 
@@ -188,8 +188,8 @@ console.log(doubled.value);  // 10
 
 ## Benefits of v3
 
-✅ **80% smaller** - 1.14 KB vs 5.76 KB gzipped
-✅ **8x faster** - in real-world counter apps
+✅ **80% smaller** - 1.68 KB vs 5.76 KB gzipped
+✅ **blazing fast** - in real-world counter apps
 ✅ **Auto-tracking** - no manual deps needed
 ✅ **Cleaner API** - unified `.value` everywhere
 ✅ **Async support** - built-in `computedAsync`

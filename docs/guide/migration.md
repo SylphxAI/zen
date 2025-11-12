@@ -6,8 +6,8 @@ Choose the migration guide for your current version:
 
 If you're currently using **Zen v2**, upgrade to v3 for massive improvements:
 
-- 🎉 **80% smaller** - 1.14 KB vs 5.76 KB gzipped
-- ⚡ **8x faster** in real-world scenarios
+- 🎉 **80% smaller** - 1.68 KB vs 5.76 KB gzipped
+- ⚡ **blazing fast** in real-world scenarios
 - 🪄 **Auto-tracking** - No manual dependency arrays
 - ✨ **New features** - Built-in async support
 
@@ -51,7 +51,7 @@ count.value = 1;
 
 | Version | Status | Bundle Size | Auto-tracking |
 |---------|--------|-------------|---------------|
-| **v3** (latest) | ✅ Active | 1.14 KB | ✅ Yes |
+| **v3** (latest) | ✅ Active | 1.68 KB | ✅ Yes |
 | v2 | ⚠️ Maintenance | 5.76 KB | ❌ No |
 | v1 | ❌ Deprecated | ~6 KB | ❌ No |
 

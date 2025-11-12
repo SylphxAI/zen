@@ -584,7 +584,7 @@ const value = useStore(count);
 |---------|----------------|-------|
 | Zustand | ~1.2 KB | Core only |
 | Zustand + middleware | ~3-5 KB | With persist, immer |
-| **Zen Core** | **1.14 KB** | Includes computed, async, auto-tracking |
+| **Zen Core** | **1.68 KB** | Includes computed, async, auto-tracking |
 | Zen + React | +0.3 KB | Framework integration |
 | Zen + Ecosystem | +3-6 KB | Router, persistence, craft |
 
@@ -760,7 +760,7 @@ if (count.value > 5) { } // Comparing value
 - ✅ You want fine-grained reactivity with auto-tracking
 - ✅ You need computed async values
 - ✅ You like Vue/Solid.js mental model
-- ✅ You want maximum performance (8x faster real-world apps)
+- ✅ You want maximum performance (blazing fast real-world apps)
 
 ---
 
@@ -774,8 +774,8 @@ if (count.value > 5) { } // Comparing value
 | **Selectors** | Inline in components | Reusable computed/select |
 | **Computed** | Getters (no cache) | Cached computed values |
 | **Async** | Manual with useEffect | Reactive computedAsync |
-| **Bundle Size** | ~1.2 KB | ~1.14 KB |
-| **Performance** | Fast | 8x faster real-world |
+| **Bundle Size** | ~1.2 KB | ~1.68 KB |
+| **Performance** | Fast | blazing fast real-world |
 | **Granularity** | Selector-based | Automatic fine-grained |
 
 ---

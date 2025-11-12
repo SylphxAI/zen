@@ -1,5 +1,4 @@
 import type { BatchedZen } from './batched'; // Import BatchedZen type
-import { sourceValuesPool } from './pool';
 // Functional computed (derived state) implementation.
 import type { AnyZen, Unsubscribe, ZenWithValue } from './types';
 import { notifyListeners } from './zen';
@@ -24,7 +23,6 @@ export type ComputedZen<T = unknown> = ZenWithValue<T | null> & {
   _update: () => boolean;
   _subscribeToSources: () => void;
   _unsubscribeFromSources: () => void;
-  _dispose?: () => void; // Optional disposal for resource cleanup
 };
 
 /** Alias for ComputedZen, representing the read-only nature. */
@@ -201,8 +199,6 @@ function _subscribeToSingleSource(
 ): Unsubscribe | undefined {
   if (!source) return undefined;
 
-  // ✅ PHASE 6 OPTIMIZATION: Attach computed zen reference to handler
-  // This allows markDirty() to find the computed zen and mark it GREEN
   if (computedZen) {
     // biome-ignore lint/suspicious/noExplicitAny: Required to attach computed zen reference to handler for graph coloring
     (onChangeHandler as any)._computedZen = computedZen;
@@ -213,12 +209,10 @@ function _subscribeToSingleSource(
   baseSource._listeners ??= [];
   baseSource._listeners.push(onChangeHandler);
 
-  if (isFirstSourceListener) {
-    if (source._kind === 'computed') {
-      const computedSource = source as ComputedZen<unknown>;
-      if (typeof computedSource._subscribeToSources === 'function') {
-        computedSource._subscribeToSources();
-      }
+  if (isFirstSourceListener && source._kind === 'computed') {
+    const computedSource = source as ComputedZen<unknown>;
+    if (computedSource._subscribeToSources) {
+      computedSource._subscribeToSources();
     }
   }
 
@@ -237,7 +231,6 @@ function _handleSourceUnsubscribeCleanup(source: AnyZen, onChangeHandler: () => 
   const idx = srcListeners.indexOf(onChangeHandler);
   if (idx === -1) return;
 
-  // Swap-remove for O(1) deletion
   const lastIdx = srcListeners.length - 1;
   if (idx !== lastIdx) {
     srcListeners[idx] = srcListeners[lastIdx];
@@ -248,7 +241,7 @@ function _handleSourceUnsubscribeCleanup(source: AnyZen, onChangeHandler: () => 
     baseSrc._listeners = undefined;
     if (source._kind === 'computed') {
       const computedSource = source as ComputedZen<unknown>;
-      if (typeof computedSource._unsubscribeFromSources === 'function') {
+      if (computedSource._unsubscribeFromSources) {
         computedSource._unsubscribeFromSources();
       }
     }
@@ -257,37 +250,30 @@ function _handleSourceUnsubscribeCleanup(source: AnyZen, onChangeHandler: () => 
 
 /** Subscribes a computed zen to all its source zens. @internal */
 function subscribeComputedToSources<T>(zen: ComputedZen<T>): void {
-  if (zen._unsubscribers) return; // Avoid double subscriptions
+  if (zen._unsubscribers) return;
 
   const sources = zen._sources;
-  const newUnsubscribers: Unsubscribe[] = []; // Collect valid unsubscribers
-
-  // Create a bound handler specific to this computed zen instance
+  const newUnsubscribers: Unsubscribe[] = [];
   const onChangeHandler = () => computedSourceChanged(zen);
 
   for (let i = 0; i < sources.length; i++) {
-    // ✅ PHASE 6: Pass zen reference so handler can be linked to computed
-    const unsub = _subscribeToSingleSource(
-      sources[i],
-      onChangeHandler,
-      zen as ComputedZen<unknown>,
-    );
+    const unsub = _subscribeToSingleSource(sources[i], onChangeHandler, zen as ComputedZen<unknown>);
     if (unsub) {
-      newUnsubscribers.push(unsub); // Add only valid unsub functions
+      newUnsubscribers.push(unsub);
     }
   }
-  zen._unsubscribers = newUnsubscribers; // Assign the filtered array
+  zen._unsubscribers = newUnsubscribers;
 }
 
 /** Unsubscribes a computed zen from all its source zens. @internal */
 function unsubscribeComputedFromSources<T>(zen: ComputedZen<T>): void {
-  if (!zen._unsubscribers) return; // Nothing to unsubscribe from
+  if (!zen._unsubscribers) return;
 
   for (const unsub of zen._unsubscribers) {
-    unsub?.(); // Call each unsubscribe function
+    unsub?.();
   }
-  zen._unsubscribers = undefined; // Clear the array
-  zen._dirty = true; // Mark as dirty when inactive, forces recalc on next activation
+  zen._unsubscribers = undefined;
+  zen._dirty = true;
 }
 
 // --- Override getZenValue for Computed ---
@@ -310,74 +296,27 @@ function unsubscribeComputedFromSources<T>(zen: ComputedZen<T>): void {
  * @returns A ReadonlyZen representing the computed value.
  */
 export function computed<T, S extends AnyZen | Stores>(
-  // Allow single zen or array
   stores: S,
-  // Change signature to accept unknown[] for compatibility with internal call
   calculation: (...values: unknown[]) => T,
-  equalityFn: (a: T, b: T) => boolean = Object.is, // Default to Object.is
+  equalityFn: (a: T, b: T) => boolean = Object.is,
 ): ReadonlyZen<T> {
-  // Normalize stores input to always be an array
   const storesArray = Array.isArray(stores) ? stores : [stores];
+  const sourceValues = new Array(storesArray.length);
 
-  // ✅ PHASE 1 OPTIMIZATION: Acquire pooled array for source values
-  const sourceValues = sourceValuesPool.acquire();
-  sourceValues.length = storesArray.length;
-
-  // Define the structure adhering to ComputedZen<T> type
-  // Optimize: Only initialize essential computed properties. Listeners omitted.
   const computedZen: ComputedZen<T> = {
-    _kind: 'computed', // Set kind
-    _value: null, // Start as null
+    _kind: 'computed',
+    _value: null,
     _dirty: true,
-    _sources: [...storesArray], // Use spread syntax on the normalized array
-    _sourceValues: sourceValues, // Use pooled array
-    // Store the calculation function as provided (expecting spread args)
-    _calculation: calculation, // No cast needed now
+    _sources: storesArray,
+    _sourceValues: sourceValues,
+    _calculation: calculation,
     _equalityFn: equalityFn,
-    // Listener properties (e.g., _listeners, _startListeners) are omitted
-    // _unsubscribers will be added by _subscribeToSources when needed
-    // Add back internal methods needed by core logic (get, subscribe)
     _subscribeToSources: () => subscribeComputedToSources(computedZen),
     _unsubscribeFromSources: () => unsubscribeComputedFromSources(computedZen),
     _update: () => updateComputedValue(computedZen),
-    // ✅ PHASE 1 OPTIMIZATION: Dispose method to release pooled array
-    _dispose: () => {
-      // Unsubscribe from all sources first
-      if (computedZen._unsubscribers) {
-        unsubscribeComputedFromSources(computedZen);
-      }
-      // Release pooled array back to pool
-      sourceValuesPool.release(sourceValues);
-    },
-    // _onChange is not directly called externally, computedSourceChanged handles it
   };
 
-  // onMount logic removed
-
-  // The getZenValue in zen.ts now calls updateComputedValue if dirty.
-  // The subscribeToZen in zen.ts now calls subscribeComputedToSources/unsubscribeComputedFromSources.
-
-  return computedZen; // Return the computed zen structure
-}
-
-/**
- * Dispose a computed zen and release pooled resources.
- * Call this when you're completely done with a computed value to help with memory management.
- * ✅ PHASE 1 OPTIMIZATION: Releases pooled arrays back to pool
- *
- * @example
- * ```typescript
- * const doubled = computed([count], (n) => n * 2);
- * // ... use doubled ...
- * dispose(doubled); // Release resources when done
- * ```
- *
- * @param zen The computed zen to dispose
- */
-export function dispose<T>(zen: ComputedZen<T>): void {
-  if (zen._dispose) {
-    zen._dispose();
-  }
+  return computedZen;
 }
 
 // Note: getZenValue and subscribeToZen logic in zen.ts handles computed zen specifics.

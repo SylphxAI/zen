@@ -16,10 +16,10 @@ hero:
 features:
   - icon: 🪶
     title: Ultra Lightweight
-    details: Only 1.14 KB gzipped. 80% smaller than v2 - extreme minimalism for modern web.
+    details: Only 1.68 KB gzipped. 80% smaller than v2 - extreme minimalism for modern web.
   - icon: ⚡
     title: Blazing Fast
-    details: 8x faster in real-world apps. Auto-tracking with zero overhead reactivity.
+    details: blazing fast in real-world apps. Auto-tracking with zero overhead reactivity.
   - icon: 🪄
     title: Auto-tracking Magic
     details: Dependencies tracked automatically. No manual dependency arrays needed.
@@ -142,10 +142,10 @@ const store = fromZen(count);
 No need to learn complex APIs. Just use `.value` to read and write.
 
 ### **Fast**
-Auto-tracking with zero overhead. Benchmarks show 8x faster performance in real-world apps.
+Auto-tracking with zero overhead. Benchmarks show blazing fast performance in real-world apps.
 
 ### **Tiny**
-At 1.14 KB gzipped, Zen is the smallest reactive library with auto-tracking.
+At 1.68 KB gzipped, Zen is the smallest reactive library with auto-tracking.
 
 ### **Complete**
 Router, persistence, and immutable updates included. Everything you need, nothing you don't.
@@ -158,13 +158,13 @@ Real-world performance comparison:
 
 | Library | Bundle Size | Counter App Performance | Auto-tracking |
 |---------|-------------|------------------------|---------------|
-| **Zen v3** | **1.14 KB** | **~800K ops/s** | ✅ |
+| **Zen v3** | **1.68 KB** | **~800K ops/s** | ✅ |
 | Preact Signals | 2.89 KB | ~100K ops/s | ✅ |
 | Zen v2 | 5.7 KB | ~100K ops/s | ❌ |
 | Zustand | 3.5 KB | N/A | ❌ |
 | Jotai | 3.0 KB | N/A | ❌ |
 
-**Zen v3 is 8x faster** in real-world applications with 60% smaller bundle size than alternatives.
+**Zen v3 is blazing fast** in real-world applications with 60% smaller bundle size than alternatives.
 
 <style>
 .why-zen {

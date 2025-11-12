@@ -48,9 +48,9 @@ function _getDependencyValues(stores: AnyZen[], targetArray: unknown[]): boolean
         dependenciesReady = false;
         break;
       }
-      // Use .value property accessor (get() was removed from zen.ts)
+      // Use .value for zen/computed (has getter), _value for batched (no getter)
       // biome-ignore lint/suspicious/noExplicitAny: TS struggles with generic overload resolution here
-      targetArray[i] = (source as any).value;
+      targetArray[i] = source._kind === 'batched' ? (source as any)._value : (source as any).value;
     } else {
       targetArray[i] = undefined;
     }

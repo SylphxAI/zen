@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { computed } from './computed'; // Import computed
-import { get as getAtomValue, set as setAtomValue, subscribe as subscribeToAtom, zen } from './zen'; // Import updated functional API
+import { subscribe as subscribeToAtom, zen } from './zen'; // Import updated functional API (get/set removed)
 
 // // Mock the internal subscribe/unsubscribe functions for dependency tracking test - REMOVED due to vi.mock error
 // vi.mock('./atom', async (importOriginal) => {
@@ -23,7 +23,7 @@ describe('computed (functional)', () => {
     const count = zen(10); // Use zen
     // biome-ignore lint/suspicious/noExplicitAny: Test setup requires cast
     const double = computed([count as any], (value: unknown) => (value as number) * 2); // Use computed, accept unknown, cast inside
-    expect(getAtomValue(double)).toBe(20);
+    expect(double._value).toBe(20);
   });
 
   it('should update when a dependency atom changes', () => {
@@ -35,9 +35,9 @@ describe('computed (functional)', () => {
     // biome-ignore lint/suspicious/noExplicitAny: Test setup requires cast
     const unsub = subscribeToAtom(double as any, () => {});
 
-    expect(getAtomValue(double)).toBe(20);
-    setAtomValue(count, 15);
-    expect(getAtomValue(double)).toBe(30);
+    expect(double._value).toBe(20);
+    count.value = 15;
+    expect(double._value).toBe(30);
 
     unsub();
   });
@@ -51,11 +51,11 @@ describe('computed (functional)', () => {
     // biome-ignore lint/suspicious/noExplicitAny: Test setup requires cast
     const unsubscribe = subscribeToAtom(double as any, listener); // Use subscribeToAtom, add cast
     // Initial call happens, store the value for comparison
-    const initialValue = getAtomValue(double); // Should be 20
+    const initialValue = double._value; // Should be 20
     listener.mockClear(); // Reset after subscription
 
     // Test updates
-    setAtomValue(count, 15);
+    count.value = 15;
     expect(listener).toHaveBeenCalledTimes(1);
     expect(listener).toHaveBeenCalledWith(30, initialValue); // Pass initialValue as oldValue
 
@@ -74,8 +74,8 @@ describe('computed (functional)', () => {
     const unsubscribe = subscribeToAtom(parity as any, listener); // Use subscribeToAtom, add cast
     listener.mockClear(); // Clear call history after subscription
 
-    setAtomValue(count, 12); // Value changes, but computed result ('even') does not
-    expect(getAtomValue(parity)).toBe('even');
+    count.value = 12; // Value changes, but computed result ('even') does not
+    expect(parity._value).toBe('even');
     expect(listener).not.toHaveBeenCalled();
 
     unsubscribe();
@@ -93,18 +93,18 @@ describe('computed (functional)', () => {
 
     // biome-ignore lint/suspicious/noExplicitAny: Test setup requires cast
     const unsubscribe = subscribeToAtom(sum as any, listener); // Use subscribeToAtom, add cast
-    const initialSum = getAtomValue(sum); // 15
+    const initialSum = sum._value; // 15
     listener.mockClear(); // Clear after subscription
 
-    setAtomValue(num1, 20); // sum changes from 15 to 25
-    expect(getAtomValue(sum)).toBe(25);
+    num1.value = 20; // sum changes from 15 to 25
+    expect(sum._value).toBe(25);
     expect(listener).toHaveBeenCalledTimes(1);
     expect(listener).toHaveBeenCalledWith(25, initialSum);
     listener.mockClear();
 
-    const intermediateSum = getAtomValue(sum); // 25
-    setAtomValue(num2, 7); // sum changes from 25 to 27
-    expect(getAtomValue(sum)).toBe(27);
+    const intermediateSum = sum._value; // 25
+    num2.value = 7; // sum changes from 25 to 27
+    expect(sum._value).toBe(27);
     expect(listener).toHaveBeenCalledTimes(1);
     expect(listener).toHaveBeenCalledWith(27, intermediateSum);
 
@@ -125,11 +125,11 @@ describe('computed (functional)', () => {
 
     // biome-ignore lint/suspicious/noExplicitAny: Test setup requires cast
     const unsubscribe = subscribeToAtom(quadruple as any, listener); // Use subscribeToAtom, add cast
-    const initialQuad = getAtomValue(quadruple); // 40
+    const initialQuad = quadruple._value; // 40
     listener.mockClear(); // Clear after subscription
 
-    setAtomValue(base, 5);
-    expect(getAtomValue(quadruple)).toBe(20); // 5 * 2 * 2
+    base.value = 5;
+    expect(quadruple._value).toBe(20); // 5 * 2 * 2
     expect(listener).toHaveBeenCalledTimes(1);
     expect(listener).toHaveBeenCalledWith(20, initialQuad);
 

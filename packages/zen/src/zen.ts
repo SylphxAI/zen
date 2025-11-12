@@ -131,6 +131,14 @@ export function subscribe<A extends AnyZen>(zen: A, listener: Listener<ZenValue<
     subscribeToSources(zen as any);
   }
 
+  // Subscribe batched to sources (for batched stores from batched.ts)
+  if (zen._kind === 'batched' && (zen as any)._subscribeToSources) {
+    const firstListener = zenData._listeners.length === 1;
+    if (firstListener) {
+      (zen as any)._subscribeToSources();
+    }
+  }
+
   // Initial notification
   listener(zenData._value as any, undefined);
 
@@ -149,6 +157,10 @@ export function subscribe<A extends AnyZen>(zen: A, listener: Listener<ZenValue<
       zenData._listeners = undefined;
       if (zen._kind === 'computed' && zen._unsubs) {
         unsubscribeFromSources(zen as any);
+      }
+      // Unsubscribe batched from sources
+      if (zen._kind === 'batched' && (zen as any)._unsubscribeFromSources) {
+        (zen as any)._unsubscribeFromSources();
       }
     }
   };

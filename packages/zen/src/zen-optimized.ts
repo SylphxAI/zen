@@ -33,6 +33,19 @@ type ComputedCore<T> = ZenCore<T> & {
   _unsubs?: Unsubscribe[];
 };
 
+// Type for batched signals that have extra methods
+type BatchedExtension<T> = {
+  _subscribeToSources?: () => void;
+  _unsubscribeFromSources?: () => void;
+} & ZenCore<T>;
+
+// Type for effect objects
+type EffectCore = {
+  _callback: () => undefined | (() => void);
+  _cleanup?: (() => void) | undefined;
+  _queued: boolean;
+};
+
 export type AnyZen = ZenCore<any> | ComputedCore<any>;
 export type ZenValue<A extends AnyZen> = A extends ZenCore<infer V> ? V : never;
 
@@ -83,13 +96,13 @@ const zenBase = {
     } else {
       notifyListeners(this, newValue, oldValue);
     }
-  }
+  },
 };
 
 export function zen<T>(initialValue: T): ZenCore<T> {
   return Object.assign(Object.create(zenBase), {
     _kind: 'zen' as const,
-    _value: initialValue
+    _value: initialValue,
   });
 }
 
@@ -135,12 +148,15 @@ export function batch<T>(fn: () => T): T {
 // SUBSCRIBE
 // ============================================================================
 
-export function subscribe<T>(
-  zen: ZenCore<T>,
-  listener: Listener<T>
-): Unsubscribe {
+export function subscribe<T>(zen: ZenCore<T>, listener: Listener<T>): Unsubscribe {
   const listeners = zen._listeners || (zen._listeners = []);
   listeners.push(listener);
+
+  // Check if this is a batched computed signal that needs to be activated
+  const batchedZen = zen as BatchedExtension<T>;
+  if (batchedZen._subscribeToSources && typeof batchedZen._subscribeToSources === 'function') {
+    batchedZen._subscribeToSources();
+  }
 
   // Immediate notification
   listener(zen._value, undefined);
@@ -149,6 +165,15 @@ export function subscribe<T>(
     const index = listeners.indexOf(listener);
     if (index !== -1) {
       listeners.splice(index, 1);
+    }
+
+    // Check if this is a batched signal and there are no more listeners
+    if (
+      listeners.length === 0 &&
+      batchedZen._unsubscribeFromSources &&
+      typeof batchedZen._unsubscribeFromSources === 'function'
+    ) {
+      batchedZen._unsubscribeFromSources();
     }
   };
 }
@@ -185,10 +210,12 @@ function subscribeToComputed(c: ComputedCore<any>): void {
   if (!c._unsubs) {
     c._unsubs = [];
     for (const source of c._sources) {
-      c._unsubs.push(subscribe(source, () => {
-        c._dirty = true;
-        updateComputed(c);
-      }));
+      c._unsubs.push(
+        subscribe(source, () => {
+          c._dirty = true;
+          updateComputed(c);
+        }),
+      );
     }
   }
 }
@@ -199,7 +226,7 @@ export function computed<T>(calc: () => T): ComputedCore<T> {
     _value: null,
     _dirty: true,
     _sources: [],
-    _calc: calc
+    _calc: calc,
   });
 
   // Setup dependencies
@@ -225,7 +252,7 @@ export function computed<T>(calc: () => T): ComputedCore<T> {
 // EFFECT - OPTIMIZED
 // ============================================================================
 
-function executeEffect(e: any): void {
+function executeEffect(e: EffectCore): void {
   const cleanup = e._cleanup;
   if (cleanup) {
     e._cleanup = undefined;
@@ -237,12 +264,12 @@ function executeEffect(e: any): void {
     if (typeof result === 'function') {
       e._cleanup = result;
     }
-  } catch (error) {
+  } catch (_error) {
     // Silent error handling for performance
   }
 }
 
-function queueEffect(e: any): void {
+function queueEffect(e: EffectCore): void {
   if (e._queued) return;
 
   if (batchDepth > 0) {
@@ -256,14 +283,11 @@ function queueEffect(e: any): void {
   }
 }
 
-export function effect(
-  callback: () => undefined | (() => void),
-  deps?: AnyZen[]
-): Unsubscribe {
-  const e: any = {
+export function effect(callback: () => undefined | (() => void), deps?: AnyZen[]): Unsubscribe {
+  const e: EffectCore = {
     _callback: callback,
-    _cleanup: undefined as (() => void) | undefined,
-    _queued: false
+    _cleanup: undefined,
+    _queued: false,
   };
 
   if (deps) {

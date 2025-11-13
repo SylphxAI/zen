@@ -29,6 +29,8 @@ type ZenCore<T> = {
   _listeners?: Listener<T>[];
   _pendingOldValue?: T; // ✅ Phase 3 OPTIMIZATION: Replace pendingNotifications Map
   _computedListeners?: ComputedCore<any>[]; // ✅ Phase 3 OPTIMIZATION: Separate computed listeners
+  _computedSlots?: number[]; // ✅ v3.6 OPTIMIZATION: Slot positions for O(1) computed listener removal
+  _version: number; // ✅ v3.6 OPTIMIZATION: Version tracking for fast dependency checking
 };
 
 type ComputedCore<T> = ZenCore<T | null> & {
@@ -38,6 +40,8 @@ type ComputedCore<T> = ZenCore<T | null> & {
   _calc: () => T;
   _unsubs?: Unsubscribe[];
   _epoch?: number; // OPTIMIZATION: Track last processed epoch (instead of Set)
+  _sourceVersions?: number[]; // ✅ v3.6 OPTIMIZATION: Track source versions for fast checking
+  _sourceSlots?: number[]; // ✅ v3.6 OPTIMIZATION: Slot positions in each source's _computedListeners for O(1) removal
 };
 
 export type AnyZen = ZenCore<any> | ComputedCore<any>;
@@ -114,6 +118,7 @@ const zenProto = {
     if (newValue !== newValue && oldValue !== oldValue) return;
 
     this._value = newValue;
+    this._version++; // ✅ v3.6 OPTIMIZATION: Increment version on change
 
     // ✅ Phase 3 OPTIMIZATION: Use _computedListeners to avoid type checking
     const computedListeners = this._computedListeners;
@@ -123,6 +128,8 @@ const zenProto = {
         if (!computedZen._dirty) {
           // ✅ v3.3 OPTIMIZATION: Only mark and queue if not already dirty
           computedZen._dirty = true;
+          // ✅ v3.6 OPTIMIZATION: Clear cached versions when marked dirty
+          computedZen._sourceVersions = undefined;
           // Add to Updates set if in batch (Set handles deduplication)
           if (batchDepth > 0) {
             Updates.add(computedZen);
@@ -149,6 +156,7 @@ export function zen<T>(initialValue: T): Zen<T> {
   const signal = Object.create(zenProto) as ZenCore<T> & { value: T };
   signal._kind = 'zen';
   signal._value = initialValue;
+  signal._version = 0; // ✅ v3.6 OPTIMIZATION: Initialize version
   return signal;
 }
 
@@ -312,6 +320,17 @@ export function batch<T>(fn: () => T): T {
                     subscribeToSources(computed);
                   }
 
+                  // ✅ v3.6 OPTIMIZATION: Save source versions after computation
+                  if (
+                    !computed._sourceVersions ||
+                    computed._sourceVersions.length !== computed._sources.length
+                  ) {
+                    computed._sourceVersions = new Array(computed._sources.length);
+                  }
+                  for (let i = 0; i < computed._sources.length; i++) {
+                    computed._sourceVersions[i] = computed._sources[i]._version;
+                  }
+
                   // ✅ Phase 3 OPTIMIZATION: Inline Object.is for equality check
                   const isSame =
                     (newValue === computed._value &&
@@ -381,6 +400,26 @@ export function batch<T>(fn: () => T): T {
 // ============================================================================
 
 function updateComputed<T>(c: ComputedCore<T>): void {
+  // ✅ v3.6 OPTIMIZATION: Quick version check (fast path)
+  // Only apply if sources are stable (not re-tracked) and we have cached versions
+  if (
+    c._sourceVersions &&
+    c._sources.length === c._sourceVersions.length &&
+    c._unsubs !== undefined
+  ) {
+    let unchanged = true;
+    for (let i = 0; i < c._sources.length; i++) {
+      if (c._sources[i]._version !== c._sourceVersions[i]) {
+        unchanged = false;
+        break;
+      }
+    }
+    if (unchanged) {
+      c._dirty = false; // Fast path - no recompute needed!
+      return;
+    }
+  }
+
   // For auto-tracked computed, unsubscribe and reset sources for re-tracking
   const needsResubscribe = c._unsubs !== undefined;
   if (needsResubscribe) {
@@ -399,6 +438,14 @@ function updateComputed<T>(c: ComputedCore<T>): void {
     // Re-subscribe to newly tracked sources
     if (needsResubscribe && c._sources.length > 0) {
       subscribeToSources(c);
+    }
+
+    // ✅ v3.6 OPTIMIZATION: Save source versions after computation
+    if (!c._sourceVersions || c._sourceVersions.length !== c._sources.length) {
+      c._sourceVersions = new Array(c._sources.length);
+    }
+    for (let i = 0; i < c._sources.length; i++) {
+      c._sourceVersions[i] = c._sources[i]._version;
     }
 
     // ✅ Phase 3 OPTIMIZATION: Inline Object.is for equality check
@@ -460,6 +507,8 @@ function attachListener(sources: AnyZen[], callback: any): Unsubscribe[] {
 function subscribeToSources(c: ComputedCore<any>): void {
   const onSourceChange = () => {
     c._dirty = true;
+    // ✅ v3.6 OPTIMIZATION: Clear cached versions when source changes
+    c._sourceVersions = undefined;
     updateComputed(c);
   };
   (onSourceChange as any)._computedZen = c;
@@ -467,13 +516,22 @@ function subscribeToSources(c: ComputedCore<any>): void {
   c._unsubs = attachListener(c._sources, onSourceChange);
 
   // ✅ Phase 3 OPTIMIZATION: Add to _computedListeners for fast dirty marking
+  // ✅ v3.6 OPTIMIZATION: Track slot positions for O(1) removal
+  if (!c._sourceSlots) {
+    c._sourceSlots = new Array(c._sources.length);
+  }
+
   for (let i = 0; i < c._sources.length; i++) {
     const source = c._sources[i];
     if (!source._computedListeners) {
       source._computedListeners = [];
+      source._computedSlots = [];
     }
     if (!source._computedListeners.includes(c)) {
+      const slot = source._computedListeners.length;
       source._computedListeners.push(c);
+      source._computedSlots?.push(i); // Store the source index in the computed
+      c._sourceSlots[i] = slot; // Store position in source's list
     }
   }
 }
@@ -485,18 +543,42 @@ function unsubscribeFromSources(c: ComputedCore<any>): void {
   c._dirty = true;
 
   // ✅ Phase 3 OPTIMIZATION: Remove from _computedListeners
-  for (let i = 0; i < c._sources.length; i++) {
-    const source = c._sources[i];
-    const computedListeners = source._computedListeners;
-    if (computedListeners) {
-      const idx = computedListeners.indexOf(c);
-      if (idx !== -1) {
-        computedListeners.splice(idx, 1);
+  // ✅ v3.6 OPTIMIZATION: O(1) removal using swap-and-pop with slot tracking
+  if (c._sourceSlots) {
+    for (let i = 0; i < c._sources.length; i++) {
+      const source = c._sources[i];
+      const computedListeners = source._computedListeners;
+      const computedSlots = source._computedSlots;
+
+      if (computedListeners && computedSlots) {
+        const slot = c._sourceSlots[i];
+
+        // Swap-and-pop: Move last element to this slot, then pop
+        const lastComputed = computedListeners[computedListeners.length - 1];
+        const lastSourceIndex = computedSlots[computedSlots.length - 1];
+
+        if (slot < computedListeners.length - 1) {
+          // Not the last element - swap it
+          computedListeners[slot] = lastComputed;
+          computedSlots[slot] = lastSourceIndex;
+
+          // Update the moved computed's slot position
+          if (lastComputed._sourceSlots) {
+            lastComputed._sourceSlots[lastSourceIndex] = slot;
+          }
+        }
+
+        // Pop the last element
+        computedListeners.pop();
+        computedSlots.pop();
+
         if (computedListeners.length === 0) {
           source._computedListeners = undefined;
+          source._computedSlots = undefined;
         }
       }
     }
+    c._sourceSlots = undefined;
   }
 }
 

@@ -53,9 +53,10 @@ let currentListener: ComputedCore<any> | null = null;
 
 let batchDepth = 0;
 // OPTIMIZATION: Queue-based batching (Solid-inspired) - replaces Map with arrays
-let Updates: ComputedCore<any>[] | null = null; // Queue for computed updates
+let Updates: Set<ComputedCore<any>> | null = null; // Set for computed updates (deduplication)
 let Effects: Array<() => void> | null = null; // Queue for side effects
 const pendingNotifications = new Map<AnyZen, any>(); // Keep for external stores (map, deepMap)
+let isProcessingUpdates = false; // Flag to indicate we're in STEP 1 (processing Updates)
 
 export function notifyListeners<T>(zen: ZenCore<T>, newValue: T, oldValue: T): void {
   const listeners = zen._listeners;
@@ -75,6 +76,14 @@ export function queueZenForBatch(zen: AnyZen, oldValue: any): void {
 
 // Helper to check if currently in a batch
 export { batchDepth };
+
+// Helper to check if we're in batch processing phase (STEP 2/3, not STEP 1)
+export function isInBatchProcessing(): boolean {
+  // We're in processing phase only when batchDepth > 0 AND Updates is null
+  // During STEP 1 (Updates processing), Updates is a Set, so this returns false
+  // During STEP 2/3 (pendingNotifications/Effects), Updates is null, so this returns true
+  return batchDepth > 0 && Updates === null;
+}
 
 // ============================================================================
 // ZEN (Core Signal)
@@ -103,11 +112,11 @@ const zenProto = {
       for (let i = 0; i < listeners.length; i++) {
         const listener = listeners[i];
         const computedZen = (listener as any)._computedZen;
-        if (computedZen && !computedZen._dirty) {
+        if (computedZen) {
           computedZen._dirty = true;
-          // Add to Updates queue if in batch
+          // Add to Updates set if in batch (Set handles deduplication)
           if (Updates) {
-            Updates.push(computedZen);
+            Updates.add(computedZen);
           }
         }
       }
@@ -219,29 +228,59 @@ export function batch<T>(fn: () => T): T {
 
   // Start new batch with queues
   batchDepth = 1;
-  Updates = [];
+  Updates = new Set();
   Effects = [];
 
   try {
     const result = fn();
 
-    // STEP 1: Process Updates queue (computed values)
-    if (Updates.length > 0) {
-      const updateQueue = Updates;
-      Updates = null; // Clear to detect nested batches
+    // STEP 1: Process Updates set (computed values)
+    // Process iteratively to handle chains (e.g., a → sum → doubled)
+    if (Updates.size > 0) {
+      // Keep Updates as a Set to allow new computed to be added during processing
+      // This handles dependency chains where updating A dirties B which needs processing
+      const processed = new Set<ComputedCore<any>>();
+      isProcessingUpdates = true;
 
-      for (let i = 0; i < updateQueue.length; i++) {
-        const computed = updateQueue[i];
+      while (Updates.size > 0) {
+        // Get next unprocessed computed
+        let computed: ComputedCore<any> | undefined;
+        for (const c of Updates) {
+          if (!processed.has(c)) {
+            computed = c;
+            break;
+          }
+        }
+
+        if (!computed) break; // All processed
+
+        // Remove from Updates and mark as processed
+        Updates.delete(computed);
+        processed.add(computed);
+
         if (computed._dirty) {
+          const oldValue = computed._value;
+          let changed = false;
+
           // Check if it's from computed.ts (has _update method)
           if ((computed as any)._update) {
-            (computed as any)._update();
+            changed = (computed as any)._update();
+            // Send notification for computed.ts computed values
+            if (changed && computed._listeners) {
+              for (let j = 0; j < computed._listeners.length; j++) {
+                computed._listeners[j](computed._value, oldValue);
+              }
+            }
           } else {
             // It's from zen.ts (internal computed)
+            // updateComputed will handle both update and notification
             updateComputed(computed);
           }
         }
       }
+
+      isProcessingUpdates = false;
+      Updates = null; // Clear after all processing
     }
 
     // STEP 2: Process external store notifications (map, deepMap)
@@ -273,6 +312,7 @@ export function batch<T>(fn: () => T): T {
     batchDepth = 0;
     Updates = null;
     Effects = null;
+    isProcessingUpdates = false;
   }
 }
 
@@ -307,11 +347,20 @@ function updateComputed<T>(c: ComputedCore<T>): void {
     const oldValue = c._value;
     c._value = newValue;
 
-    if (batchDepth > 0) {
+    // Notification handling based on context:
+    // 1. If processing Updates (STEP 1): notify immediately (don't queue)
+    // 2. If in batch but not processing Updates: queue for STEP 2
+    // 3. If not in batch: notify immediately
+    if (isProcessingUpdates) {
+      // We're in STEP 1 processing Updates - notify immediately
+      notifyListeners(c, newValue, oldValue);
+    } else if (batchDepth > 0) {
+      // In batch but not processing Updates - queue for STEP 2
       if (!pendingNotifications.has(c)) {
         pendingNotifications.set(c, oldValue);
       }
     } else {
+      // Not in batch - notify immediately
       notifyListeners(c, newValue, oldValue);
     }
   } finally {
@@ -373,11 +422,13 @@ const computedProto = {
 
     if (this._dirty) {
       updateComputed(this);
-      // Subscribe on first access
-      if (this._unsubs === undefined && this._sources.length > 0) {
-        subscribeToSources(this);
-      }
     }
+
+    // Subscribe on first access (after updateComputed which populates _sources)
+    if (this._unsubs === undefined && this._sources.length > 0) {
+      subscribeToSources(this);
+    }
+
     return this._value;
   },
 };

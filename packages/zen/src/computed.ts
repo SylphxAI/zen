@@ -1,7 +1,7 @@
 import type { BatchedZen } from './batched'; // Import BatchedZen type
 // Functional computed (derived state) implementation.
 import type { AnyZen, Unsubscribe, ZenWithValue } from './types';
-import { batchDepth, notifyListeners, queueZenForBatch } from './zen';
+import { batchDepth, notifyListeners, queueZenForBatch, isInBatchProcessing } from './zen';
 // NOTE: markDirty and updateIfNecessary were removed in zen.ts radical optimization
 // Removed getZenValue, subscribeToZen imports as logic is inlined
 
@@ -100,13 +100,20 @@ function _getSourceValuesAndReadiness(
  * @returns True if the value changed, false otherwise.
  * @internal
  */
-function updateComputedValue<T>(zen: ComputedZen<T>): boolean {
+function updateComputedValue<T>(zen: ComputedZen<T>, force: boolean = false): boolean {
   // NOTE: Graph coloring optimization (_color, updateIfNecessary) was removed in zen.ts radical optimization
   // This function now uses simple _dirty flag instead of 3-state coloring
 
   // Check if update is needed
   if (!zen._dirty && zen._value !== null) {
     return false;
+  }
+
+  // ✅ v3.2 LAZY OPTIMIZATION: Skip update if no listeners (unless forced)
+  // During batch, if computed has no listeners, keep it dirty for lazy evaluation
+  // This prevents unnecessary computation for unobserved values
+  if (!force && (!zen._listeners || zen._listeners.length === 0)) {
+    return false; // Keep dirty, will compute on next access
   }
 
   const srcs = zen._sources;
@@ -174,18 +181,27 @@ function updateComputedValue<T>(zen: ComputedZen<T>): boolean {
  * @internal
  */
 function computedSourceChanged<T>(zen: ComputedZen<T>): void {
+  // ✅ v3.2 OPTIMIZATION: During batch processing phase, don't re-dirty already processed computed
+  // This prevents redundant recomputation when processing pendingNotifications
+  if (isInBatchProcessing()) {
+    // We're in batch processing phase (Updates === null)
+    // This computed may have already been processed in the Updates set
+    // Don't mark dirty again or it will compute unnecessarily later
+    return;
+  }
+
+  // Early exit if already dirty (avoids redundant processing)
   if (zen._dirty) return;
 
   zen._dirty = true;
   // NOTE: _color assignment removed (graph coloring was removed in zen.ts radical optimization)
 
   // ✅ v3.2 OPTIMIZATION: Defer updates and notifications when in batch
+  // Note: batchDepth check is imported from zen.ts
   if (batchDepth > 0) {
-    // In batch: just mark dirty and queue for later processing
-    // The batch() function will call updateComputedValue at end
-    if (zen._listeners?.length) {
-      queueZenForBatch(zen as AnyZen, zen._value);
-    }
+    // In batch: just mark dirty and return
+    // The batch() function will handle updates in its Updates queue
+    // Don't queue here - it's handled by signal setter or will be processed in current batch
     return;
   }
 
@@ -334,9 +350,9 @@ export function computed<T, S extends AnyZen | Stores>(
   // ✅ v3.2 OPTIMIZATION: Add value getter for lazy evaluation
   Object.defineProperty(computedZen, 'value', {
     get() {
-      // Update if dirty
+      // Update if dirty (force=true to compute even without listeners)
       if (computedZen._dirty) {
-        updateComputedValue(computedZen);
+        updateComputedValue(computedZen, true);
         // Subscribe on first access
         if (!computedZen._unsubscribers && computedZen._sources.length > 0) {
           subscribeComputedToSources(computedZen);

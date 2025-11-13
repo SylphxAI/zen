@@ -1,7 +1,7 @@
 import type { BatchedZen } from './batched'; // Import BatchedZen type
 // Functional computed (derived state) implementation.
 import type { AnyZen, Unsubscribe, ZenWithValue } from './types';
-import { batchDepth, notifyListeners, queueZenForBatch, isInBatchProcessing } from './zen';
+import { batchDepth, isInBatchProcessing, notifyListeners, queueZenForBatch } from './zen';
 // NOTE: markDirty and updateIfNecessary were removed in zen.ts radical optimization
 // Removed getZenValue, subscribeToZen imports as logic is inlined
 
@@ -100,7 +100,7 @@ function _getSourceValuesAndReadiness(
  * @returns True if the value changed, false otherwise.
  * @internal
  */
-function updateComputedValue<T>(zen: ComputedZen<T>, force: boolean = false): boolean {
+function updateComputedValue<T>(zen: ComputedZen<T>, force = false): boolean {
   // NOTE: Graph coloring optimization (_color, updateIfNecessary) was removed in zen.ts radical optimization
   // This function now uses simple _dirty flag instead of 3-state coloring
 

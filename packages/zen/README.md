@@ -621,6 +621,14 @@ MIT © [Sylphx](https://github.com/SylphxAI)
 
 ---
 
+## Related Packages
+
+- **[@sylphx/zen-patterns](../zen-patterns)** - Useful patterns (store, async, map, deepMap) - **NEW v2.0!**
+- **[@sylphx/zen-react](../zen-react)** - React hooks integration
+- **[@sylphx/zen-persistent](../zen-persistent)** - localStorage/sessionStorage persistence
+- **[@sylphx/zen-craft](../zen-craft)** - Immutable state updates (1.4-35x faster than immer)
+- **[@sylphx/zen-router](../zen-router)** - Type-safe routing
+
 ## Links
 
 - [Website](https://zen.sylphx.com/)

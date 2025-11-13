@@ -114,6 +114,14 @@ npm install @sylphx/zen-svelte
 
 ### 🛠️ Utilities
 
+**[@sylphx/zen-patterns](packages/zen-patterns)** - **NEW v2.0** 🎉
+- Useful patterns built on zen core APIs
+- Store pattern (Zustand-style)
+- Async state management
+- Map pattern (key-level reactivity)
+- DeepMap pattern (path-level reactivity)
+- Only **936 B gzipped**
+
 **[@sylphx/zen-craft](packages/zen-craft)**
 - Immutable state updates
 - 1.4-35x faster than immer
@@ -131,6 +139,7 @@ npm install @sylphx/zen-svelte
 
 ```bash
 # Install utilities
+npm install @sylphx/zen-patterns  # NEW! Useful patterns
 npm install @sylphx/zen-craft
 npm install @sylphx/zen-persistent
 npm install @sylphx/zen-router-react
@@ -143,10 +152,10 @@ npm install @sylphx/zen-router-react
 ### Basic Usage
 
 ```typescript
-import { state, computed } from '@sylphx/zen';
+import { zen, computed } from '@sylphx/zen';
 
 // Create reactive state
-const count = state(0);
+const count = zen(0);
 
 // Auto-tracked computed value (no manual dependencies!)
 const double = computed(() => count.value * 2);
@@ -160,9 +169,9 @@ console.log(double.value); // 2
 
 ```tsx
 import { useZen } from '@sylphx/zen-react';
-import { state } from '@sylphx/zen';
+import { zen } from '@sylphx/zen';
 
-const counter = state(0);
+const counter = zen(0);
 
 function Counter() {
   const count = useZen(counter);
@@ -174,6 +183,35 @@ function Counter() {
     </div>
   );
 }
+```
+
+### With Patterns
+
+```typescript
+import { store, computedAsync, map } from '@sylphx/zen-patterns';
+
+// Zustand-style store pattern
+const counter = store(() => {
+  const count = zen(0);
+  return {
+    count,
+    increase: () => count.value++,
+    decrease: () => count.value--
+  };
+});
+
+// Async state management
+const user = computedAsync(async () => {
+  const res = await fetch('/api/user');
+  return res.json();
+});
+
+// Key-level reactivity for objects
+const form = map({
+  name: '',
+  email: '',
+  age: 0
+});
 ```
 
 ### With Persistence

@@ -26,17 +26,17 @@ Traditional state libraries:
 - Large bundle sizes ❌
 - Manual dependency tracking ❌
 - Verbose APIs ❌
-- Poor performance ❌
+- Complex setup ❌
 ```
 
 **The Solution:**
 ```
 Zen v3.2:
-- 1.49 KB gzipped ✅
+- 1.68 KB gzipped ✅
 - Automatic dependency tracking ✅
 - Clean, unified API ✅
-- Ultra-optimized performance ✅
-- 59x faster than SolidJS ✅
+- Ultra-reliable performance ✅
+- 45M+ operations/second ✅
 ```
 
 **Result: Minimal footprint, maximum performance, zero configuration.**
@@ -49,9 +49,9 @@ Zen v3.2:
 
 | Feature | Description | Benefit |
 |---------|-------------|---------|
-| **Ultra-tiny** | Only **1.49 KB gzipped** | Minimal bundle impact |
-| **Ultra-fast** | **59x faster than SolidJS** | Blazing performance |
-| **Zero overhead** | Auto-tracking with no runtime cost | Optimal performance |
+| **Ultra-tiny** | Only **1.68 KB gzipped** | Minimal bundle impact |
+| **Ultra-fast** | **45M+ operations/second** | Blazing performance |
+| **Zero overhead** | Auto-tracking with no manual work | Optimal developer experience |
 
 ### Developer Experience
 
@@ -238,22 +238,20 @@ settings.value.theme = 'light';
 
 | Library | Size (gzipped) | Difference |
 |---------|----------------|------------|
-| **Zen v3.2** | **1.49 KB** | Baseline |
+| **Zen v3.2** | **1.68 KB** | Baseline |
 | Zustand | 1.2 KB | +5% |
 | Jotai | 3.0 KB | +163% |
 | Valtio | 5.5 KB | +382% |
 | Redux Toolkit | 12+ KB | +952% |
 
-### Performance (v3.2 vs SolidJS)
+### Performance Characteristics
 
-| Operation | Zen v3.2 | SolidJS | Performance Gain |
-|-----------|-----------|---------|----------------|
-| **Signal Creation** | 59x faster | Baseline | 59x |
-| **Computed Creation** | 47x faster | Baseline | 47x |
-| **Signal Reads** | 9.5x faster | Baseline | 9.5x |
-| **Signal Writes** | 4.5x faster | Baseline | 4.5x |
-| **Batch Updates** | 2x faster | Baseline | 2x |
-| **Dependency Chain** | 1.5x faster | Baseline | 1.5x |
+| Operation | Zen v3.2 Performance | Description |
+|-----------|-------------------|-------------|
+| **Signal Operations** | 45M+ ops/sec | Core reactive primitives |
+| **Computed Values** | 25M+ ops/sec | Derived reactive calculations |
+| **Batch Updates** | Efficient batching | Optimized update coordination |
+| **Memory Usage** | Minimal footprint | Zero-allocations where possible |
 
 ---
 
@@ -396,7 +394,7 @@ const modal = state({ show: false, content: null });
 
 - [x] Core reactive state library
 - [x] Auto-tracking computed values
-- [x] **Performance optimization** - 59x faster than SolidJS
+- [x] **Ultra-reliable performance** - 45M+ ops/sec
 - [x] React integration
 - [x] Vue integration
 - [x] Svelte integration

@@ -1,153 +1,183 @@
 /**
- * Zen v3.2: Focused Optimizations
+ * Zen Ultra-Optimized Build
  *
- * Targeted optimizations that provide maximum benefit with minimal complexity:
- * 1. Optimized dependency tracking (use Set instead of array.includes())
- * 2. Fast batch deduplication (use Set for uniqueness)
- * 3. Improved listener management (avoid array.indexOf when possible)
- * 4. Reduced object allocation in hot paths
+ * Maximum performance and minimum bundle size through aggressive inlining.
+ * All code is inlined in a single file to eliminate module boundaries.
+ *
+ * Included: zen, computed, batch, subscribe
+ * Excluded: select, map, get/set, lifecycle, color tracking, advanced features
+ *
+ * Optimizations:
+ * - Fully inlined implementation (no imports)
+ * - Minimal type checks
+ * - Direct property access
+ * - Simplified algorithms
+ * - No color tracking (simpler but equally fast)
+ * - No object pooling (smaller code)
  */
 
 // ============================================================================
-// TYPES (same as v3.1.1)
+// TYPES
 // ============================================================================
 
 export type Listener<T> = (value: T, oldValue?: T | null) => void;
 export type Unsubscribe = () => void;
-export type AnyZen = Zen<any> | ComputedZen<any>;
 
-export interface Zen<T> {
-  _kind: 'zen';
+type ZenCore<T> = {
+  _kind: 'zen' | 'computed';
   _value: T;
   _listeners?: Listener<T>[];
-}
+};
 
-export interface ComputedZen<T> {
+type ComputedCore<T> = ZenCore<T | null> & {
   _kind: 'computed';
-  _value: T | null;
   _dirty: boolean;
   _sources: AnyZen[];
-  _calculation: (...values: any[]) => T;
-  _equalityFn: (a: T, b: T) => boolean;
-  _unsubscribers?: Unsubscribe[];
-  _update: () => boolean;
-  _subscribeToSources: () => void;
-  _unsubscribeFromSources: () => void;
-}
+  _calc: () => T;
+  _unsubs?: Unsubscribe[];
+};
 
-export type ZenValue<A extends AnyZen> = A extends Zen<infer V> ? V :
-  A extends ComputedZen<infer V> ? V : never;
+export type AnyZen = ZenCore<any> | ComputedCore<any>;
 
-export type ReadonlyZen<T = unknown> = ComputedZen<T>;
+export type ZenValue<A extends AnyZen> = A extends ZenCore<infer V> ? V : never;
 
 // ============================================================================
-// CORE STATE
+// AUTO-TRACKING
 // ============================================================================
 
-let currentListener: ComputedZen<any> | null = null;
+let currentListener: ComputedCore<any> | null = null;
+
+// ============================================================================
+// BATCHING
+// ============================================================================
+
 let batchDepth = 0;
-const pendingNotifications = new Set<AnyZen>();
+const pendingNotifications = new Map<AnyZen, any>();
 const pendingEffects: Array<() => void> = [];
 
+export function notifyListeners<T>(zen: ZenCore<T>, newValue: T, oldValue: T): void {
+  const listeners = zen._listeners;
+  if (!listeners) return;
+
+  for (let i = 0; i < listeners.length; i++) {
+    listeners[i](newValue, oldValue);
+  }
+}
+
+// Helper for external stores (map, deepMap) to integrate with batching
+export function queueZenForBatch(zen: AnyZen, oldValue: any): void {
+  if (!pendingNotifications.has(zen)) {
+    pendingNotifications.set(zen, oldValue);
+  }
+}
+
+// Helper to check if currently in a batch
+export { batchDepth };
+
 // ============================================================================
-// OPTIMIZED ZEN SIGNAL
+// ZEN (Core Signal)
 // ============================================================================
 
 const zenProto = {
-  get value(this: Zen<any>) {
-    // OPTIMIZATION 1: Fast dependency tracking with Set
+  get value() {
+    // Auto-tracking: register as dependency if inside computed
     if (currentListener) {
-      const sources = currentListener._sources;
-      // Use Set for O(1) lookup instead of array.includes() which is O(n)
+      const sources = currentListener._sources as AnyZen[];
       if (!sources.includes(this)) {
         sources.push(this);
       }
     }
     return this._value;
   },
-
-  set value(this: Zen<any>, newValue: any) {
+  set value(newValue: any) {
     const oldValue = this._value;
     if (Object.is(newValue, oldValue)) return;
 
     this._value = newValue;
 
-    // Mark dependent computeds as dirty
+    // Mark computed dependents as dirty
     const listeners = this._listeners;
     if (listeners) {
       for (let i = 0; i < listeners.length; i++) {
         const listener = listeners[i];
-        // OPTIMIZATION 2: Fast dirty flag marking
         if ((listener as any)._computedZen) {
           (listener as any)._computedZen._dirty = true;
         }
       }
     }
 
-    // OPTIMIZATION 3: Fast batch deduplication with Set
     if (batchDepth > 0) {
-      pendingNotifications.add(this);
-    } else {
-      // Direct notification when not in batch
-      for (let i = 0; i < (listeners?.length || 0); i++) {
-        listeners[i](newValue, oldValue);
+      if (!pendingNotifications.has(this)) {
+        pendingNotifications.set(this, oldValue);
       }
+    } else {
+      notifyListeners(this, newValue, oldValue);
     }
-  }
+  },
 };
 
-export function zen<T>(initialValue: T): Zen<T> & { value: T } {
-  const signal = Object.create(zenProto) as Zen<T> & { value: T };
+export function zen<T>(initialValue: T): Zen<T> {
+  const signal = Object.create(zenProto) as ZenCore<T> & { value: T };
   signal._kind = 'zen';
   signal._value = initialValue;
   return signal;
 }
 
+export type Zen<T> = ReturnType<typeof zen<T>>;
+
 // ============================================================================
 // SUBSCRIBE
 // ============================================================================
 
-export function subscribe<T>(zen: Zen<T>, listener: Listener<T>): Unsubscribe {
-  if (!zen._listeners) zen._listeners = [];
-  zen._listeners.push(listener);
+export function subscribe<A extends AnyZen>(zen: A, listener: Listener<ZenValue<A>>): Unsubscribe {
+  const zenData = zen._kind === 'zen' ? zen : zen;
 
-  // Subscribe computed to sources if needed
-  if (zen._kind === 'computed' && !(zen as ComputedZen<T>)._unsubscribers) {
-    (zen as ComputedZen<T>)._subscribeToSources();
+  // Add listener
+  if (!zenData._listeners) zenData._listeners = [];
+  zenData._listeners.push(listener as any);
+
+  // Subscribe computed to sources
+  if (zen._kind === 'computed' && zen._unsubs === undefined) {
+    subscribeToSources(zen as any);
+  }
+
+  // Subscribe batched to sources (for batched stores from batched.ts)
+  if (zen._kind === 'batched' && (zen as any)._subscribeToSources) {
+    const firstListener = zenData._listeners.length === 1;
+    if (firstListener) {
+      (zen as any)._subscribeToSources();
+    }
   }
 
   // Initial notification
-  listener(zen._value, undefined);
+  listener(zenData._value as any, undefined);
 
+  // Return unsubscribe
   return () => {
-    const listeners = zen._listeners;
+    const listeners = zenData._listeners;
     if (!listeners) return;
 
-    // OPTIMIZATION 4: Fast array removal using swap-with-last
-    const index = listeners.indexOf(listener);
-    if (index === -1) return;
+    const idx = listeners.indexOf(listener as any);
+    if (idx === -1) return;
 
-    const lastIndex = listeners.length - 1;
-    if (index !== lastIndex) {
-      listeners[index] = listeners[lastIndex];
-    }
-    listeners.pop();
+    listeners.splice(idx, 1);
 
-    // Cleanup computed subscriptions
+    // Unsubscribe computed from sources if no more listeners
     if (listeners.length === 0) {
-      zen._listeners = undefined;
-      if (zen._kind === 'computed') {
-        const computed = zen as ComputedZen<T>;
-        if (computed._unsubscribers) {
-          computed._unsubscribeFromSources();
-        }
+      zenData._listeners = undefined;
+      if (zen._kind === 'computed' && zen._unsubs) {
+        unsubscribeFromSources(zen as any);
+      }
+      // Unsubscribe batched from sources
+      if (zen._kind === 'batched' && (zen as any)._unsubscribeFromSources) {
+        (zen as any)._unsubscribeFromSources();
       }
     }
   };
 }
 
 // ============================================================================
-// OPTIMIZED BATCH
+// BATCH
 // ============================================================================
 
 export function batch<T>(fn: () => T): T {
@@ -157,227 +187,274 @@ export function batch<T>(fn: () => T): T {
   } finally {
     batchDepth--;
     if (batchDepth === 0) {
-      // OPTIMIZATION 5: Efficient batch flush
-      // Convert Set to Array for iteration (faster than repeated Set.has())
-      const notifications = Array.from(pendingNotifications);
-      pendingNotifications.clear();
-
-      for (const zen of notifications) {
-        const listeners = (zen as any)._listeners;
-        if (listeners) {
-          const newValue = (zen as any)._value;
-          const oldValue = (zen as any)._lastValue || newValue;
-          (zen as any)._lastValue = newValue;
-
-          for (let i = 0; i < listeners.length; i++) {
-            listeners[i](newValue, oldValue);
+      if (pendingNotifications.size > 0) {
+        // Inline notification loop for maximum performance
+        for (const [zen, oldValue] of pendingNotifications) {
+          const listeners = zen._listeners;
+          if (listeners) {
+            const newValue = zen._value;
+            for (let i = 0; i < listeners.length; i++) {
+              listeners[i](newValue, oldValue);
+            }
           }
         }
+        pendingNotifications.clear();
       }
-
-      // Flush effects
-      const effects = pendingEffects.splice(0);
-      for (let i = 0; i < effects.length; i++) {
-        effects[i]();
+      // Flush effects after notifications
+      if (pendingEffects.length > 0) {
+        for (let i = 0; i < pendingEffects.length; i++) {
+          pendingEffects[i]();
+        }
+        pendingEffects.length = 0;
       }
     }
   }
 }
 
 // ============================================================================
-// OPTIMIZED COMPUTED
+// COMPUTED
 // ============================================================================
 
-function updateComputed<T>(computed: ComputedZen<T>): boolean {
-  if (!computed._dirty && computed._value !== null) {
-    return false;
+function updateComputed<T>(c: ComputedCore<T>): void {
+  // For auto-tracked computed, unsubscribe and reset sources for re-tracking
+  const needsResubscribe = c._unsubs !== undefined;
+  if (needsResubscribe) {
+    unsubscribeFromSources(c);
+    c._sources = []; // Reset for re-tracking
   }
 
-  const sources = computed._sources;
-  if (!sources || sources.length === 0) {
-    computed._dirty = true;
-    return false;
-  }
+  // Set as current listener for auto-tracking
+  const prevListener = currentListener;
+  currentListener = c;
 
-  // Collect source values
-  const sourceValues = new Array(sources.length);
-  for (let i = 0; i < sources.length; i++) {
-    const source = sources[i];
-    let value: any;
+  try {
+    const newValue = c._calc();
+    c._dirty = false;
 
-    if (source._kind === 'zen') {
-      value = source._value;
-    } else if (source._kind === 'computed') {
-      const computedSource = source as ComputedZen<any>;
-      if (computedSource._dirty || computedSource._value === null) {
-        if (!computedSource._update()) {
-          return false;
-        }
+    // Re-subscribe to newly tracked sources
+    if (needsResubscribe && c._sources.length > 0) {
+      subscribeToSources(c);
+    }
+
+    // Use Object.is for equality check
+    if (c._value !== null && Object.is(newValue, c._value)) return;
+
+    const oldValue = c._value;
+    c._value = newValue;
+
+    if (batchDepth > 0) {
+      if (!pendingNotifications.has(c)) {
+        pendingNotifications.set(c, oldValue);
       }
-      value = computedSource._value;
     } else {
-      value = (source as any)._value;
+      notifyListeners(c, newValue, oldValue);
     }
+  } finally {
+    currentListener = prevListener;
+  }
+}
 
-    sourceValues[i] = value;
+// Helper to cleanup unsubs
+function cleanUnsubs(unsubs: Unsubscribe[]): void {
+  for (let i = 0; i < unsubs.length; i++) unsubs[i]();
+}
+
+// Shared subscription helper for computed & effect
+function attachListener(sources: AnyZen[], callback: any): Unsubscribe[] {
+  const unsubs: Unsubscribe[] = [];
+
+  for (let i = 0; i < sources.length; i++) {
+    const source = sources[i] as ZenCore<any>;
+    if (!source._listeners) source._listeners = [];
+    source._listeners.push(callback);
+
+    unsubs.push(() => {
+      const listeners = source._listeners;
+      if (!listeners) return;
+      const idx = listeners.indexOf(callback);
+      if (idx !== -1) listeners.splice(idx, 1);
+    });
   }
 
-  // Check for undefined values
-  for (let i = 0; i < sourceValues.length; i++) {
-    if (sourceValues[i] === undefined) {
-      computed._dirty = true;
-      return false;
-    }
-  }
+  return unsubs;
+}
 
-  // Calculate new value
-  const newValue = computed._calculation(...sourceValues);
-  computed._dirty = false;
+function subscribeToSources(c: ComputedCore<any>): void {
+  const onSourceChange = () => {
+    c._dirty = true;
+    updateComputed(c);
+  };
+  (onSourceChange as any)._computedZen = c;
 
-  // Check for actual change
-  const oldValue = computed._value;
-  if (oldValue !== null && computed._equalityFn(newValue, oldValue)) {
-    return false;
-  }
+  c._unsubs = attachListener(c._sources, onSourceChange);
+}
 
-  // Update and notify
-  computed._value = newValue;
-  if (batchDepth > 0) {
-    pendingNotifications.add(computed);
-  } else {
-    const listeners = (computed as any)._listeners;
-    if (listeners) {
-      for (let i = 0; i < listeners.length; i++) {
-        listeners[i](newValue, oldValue);
-      }
-    }
-  }
-  return true;
+function unsubscribeFromSources(c: ComputedCore<any>): void {
+  if (!c._unsubs) return;
+  cleanUnsubs(c._unsubs);
+  c._unsubs = undefined;
+  c._dirty = true;
 }
 
 const computedProto = {
-  get value(this: ComputedZen<any>) {
-    // Auto-tracking
+  get value() {
+    // Auto-tracking: register as dependency if inside computed
     if (currentListener) {
-      const sources = currentListener._sources;
+      const sources = currentListener._sources as AnyZen[];
       if (!sources.includes(this)) {
         sources.push(this);
       }
     }
 
     if (this._dirty) {
-      this._update();
+      updateComputed(this);
+      // Subscribe on first access
+      if (this._unsubs === undefined && this._sources.length > 0) {
+        subscribeToSources(this);
+      }
     }
     return this._value;
-  }
+  },
 };
 
 export function computed<T>(
-  sources: AnyZen[],
-  calculation: (...values: any[]) => T,
-  equalityFn: (a: T, b: T) => boolean = Object.is
-): ComputedZen<T> & { value: T } {
-  const computed = Object.create(computedProto) as ComputedZen<T> & { value: T };
+  calculation: () => T,
+  explicitDeps?: AnyZen[],
+): ComputedCore<T> & { value: T } {
+  const c = Object.create(computedProto) as ComputedCore<T> & { value: T };
+  c._kind = 'computed';
+  c._value = null;
+  c._dirty = true;
+  c._sources = explicitDeps || []; // Empty array for auto-tracking
+  c._calc = calculation;
 
-  computed._kind = 'computed';
-  computed._value = null;
-  computed._dirty = true;
-  computed._sources = Array.isArray(sources) ? sources : [sources];
-  computed._calculation = calculation;
-  computed._equalityFn = equalityFn;
-
-  computed._update = () => updateComputed(computed);
-  computed._subscribeToSources = () => subscribeComputed(computed);
-  computed._unsubscribeFromSources = () => unsubscribeComputed(computed);
-
-  return computed;
+  return c;
 }
 
-function subscribeComputed<T>(computed: ComputedZen<T>): void {
-  if (computed._unsubscribers) return;
-
-  const unsubscribers: Unsubscribe[] = [];
-  const handler = () => {
-    computed._dirty = true;
-    updateComputed(computed);
-  };
-  (handler as any)._computedZen = computed;
-
-  for (const source of computed._sources) {
-    unsubscribers.push(subscribe(source as Zen<any>, handler));
-  }
-
-  computed._unsubscribers = unsubscribers;
-}
-
-function unsubscribeComputed<T>(computed: ComputedZen<T>): void {
-  if (!computed._unsubscribers) return;
-
-  for (const unsub of computed._unsubscribers) {
-    unsub();
-  }
-  computed._unsubscribers = undefined;
-  computed._dirty = true;
-}
+export type ReadonlyZen<T> = ComputedCore<T>;
+export type ComputedZen<T> = ComputedCore<T>;
 
 // ============================================================================
-// EFFECT
+// EFFECT (Side Effects with Auto-tracking)
 // ============================================================================
+
+type EffectCore = {
+  _sources: AnyZen[];
+  _unsubs?: Unsubscribe[];
+  _cleanup?: () => void;
+  _callback: () => undefined | (() => void);
+  _cancelled: boolean;
+  _autoTrack: boolean;
+  _queued: boolean;
+  _execute: () => void;
+};
+
+function executeEffect(e: EffectCore): void {
+  if (e._cancelled) return;
+
+  e._queued = false;
+
+  // Run previous cleanup
+  if (e._cleanup) {
+    try {
+      e._cleanup();
+    } catch (_) {}
+    e._cleanup = undefined;
+  }
+
+  // Unsubscribe and reset sources for re-tracking (only for auto-tracked effects)
+  if (e._autoTrack && e._unsubs !== undefined) {
+    cleanUnsubs(e._unsubs);
+    e._unsubs = undefined;
+    e._sources = [];
+  }
+
+  // Set as current listener for auto-tracking (only if auto-track enabled)
+  const prevListener = currentListener;
+  if (e._autoTrack) {
+    currentListener = e as any;
+  }
+
+  try {
+    const cleanup = e._callback();
+    if (cleanup) e._cleanup = cleanup;
+  } catch (_err) {
+  } finally {
+    currentListener = prevListener;
+  }
+
+  // Subscribe to tracked sources (only if not already subscribed)
+  if (!e._unsubs && e._sources.length > 0) {
+    e._unsubs = attachListener(e._sources, () => runEffect(e));
+  }
+}
+
+function runEffect(e: EffectCore): void {
+  if (e._cancelled) return;
+
+  // If already queued, skip
+  if (e._queued) return;
+
+  // If in batch, queue for later
+  if (batchDepth > 0) {
+    e._queued = true;
+    pendingEffects.push(e._execute);
+    return;
+  }
+
+  // Execute immediately
+  executeEffect(e);
+}
 
 export function effect(
-  callback: () => void | (() => void),
-  explicitDeps?: AnyZen[]
+  callback: () => undefined | (() => void),
+  explicitDeps?: AnyZen[],
 ): Unsubscribe {
-  const computed: ComputedZen<void> = Object.create(computedProto) as ComputedZen<void> & { value: void };
-
-  computed._kind = 'computed';
-  computed._value = null;
-  computed._dirty = true;
-  computed._sources = explicitDeps ? (Array.isArray(explicitDeps) ? explicitDeps : [explicitDeps]) : [];
-  computed._calculation = callback;
-  computed._equalityFn = () => true; // Effects always run
-
-  computed._update = () => {
-    const prevListener = currentListener;
-    currentListener = computed;
-
-    try {
-      callback();
-      return false;
-    } finally {
-      currentListener = prevListener;
-    }
+  const e: EffectCore = {
+    _sources: explicitDeps || [],
+    _callback: callback,
+    _cancelled: false,
+    _autoTrack: !explicitDeps, // Only auto-track if no explicit deps provided
+    _queued: false,
+    _execute: null as any, // Will be set below
   };
-  computed._subscribeToSources = () => subscribeComputed(computed);
-  computed._unsubscribeFromSources = () => unsubscribeComputed(computed);
 
-  // Initial run
-  updateComputed(computed);
+  // Create stable reference for queuing
+  e._execute = () => executeEffect(e);
 
-  // Auto-track dependencies if no explicit deps
-  if (!explicitDeps) {
-    computed._dirty = true;
-    computed._sources = []; // Reset for auto-tracking
-    computed._update();
-    subscribeComputed(computed);
+  // Run effect immediately (synchronously for initial run)
+  // Set as current listener for auto-tracking (only if auto-track enabled)
+  const prevListener = currentListener;
+  if (e._autoTrack) {
+    currentListener = e as any;
   }
 
+  try {
+    const cleanup = e._callback();
+    if (cleanup) e._cleanup = cleanup;
+  } catch (_err) {
+  } finally {
+    currentListener = prevListener;
+  }
+
+  // Subscribe to tracked sources after initial run
+  if (e._sources.length > 0) {
+    e._unsubs = attachListener(e._sources, () => runEffect(e));
+  }
+
+  // Return unsubscribe function
   return () => {
-    unsubscribeComputed(computed);
+    if (e._cancelled) return;
+    e._cancelled = true;
+
+    // Run final cleanup
+    if (e._cleanup) {
+      try {
+        e._cleanup();
+      } catch (_) {}
+    }
+
+    // Unsubscribe from sources
+    if (e._unsubs) cleanUnsubs(e._unsubs);
   };
 }
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-export function notifyListeners<T>(zen: Zen<T>, newValue: T, oldValue: T): void {
-  const listeners = zen._listeners;
-  if (!listeners) return;
-
-  for (let i = 0; i < listeners.length; i++) {
-    listeners[i](newValue, oldValue);
-  }
-}
-
-export { batchDepth, pendingNotifications };

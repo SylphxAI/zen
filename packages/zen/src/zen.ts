@@ -110,7 +110,7 @@ const zenProto = {
     // ✅ Phase 3 OPTIMIZATION: Inline Object.is (eliminate function call)
     // Handle NaN (NaN !== NaN but Object.is(NaN, NaN) === true)
     // Handle +0/-0 (+0 === -0 but Object.is(+0, -0) === false)
-    if (newValue === oldValue && (newValue !== 0 || 1/newValue === 1/oldValue)) return;
+    if (newValue === oldValue && (newValue !== 0 || 1 / newValue === 1 / oldValue)) return;
     if (newValue !== newValue && oldValue !== oldValue) return;
 
     this._value = newValue;
@@ -313,7 +313,10 @@ export function batch<T>(fn: () => T): T {
                   }
 
                   // ✅ Phase 3 OPTIMIZATION: Inline Object.is for equality check
-                  const isSame = newValue === computed._value && (newValue !== 0 || 1/newValue === 1/computed._value) || (newValue !== newValue && computed._value !== computed._value);
+                  const isSame =
+                    (newValue === computed._value &&
+                      (newValue !== 0 || 1 / newValue === 1 / computed._value)) ||
+                    (newValue !== newValue && computed._value !== computed._value);
                   if (computed._value === null || !isSame) {
                     computed._value = newValue;
                     // In STEP 1, notify immediately (we're already in isProcessingUpdates)
@@ -399,7 +402,9 @@ function updateComputed<T>(c: ComputedCore<T>): void {
     }
 
     // ✅ Phase 3 OPTIMIZATION: Inline Object.is for equality check
-    const isSame = newValue === c._value && (newValue !== 0 || 1/newValue === 1/c._value) || (newValue !== newValue && c._value !== c._value);
+    const isSame =
+      (newValue === c._value && (newValue !== 0 || 1 / newValue === 1 / c._value)) ||
+      (newValue !== newValue && c._value !== c._value);
     if (c._value !== null && isSame) return;
 
     const oldValue = c._value;

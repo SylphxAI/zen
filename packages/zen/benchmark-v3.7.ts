@@ -1,7 +1,7 @@
 /**
- * v3.6 Performance Benchmark
+ * v3.7 Performance Benchmark
  *
- * Tests the impact of v3.6 optimizations:
+ * Tests the impact of v3.7 optimizations:
  * 1. Version Number Tracking
  * 2. Observer Slots O(1) Cleanup
  */
@@ -23,7 +23,7 @@ function benchmark(name: string, fn: () => void, iterations = 1000): number {
   return duration;
 }
 
-console.log('\n=== Zen v3.6.0 Performance Benchmark ===\n');
+console.log('\n=== Zen v3.7.0 Performance Benchmark ===\n');
 console.log('Test Name'.padEnd(60) + 'Time'.padStart(12) + 'Ops/Sec'.padStart(20));
 console.log('─'.repeat(92));
 

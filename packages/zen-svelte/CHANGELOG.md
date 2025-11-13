@@ -1,5 +1,12 @@
 # @sylphx/zen-svelte
 
+## 3.0.3
+
+### Patch Changes
+
+- Updated dependencies [2d6f990]
+  - @sylphx/zen@3.1.2
+
 ## 3.0.2
 
 ### Patch Changes

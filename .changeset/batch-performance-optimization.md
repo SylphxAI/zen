@@ -2,21 +2,26 @@
 "@sylphx/zen": minor
 ---
 
-feat: 16x faster batching - now surpasses Solid Signals performance
+feat: queue-based batching with lazy evaluation (v3.2)
 
-BREAKING: None (backward compatible)
+BREAKING: None (fully backward compatible)
 
-Performance improvements in v3.2:
-- Batching operations: 16.85x faster (now 1.28x faster than Solid!)
-- Deep reactive chains: 30x faster
-- Diamond patterns: 25x faster
-- Basic write operations: 1.7x faster
-- Bundle size: Still only 1.68 KB gzipped
+Architecture improvements in v3.2:
+- Implemented queue-based batching (Solid-inspired architecture)
+- Lazy evaluation for unobserved computed values
+- 3-stage batch processing (Updates → Notifications → Effects)
+- Iterative dependency chain handling (a → b → c)
+- Correct deduplication: 2 signal updates → 1 computed update per batch
 
 Technical changes:
-- Implemented queue-based batching (Solid-inspired architecture)
-- Separate Updates/Effects queues for proper execution order
-- Optimized auto-tracking with reduced scanning overhead
-- State-based dirty tracking for future optimizations
+- Set-based Updates queue for automatic deduplication
+- isProcessingUpdates flag prevents double notifications
+- force parameter in updateComputedValue for lazy optimization
+- Proper notification timing based on batch processing phase
 
-Benchmark results show zen now surpasses Solid Signals in batching performance while maintaining its tiny bundle size advantage.
+Test results:
+- All 77 tests passing
+- Zero breaking changes
+- Bundle size: 1.97 KB gzipped (from 1.68 KB, +290 bytes)
+
+Perfect for reactive applications with subscribed state (React, Vue, Svelte).

@@ -4,27 +4,59 @@
 
 ### Minor Changes
 
+- 4c23a25: Optimize core package size and performance
+
+  **Bundle Size Improvements:**
+
+  - Reduced from 2.61 KB to 1.68 KB gzipped (-36%)
+  - Removed unused features (select, batched, batchedUpdate)
+  - Removed object pooling optimization
+  - Simplified computed implementation
+
+  **Performance Results (vs v3.0.0):**
+
+  - Atom operations: Same or faster (1.00-1.11x)
+  - Batch operations: 33% faster (1.33x)
+  - Computed creation: 16% slower (acceptable trade-off)
+  - All other operations: Same performance
+
+  **Features:**
+
+  - Added effect() API for side effects with auto-tracking
+  - Cleaner, more maintainable codebase
+  - Better balance of size, performance, and features
+
+  **Trade-offs:**
+
+  - Size: +42% vs v3.0.0 (1.18 KB → 1.68 KB) - justified by effect API
+  - Computed creation: 16% slower - acceptable for cleaner implementation
+
+## 3.1.0
+
+### Minor Changes
+
 #### ✨ Effect API
 
 New `effect()` function for side effects with auto-tracking:
 
 ```typescript
-import { zen, effect } from '@sylphx/zen';
+import { zen, effect } from "@sylphx/zen";
 
 const count = zen(0);
 
 // Auto-tracks dependencies
 const dispose = effect(() => {
-  console.log('Count:', count.value);
+  console.log("Count:", count.value);
 
   // Optional cleanup
-  return () => console.log('Cleanup');
+  return () => console.log("Cleanup");
 });
 
 dispose(); // Stop effect
 ```
 
 **Features:**
+
 - **Auto-tracking**: Automatically tracks accessed signals
 - **Cleanup support**: Return cleanup function for resource management
 - **Batching**: Effects run after all updates complete
@@ -37,7 +69,7 @@ Removed `computedAsync` API as it was rarely used and not part of core reactive 
 ```typescript
 // Before (computedAsync)
 const data = computedAsync(async () => {
-  return await fetch('/api/data');
+  return await fetch("/api/data");
 });
 
 // After (effect + zen)
@@ -46,9 +78,9 @@ const loading = zen(true);
 
 effect(() => {
   loading.value = true;
-  fetch('/api/data')
-    .then(res => res.json())
-    .then(result => {
+  fetch("/api/data")
+    .then((res) => res.json())
+    .then((result) => {
       data.value = result;
       loading.value = false;
     });
@@ -82,17 +114,17 @@ The biggest change in v3.0 is **automatic dependency tracking** - no more manual
 
 ```typescript
 // v2.x - Manual dependencies
-const fullName = computed([firstName, lastName], (first, last) =>
-  `${first} ${last}`
+const fullName = computed(
+  [firstName, lastName],
+  (first, last) => `${first} ${last}`
 );
 
 // v3.0 - Auto-tracking!
-const fullName = computed(() =>
-  `${firstName.value} ${lastName.value}`
-);
+const fullName = computed(() => `${firstName.value} ${lastName.value}`);
 ```
 
 **Why auto-tracking?**
+
 - **2.12x faster** for conditional dependencies
 - **Zero boilerplate** - no manual dependency management
 - **Smarter updates** - only tracks active code paths
@@ -131,8 +163,8 @@ const sum = computed(() => a.value + b.value, [a, b]);
 **Select API Introduced**
 
 ```typescript
-const user = zen({ name: 'John', age: 30 });
-const userName = select(user, u => u.name);
+const user = zen({ name: "John", age: 30 });
+const userName = select(user, (u) => u.name);
 ```
 
 #### ✨ New Features
@@ -163,6 +195,7 @@ The biggest change in v2.0 is the switch from function-based to property-based a
 - Better code ergonomics
 
 **Breaking Changes:**
+
 - `get(store)` → `store.value`
 - `set(store, value)` → `store.value = value`
 - `compute()` → `computed()`

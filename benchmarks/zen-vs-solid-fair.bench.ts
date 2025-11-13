@@ -11,10 +11,15 @@
 import { bench, describe } from 'vitest';
 
 // Import Zen from built dist
-import { zen, computed as zenComputed, batch as zenBatch, subscribe as zenSubscribe } from '../packages/zen/dist/index.js';
+import {
+  zen,
+  batch as zenBatch,
+  computed as zenComputed,
+  subscribe as zenSubscribe,
+} from '../packages/zen/dist/index.js';
 
 // Import Solid from node_modules
-import { createSignal, createEffect, createMemo, batch as solidBatch } from 'solid-js';
+import { createEffect, createMemo, createSignal, batch as solidBatch } from 'solid-js';
 
 // ============================================================================
 // 1. BASIC SIGNAL OPERATIONS
@@ -37,17 +42,17 @@ describe('Basic Operations: Signal Read/Write', () => {
 
   bench('Zen: 10k reads', () => {
     const signal = zen(42);
-    let sum = 0;
+    let _sum = 0;
     for (let i = 0; i < 10000; i++) {
-      sum += signal.value;
+      _sum += signal.value;
     }
   });
 
   bench('Solid: 10k reads', () => {
     const [value] = createSignal(42);
-    let sum = 0;
+    let _sum = 0;
     for (let i = 0; i < 10000; i++) {
-      sum += value();
+      _sum += value();
     }
   });
 
@@ -339,8 +344,10 @@ describe('Batching: Multiple Updates', () => {
     });
 
     // Subscribe to trigger updates
-    let count = 0;
-    zenSubscribe(sum, () => { count++; });
+    let _count = 0;
+    zenSubscribe(sum, () => {
+      _count++;
+    });
 
     for (let i = 0; i < 100; i++) {
       zenBatch(() => {
@@ -362,10 +369,10 @@ describe('Batching: Multiple Updates', () => {
     });
 
     // Subscribe to trigger updates
-    let count = 0;
+    let _count = 0;
     createEffect(() => {
       sum();
-      count++;
+      _count++;
     });
 
     for (let i = 0; i < 100; i++) {
@@ -527,9 +534,7 @@ describe('Real-World: Shopping Cart', () => {
     const items = Array.from({ length: 10 }, (_, i) => zen(10 + i));
     const quantities = Array.from({ length: 10 }, () => zen(1));
 
-    const subtotals = items.map((price, i) =>
-      zenComputed(() => price.value * quantities[i].value)
-    );
+    const subtotals = items.map((price, i) => zenComputed(() => price.value * quantities[i].value));
 
     const total = zenComputed(() => {
       let sum = 0;
@@ -549,9 +554,7 @@ describe('Real-World: Shopping Cart', () => {
     const items = Array.from({ length: 10 }, (_, i) => createSignal(10 + i));
     const quantities = Array.from({ length: 10 }, () => createSignal(1));
 
-    const subtotals = items.map((price, i) =>
-      createMemo(() => price[0]() * quantities[i][0]())
-    );
+    const subtotals = items.map((price, i) => createMemo(() => price[0]() * quantities[i][0]()));
 
     const total = createMemo(() => {
       let sum = 0;
@@ -574,20 +577,16 @@ describe('Real-World: Form Validation', () => {
     const password = zen('');
     const confirmPassword = zen('');
 
-    const emailValid = zenComputed(() =>
-      email.value.includes('@') && email.value.length > 5
+    const emailValid = zenComputed(() => email.value.includes('@') && email.value.length > 5);
+
+    const passwordValid = zenComputed(() => password.value.length >= 8);
+
+    const passwordsMatch = zenComputed(
+      () => password.value === confirmPassword.value && password.value.length > 0,
     );
 
-    const passwordValid = zenComputed(() =>
-      password.value.length >= 8
-    );
-
-    const passwordsMatch = zenComputed(() =>
-      password.value === confirmPassword.value && password.value.length > 0
-    );
-
-    const formValid = zenComputed(() =>
-      emailValid.value && passwordValid.value && passwordsMatch.value
+    const formValid = zenComputed(
+      () => emailValid.value && passwordValid.value && passwordsMatch.value,
     );
 
     for (let i = 0; i < 100; i++) {
@@ -603,21 +602,15 @@ describe('Real-World: Form Validation', () => {
     const [password, setPassword] = createSignal('');
     const [confirmPassword, setConfirmPassword] = createSignal('');
 
-    const emailValid = createMemo(() =>
-      email().includes('@') && email().length > 5
+    const emailValid = createMemo(() => email().includes('@') && email().length > 5);
+
+    const passwordValid = createMemo(() => password().length >= 8);
+
+    const passwordsMatch = createMemo(
+      () => password() === confirmPassword() && password().length > 0,
     );
 
-    const passwordValid = createMemo(() =>
-      password().length >= 8
-    );
-
-    const passwordsMatch = createMemo(() =>
-      password() === confirmPassword() && password().length > 0
-    );
-
-    const formValid = createMemo(() =>
-      emailValid() && passwordValid() && passwordsMatch()
-    );
+    const formValid = createMemo(() => emailValid() && passwordValid() && passwordsMatch());
 
     for (let i = 0; i < 100; i++) {
       setEmail(`user${i}@example.com`);

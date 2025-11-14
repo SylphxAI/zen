@@ -325,10 +325,14 @@ export function batch<T>(fn: () => T): T {
 // ============================================================================
 
 function updateComputed<T>(c: ComputedCore<T>): void {
-  // For auto-tracked computed, unsubscribe and reset sources for re-tracking
+  // OPTIMIZATION: Save old sources to detect if they changed
+  // Skip expensive unsubscribe/resubscribe if dependencies are static
   const needsResubscribe = c._unsubs !== undefined;
+  let oldSources: Set<AnyZen> | null = null;
+
   if (needsResubscribe) {
-    unsubscribeFromSources(c);
+    // Save old sources before clearing for re-tracking
+    oldSources = c._sources.size > 0 ? new Set(c._sources) : null;
     c._sources.clear(); // Reset for re-tracking
   }
 
@@ -340,8 +344,21 @@ function updateComputed<T>(c: ComputedCore<T>): void {
     const newValue = c._calc();
     c._dirty = false;
 
-    // Re-subscribe to newly tracked sources
-    if (needsResubscribe && c._sources.size > 0) {
+    // OPTIMIZATION: Check if sources actually changed
+    if (needsResubscribe && oldSources) {
+      // Fast path: Check size first (common case: same dependencies)
+      if (oldSources.size === c._sources.size && setsEqual(oldSources, c._sources)) {
+        // Dependencies unchanged - restore sources, skip expensive unsub/resub!
+        // No need to touch _unsubs - they're still valid
+      } else {
+        // Dependencies changed - need full unsubscribe/resubscribe
+        unsubscribeFromSources(c);
+        if (c._sources.size > 0) {
+          subscribeToSources(c);
+        }
+      }
+    } else if (!needsResubscribe && c._sources.size > 0) {
+      // First subscription (explicit deps or first auto-track)
       subscribeToSources(c);
     }
 
@@ -377,6 +394,15 @@ function cleanUnsubs(unsubs: Unsubscribe[]): void {
   for (let i = 0; i < unsubs.length; i++) unsubs[i]();
 }
 
+// Helper to compare two sets for equality (optimized for static dependency detection)
+function setsEqual<T>(a: Set<T>, b: Set<T>): boolean {
+  if (a.size !== b.size) return false;
+  for (const item of a) {
+    if (!b.has(item)) return false;
+  }
+  return true;
+}
+
 // Shared subscription helper for computed & effect
 function attachListener(sources: Set<AnyZen>, callback: any): Unsubscribe[] {
   const unsubs: Unsubscribe[] = [];
@@ -400,7 +426,14 @@ function attachListener(sources: Set<AnyZen>, callback: any): Unsubscribe[] {
 function subscribeToSources(c: ComputedCore<any>): void {
   const onSourceChange = () => {
     c._dirty = true;
-    updateComputed(c);
+
+    // OPTIMIZATION: Lazy evaluation for leaf computeds (no listeners)
+    // Only eager update if this computed has downstream dependencies
+    // This dramatically improves fanout performance (1→N pattern)
+    if (c._listeners && c._listeners.length > 0) {
+      updateComputed(c);
+    }
+    // else: Lazy - will recalc on next .value access (pull-based)
   };
   (onSourceChange as any)._computedZen = c;
 
@@ -426,7 +459,8 @@ const computedProto = {
     }
 
     // Subscribe on first access (after updateComputed which populates _sources)
-    if (this._unsubs === undefined && this._sources.size > 0) {
+    // Also re-subscribe if _unsubs is empty (can happen when subscribe() called before first access)
+    if ((this._unsubs === undefined || this._unsubs.length === 0) && this._sources.size > 0) {
       subscribeToSources(this);
     }
 

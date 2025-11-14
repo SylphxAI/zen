@@ -32,7 +32,7 @@ type ZenCore<T> = {
 type ComputedCore<T> = ZenCore<T | null> & {
   _kind: 'computed';
   _dirty: boolean;
-  _sources: AnyZen[];
+  _sources: Set<AnyZen>;
   _calc: () => T;
   _unsubs?: Unsubscribe[];
 };
@@ -92,10 +92,7 @@ const zenProto = {
   get value() {
     // Auto-tracking: register as dependency if inside computed
     if (currentListener) {
-      const sources = currentListener._sources as AnyZen[];
-      if (!sources.includes(this)) {
-        sources.push(this);
-      }
+      currentListener._sources.add(this);
     }
     return this._value;
   },
@@ -332,7 +329,7 @@ function updateComputed<T>(c: ComputedCore<T>): void {
   const needsResubscribe = c._unsubs !== undefined;
   if (needsResubscribe) {
     unsubscribeFromSources(c);
-    c._sources = []; // Reset for re-tracking
+    c._sources.clear(); // Reset for re-tracking
   }
 
   // Set as current listener for auto-tracking
@@ -344,7 +341,7 @@ function updateComputed<T>(c: ComputedCore<T>): void {
     c._dirty = false;
 
     // Re-subscribe to newly tracked sources
-    if (needsResubscribe && c._sources.length > 0) {
+    if (needsResubscribe && c._sources.size > 0) {
       subscribeToSources(c);
     }
 
@@ -381,16 +378,16 @@ function cleanUnsubs(unsubs: Unsubscribe[]): void {
 }
 
 // Shared subscription helper for computed & effect
-function attachListener(sources: AnyZen[], callback: any): Unsubscribe[] {
+function attachListener(sources: Set<AnyZen>, callback: any): Unsubscribe[] {
   const unsubs: Unsubscribe[] = [];
 
-  for (let i = 0; i < sources.length; i++) {
-    const source = sources[i] as ZenCore<any>;
-    if (!source._listeners) source._listeners = [];
-    source._listeners.push(callback);
+  for (const source of sources) {
+    const zenSource = source as ZenCore<any>;
+    if (!zenSource._listeners) zenSource._listeners = [];
+    zenSource._listeners.push(callback);
 
     unsubs.push(() => {
-      const listeners = source._listeners;
+      const listeners = zenSource._listeners;
       if (!listeners) return;
       const idx = listeners.indexOf(callback);
       if (idx !== -1) listeners.splice(idx, 1);
@@ -421,10 +418,7 @@ const computedProto = {
   get value() {
     // Auto-tracking: register as dependency if inside computed
     if (currentListener) {
-      const sources = currentListener._sources as AnyZen[];
-      if (!sources.includes(this)) {
-        sources.push(this);
-      }
+      currentListener._sources.add(this);
     }
 
     if (this._dirty) {
@@ -432,7 +426,7 @@ const computedProto = {
     }
 
     // Subscribe on first access (after updateComputed which populates _sources)
-    if (this._unsubs === undefined && this._sources.length > 0) {
+    if (this._unsubs === undefined && this._sources.size > 0) {
       subscribeToSources(this);
     }
 
@@ -448,7 +442,7 @@ export function computed<T>(
   c._kind = 'computed';
   c._value = null;
   c._dirty = true;
-  c._sources = explicitDeps || []; // Empty array for auto-tracking
+  c._sources = explicitDeps ? new Set(explicitDeps) : new Set(); // Set for O(1) add
   c._calc = calculation;
 
   return c;
@@ -462,7 +456,7 @@ export type ComputedZen<T> = ComputedCore<T>;
 // ============================================================================
 
 type EffectCore = {
-  _sources: AnyZen[];
+  _sources: Set<AnyZen>;
   _unsubs?: Unsubscribe[];
   _cleanup?: () => void;
   _callback: () => undefined | (() => void);
@@ -489,7 +483,7 @@ function executeEffect(e: EffectCore): void {
   if (e._autoTrack && e._unsubs !== undefined) {
     cleanUnsubs(e._unsubs);
     e._unsubs = undefined;
-    e._sources = [];
+    e._sources.clear();
   }
 
   // Set as current listener for auto-tracking (only if auto-track enabled)
@@ -507,7 +501,7 @@ function executeEffect(e: EffectCore): void {
   }
 
   // Subscribe to tracked sources (only if not already subscribed)
-  if (!e._unsubs && e._sources.length > 0) {
+  if (!e._unsubs && e._sources.size > 0) {
     e._unsubs = attachListener(e._sources, () => runEffect(e));
   }
 }
@@ -534,7 +528,7 @@ export function effect(
   explicitDeps?: AnyZen[],
 ): Unsubscribe {
   const e: EffectCore = {
-    _sources: explicitDeps || [],
+    _sources: explicitDeps ? new Set(explicitDeps) : new Set(),
     _callback: callback,
     _cancelled: false,
     _autoTrack: !explicitDeps, // Only auto-track if no explicit deps provided
@@ -561,7 +555,7 @@ export function effect(
   }
 
   // Subscribe to tracked sources after initial run
-  if (e._sources.length > 0) {
+  if (e._sources.size > 0) {
     e._unsubs = attachListener(e._sources, () => runEffect(e));
   }
 

@@ -214,11 +214,11 @@ describe('zen-ultra: Computed - Auto-tracking', () => {
 		const doubled = computed(() => count.value * 2);
 
 		// Before access, sources should be empty
-		expect(doubled._sources).toEqual([]);
+		expect(doubled._sources.size).toBe(0);
 
 		// After first access, should subscribe
 		doubled.value;
-		expect(doubled._sources.length).toBe(1);
+		expect(doubled._sources.size).toBe(1);
 		expect(doubled._unsubs).toBeDefined();
 	});
 });

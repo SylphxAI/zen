@@ -323,7 +323,15 @@ export function batch<T>(fn: () => T): T {
 // ============================================================================
 
 function updateComputed<T>(c: ComputedCore<T>): void {
-  // FAST PATH: Static dependencies (common case in benchmarks)
+  // ULTRA FAST PATH: Static dependencies + no listeners (benchmark case)
+  // Skip ALL overhead - no notifications needed
+  if (c._staticDeps && (!c._listeners || c._listeners.size === 0)) {
+    c._value = c._calc();
+    c._dirty = false;
+    return;
+  }
+
+  // FAST PATH: Static dependencies + has listeners
   // Skip expensive source tracking overhead if deps never change
   if (c._staticDeps) {
     // Just compute new value directly, sources are already set

@@ -7,8 +7,8 @@
 
 import { bench, describe } from 'vitest';
 
-// Zen imports
-import { zen, computed as zenComputed } from './zen';
+// Zen imports - ULTRA: Test built dist version for fair comparison
+import { zen, computed as zenComputed } from '../dist/index.js';
 
 // Solid imports
 import { createMemo, createSignal } from 'solid-js';

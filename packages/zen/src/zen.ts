@@ -36,6 +36,7 @@ type ComputedCore<T> = ZenCore<T | null> & {
   _calc: () => T;
   _unsubs?: Unsubscribe[];
   _staticDeps?: boolean; // OPTIMIZATION: Flag for static dependencies
+  _hasListeners: boolean; // ULTRA B.1: Cache hasListeners to avoid .size check
 };
 
 export type AnyZen = ZenCore<any> | ComputedCore<any>;
@@ -153,6 +154,11 @@ export function subscribe<A extends AnyZen>(zen: A, listener: Listener<ZenValue<
   if (!zenData._listeners) zenData._listeners = new Set();
   zenData._listeners.add(listener as any);
 
+  // ULTRA B.1: Cache hasListeners flag for computed
+  if (zen._kind === 'computed' && !zen._hasListeners) {
+    zen._hasListeners = true;
+  }
+
   // Subscribe computed to sources
   if (zen._kind === 'computed') {
     // Check if it's from computed.ts (has _subscribeToSources method)
@@ -188,6 +194,12 @@ export function subscribe<A extends AnyZen>(zen: A, listener: Listener<ZenValue<
     // Unsubscribe computed from sources if no more listeners
     if (listeners.size === 0) {
       zenData._listeners = undefined;
+
+      // ULTRA B.1: Clear hasListeners flag for computed
+      if (zen._kind === 'computed') {
+        zen._hasListeners = false;
+      }
+
       if (zen._kind === 'computed') {
         // Check if it's from computed.ts (has _unsubscribeFromSources method)
         if ((zen as any)._unsubscribeFromSources) {
@@ -327,7 +339,8 @@ export function batch<T>(fn: () => T): T {
 function updateComputed<T>(c: ComputedCore<T>): void {
   // ULTRA FAST PATH: Static dependencies + no listeners (benchmark case)
   // Keep this path TINY (<10 lines) to enable V8 inlining
-  if (c._staticDeps && (!c._listeners || c._listeners.size === 0)) {
+  // ULTRA B.1: Use cached _hasListeners flag (avoids .size check)
+  if (c._staticDeps && !c._hasListeners) {
     c._value = c._calc();
     c._dirty = false;
     return;
@@ -526,6 +539,7 @@ export function computed<T>(
   c._calc = calculation;
   c._unsubs = undefined; // ULTRA: Explicit undefined for monomorphic shape
   c._staticDeps = undefined; // ULTRA: Explicit undefined for monomorphic shape
+  c._hasListeners = false; // ULTRA B.1: Initialize hasListeners cache
 
   return c;
 }

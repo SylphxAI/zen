@@ -15,8 +15,23 @@ export type Unsubscribe = () => void;
 // FLAGS
 // ============================================================================
 
-const FLAG_STALE = 0b01;
-const FLAG_PENDING = 0b10;
+const FLAG_STALE = 0b001;
+const FLAG_PENDING = 0b010;
+const FLAG_PENDING_NOTIFY = 0b100;
+
+// ============================================================================
+// INTERNAL SLOTS
+// ============================================================================
+
+interface EffectSlot {
+  cb: Listener<any>;
+  index: number;
+}
+
+interface ComputedSlot {
+  node: AnyNode;
+  index: number;
+}
 
 // ============================================================================
 // BASE NODE
@@ -31,8 +46,8 @@ const FLAG_PENDING = 0b10;
  */
 abstract class BaseNode<V> {
   _value: V;
-  _computedListeners: AnyNode[] = [];
-  _effectListeners: Listener<any>[] = [];
+  _computedListeners: ComputedSlot[] = [];
+  _effectListeners: EffectSlot[] = [];
   _flags = 0;
   _version = 0;
 
@@ -99,6 +114,54 @@ function valuesEqual(a: unknown, b: unknown): boolean {
   return false;
 }
 
+// Add an effect listener as a slot, return O(1) unsubscribe.
+function addEffectListener(node: AnyNode, cb: Listener<any>): Unsubscribe {
+  const effects = node._effectListeners;
+  const slot: EffectSlot = {
+    cb,
+    index: effects.length,
+  };
+  effects.push(slot);
+
+  return (): void => {
+    const idx = slot.index;
+    const lastIndex = effects.length - 1;
+    if (idx < 0 || idx > lastIndex) return;
+
+    if (idx !== lastIndex) {
+      const last = effects[lastIndex]!;
+      effects[idx] = last;
+      last.index = idx;
+    }
+    effects.pop();
+    slot.index = -1;
+  };
+}
+
+// Add a computed listener as a slot, return O(1) unsubscribe.
+function addComputedListener(source: AnyNode, node: AnyNode): Unsubscribe {
+  const list = source._computedListeners;
+  const slot: ComputedSlot = {
+    node,
+    index: list.length,
+  };
+  list.push(slot);
+
+  return (): void => {
+    const idx = slot.index;
+    const lastIndex = list.length - 1;
+    if (idx < 0 || idx > lastIndex) return;
+
+    if (idx !== lastIndex) {
+      const last = list[lastIndex]!;
+      list[idx] = last;
+      last.index = idx;
+    }
+    list.pop();
+    slot.index = -1;
+  };
+}
+
 // ============================================================================
 // ZEN (Signal)
 // ============================================================================
@@ -128,7 +191,7 @@ class ZenNode<T> extends BaseNode<T> {
     // Mark dependent computeds as STALE
     const computeds = this._computedListeners;
     for (let i = 0; i < computeds.length; i++) {
-      computeds[i]!._flags |= FLAG_STALE;
+      computeds[i]!.node._flags |= FLAG_STALE;
     }
 
     // Inside a batch: defer notifications
@@ -185,8 +248,12 @@ class ComputedNode<T> extends BaseNode<T | null> {
   private _recomputeIfNeeded(): void {
     let isStale = (this._flags & FLAG_STALE) !== 0;
 
-    // Version-based check: if any source version changed, treat as stale
-    if (!isStale && this._sources.length > 0 && this._sourceVersions.length === this._sources.length) {
+    // Version-based check: if any source version changed, treat as stale.
+    if (
+      !isStale &&
+      this._sources.length > 0 &&
+      this._sourceVersions.length === this._sources.length
+    ) {
       const srcs = this._sources;
       const vers = this._sourceVersions;
       for (let i = 0; i < srcs.length; i++) {
@@ -212,7 +279,6 @@ class ComputedNode<T> extends BaseNode<T | null> {
     this._flags |= FLAG_PENDING;
     this._flags &= ~FLAG_STALE;
 
-    const oldValue = this._value;
     const newValue = this._calc();
     this._value = newValue;
     this._flags &= ~FLAG_PENDING;
@@ -269,24 +335,10 @@ class ComputedNode<T> extends BaseNode<T | null> {
     if (this._sourceUnsubs !== undefined) return;
 
     this._sourceUnsubs = [];
-    const self = this;
 
     for (let i = 0; i < this._sources.length; i++) {
       const source = this._sources[i]!;
-      source._computedListeners.push(self as unknown as AnyNode);
-
-      const unsub: Unsubscribe = () => {
-        const arr = source._computedListeners;
-        const idx = arr.indexOf(self as unknown as AnyNode);
-        if (idx !== -1) {
-          const last = arr.length - 1;
-          if (idx !== last) {
-            arr[idx] = arr[last]!;
-          }
-          arr.pop();
-        }
-      };
-
+      const unsub = addComputedListener(source, this as unknown as AnyNode);
       this._sourceUnsubs.push(unsub);
     }
   }
@@ -329,9 +381,10 @@ const pendingNotifications: PendingNotification[] = [];
  * A given node is only queued once per change event; the earliest oldValue wins.
  */
 function queueBatchedNotification(node: AnyNode, oldValue: unknown): void {
-  for (let i = 0; i < pendingNotifications.length; i++) {
-    if (pendingNotifications[i]![0] === node) return;
+  if ((node._flags & FLAG_PENDING_NOTIFY) !== 0) {
+    return;
   }
+  node._flags |= FLAG_PENDING_NOTIFY;
   pendingNotifications.push([node, oldValue]);
 }
 
@@ -340,17 +393,17 @@ function notifyEffects(node: AnyNode, newValue: unknown, oldValue: unknown): voi
   const len = effects.length;
 
   if (len === 1) {
-    effects[0]?.(newValue, oldValue);
+    effects[0]!.cb(newValue, oldValue);
   } else if (len === 2) {
-    effects[0]?.(newValue, oldValue);
-    effects[1]?.(newValue, oldValue);
+    effects[0]!.cb(newValue, oldValue);
+    effects[1]!.cb(newValue, oldValue);
   } else if (len === 3) {
-    effects[0]?.(newValue, oldValue);
-    effects[1]?.(newValue, oldValue);
-    effects[2]?.(newValue, oldValue);
+    effects[0]!.cb(newValue, oldValue);
+    effects[1]!.cb(newValue, oldValue);
+    effects[2]!.cb(newValue, oldValue);
   } else {
     for (let i = 0; i < len; i++) {
-      effects[i]?.(newValue, oldValue);
+      effects[i]!.cb(newValue, oldValue);
     }
   }
 }
@@ -361,6 +414,7 @@ function flushPendingNotifications(): void {
   const toNotify = pendingNotifications.splice(0);
   for (let i = 0; i < toNotify.length; i++) {
     const [node, oldVal] = toNotify[i]!;
+    node._flags &= ~FLAG_PENDING_NOTIFY;
     const curr = node._value;
     notifyEffects(node, curr, oldVal);
   }
@@ -391,22 +445,18 @@ export function batch<T>(fn: () => T): T {
  * Subscribe to a signal or computed.
  *
  * - Immediately calls listener with the current value (lazy eval via .value).
- * - Returns an unsubscribe function (O(1) swap-pop removal).
+ * - Returns an unsubscribe function (true O(1) via slot + swap-pop).
  * - For computeds, if no listeners (effects or other computeds) remain,
  *   it unsubscribes from all sources.
- *
- * Note: For computeds, notifications are still driven by their underlying
- * sources and effects; this subscribe is primarily designed for signals.
  */
 export function subscribe<T>(
   node: ZenCore<T> | ComputedCore<T>,
   listener: Listener<T>,
 ): Unsubscribe {
   const n = node as AnyNode;
-  const effects = n._effectListeners as Listener<T>[];
 
-  // Add listener (O(1))
-  effects.push(listener);
+  // Add listener as an effect slot (O(1))
+  const unsubEffect = addEffectListener(n, listener as Listener<any>);
 
   // Lazy initial evaluation:
   // - zen: direct read
@@ -414,16 +464,10 @@ export function subscribe<T>(
   listener((node as any).value as T, undefined);
 
   return (): void => {
-    const idx = effects.indexOf(listener);
-    if (idx === -1) return;
+    unsubEffect();
 
-    const last = effects.length - 1;
-    if (idx !== last) {
-      effects[idx] = effects[last]!;
-    }
-    effects.pop();
-
-    const remaining = n._computedListeners.length + n._effectListeners.length;
+    const effects = n._effectListeners;
+    const remaining = n._computedListeners.length + effects.length;
 
     // If this is a computed and no listeners remain (no effects, no dependents),
     // we can detach it from all of its sources.
@@ -483,25 +527,16 @@ function executeEffect(e: EffectCore): void {
   if (e._sources.length > 0) {
     e._sourceUnsubs = [];
     const self = e;
-    const onSourceChange: Listener<unknown> = (value, oldValue) => {
+
+    const onSourceChange: Listener<unknown> = (value, _oldValue) => {
       // Re-run the effect when any source changes
       executeEffect(self);
     };
 
     for (let i = 0; i < e._sources.length; i++) {
       const src = e._sources[i]!;
-      src._effectListeners.push(onSourceChange);
-      e._sourceUnsubs.push(() => {
-        const arr = src._effectListeners;
-        const idx = arr.indexOf(onSourceChange);
-        if (idx !== -1) {
-          const last = arr.length - 1;
-          if (idx !== last) {
-            arr[idx] = arr[last]!;
-          }
-          arr.pop();
-        }
-      });
+      const unsub = addEffectListener(src, onSourceChange as Listener<any>);
+      e._sourceUnsubs.push(unsub);
     }
   }
 }

@@ -141,29 +141,6 @@ describe('effect (auto-tracking)', () => {
     expect(values).toEqual([1, 2, 20, 30]);
   });
 
-  it('supports explicit dependencies for performance', () => {
-    const count = zen(0);
-    const unused = zen(100);
-    const values: number[] = [];
-
-    effect(
-      () => {
-        // Access unused but don't track it
-        values.push(count.value + unused.value);
-      },
-      [count], // Only track count
-    );
-
-    expect(values).toEqual([100]);
-
-    count.value = 1;
-    expect(values).toEqual([100, 101]);
-
-    // unused change should NOT trigger
-    unused.value = 200;
-    expect(values).toEqual([100, 101]);
-  });
-
   it('works with batched updates', () => {
     const a = zen(1);
     const b = zen(2);

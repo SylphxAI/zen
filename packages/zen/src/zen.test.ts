@@ -163,14 +163,13 @@ describe('computed', () => {
     // Change source
     count.value = 5;
 
-    // With topo scheduling, computed is now eagerly stabilized after signal write
-    // (to prevent glitches), so it's no longer stale after the update.
-    // The lazy behavior only applies when there are no observers.
-    expect(doubled._dirty).toBe(false); // Already stabilized by processDirtyNodesAndFlush
+    // Fast mode: direct propagation marks computed stale without recomputing
+    // Lazy evaluation - computed stays stale until accessed
+    expect(doubled._dirty).toBe(true); // Marked stale, not recomputed yet
 
-    // Value is already up-to-date
+    // Access triggers lazy recomputation
     expect(doubled.value).toBe(10);
-    expect(doubled._dirty).toBe(false);
+    expect(doubled._dirty).toBe(false); // Now fresh after access
   });
 });
 

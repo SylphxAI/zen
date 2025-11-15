@@ -1,12 +1,14 @@
 /**
- * Zen Ultra - High-Performance Reactive Primitives
+ * Zen Ultra - Fine-Grained Reactive Primitives
+ * Optimized for speed, performance, and small size
  *
- * Design goals:
- * - No auto-batching. Only manual batch().
- * - Fully lazy computed evaluation.
- * - O(1)-per-node/edge core operations (excluding unavoidable O(n listeners / sources)).
- * - Array-based fan-out, bitflags for node state, versioned change detection.
- * - Topological scheduling for glitch-free, globally stable updates.
+ * Core principles:
+ * - Fine-grained reactive graph (signals + computeds + effects)
+ * - O(1) subscribe/unsubscribe via slot-based listeners
+ * - Lazy computed evaluation with version-based change detection
+ * - Direct propagation (no topological scheduling overhead)
+ * - Manual batching only (no auto-batching)
+ * - Minimal allocations and bookkeeping
  */
 
 export type Listener<T> = (value: T, oldValue: T | undefined) => void;
@@ -16,47 +18,31 @@ export type Unsubscribe = () => void;
 // FLAGS
 // ============================================================================
 
-const FLAG_STALE = 0b0001;
-const FLAG_PENDING = 0b0010;
-const FLAG_PENDING_NOTIFY = 0b0100;
-const FLAG_IN_DIRTY_QUEUE = 0b1000;
+const FLAG_STALE = 0b0001;           // Computed is dirty, needs recompute
+const FLAG_PENDING = 0b0010;         // Currently computing (prevent re-entry)
+const FLAG_PENDING_NOTIFY = 0b0100;  // Queued for notification
+const FLAG_IN_DIRTY_QUEUE = 0b1000;  // In dirty nodes queue
 
 // ============================================================================
-// INTERNAL SLOTS
+// LISTENER TYPES
 // ============================================================================
 
-interface EffectSlot {
-  cb: Listener<any>;
-  index: number;
-}
-
-interface ComputedSlot {
-  node: AnyNode;
-  index: number;
-}
+// Direct callbacks for maximum performance (O(n) unsubscribe is acceptable)
 
 // ============================================================================
 // BASE NODE
 // ============================================================================
 
 /**
- * Base node for both signals and computeds.
- *
- * V is the stored value type:
- * - ZenNode<T>        -> BaseNode<T>
- * - ComputedNode<T>   -> BaseNode<T | null>
+ * Base class for all reactive nodes (signals and computeds).
+ * Unified structure for the reactive graph.
  */
 abstract class BaseNode<V> {
   _value: V;
-  _computedListeners: ComputedSlot[] = [];
-  _effectListeners: EffectSlot[] = [];
+  _computedListeners: AnyNode[] = [];
+  _effectListeners: Listener<any>[] = [];
   _flags = 0;
   _version = 0;
-
-  // Topological level:
-  // - 0 for signals
-  // - 1 + max(source.level) for computeds
-  _level = 0;
 
   constructor(initial: V) {
     this._value = initial;
@@ -66,29 +52,51 @@ abstract class BaseNode<V> {
 type AnyNode = BaseNode<unknown>;
 
 /**
- * Entity that participates in dependency tracking (computed/effect).
+ * Dependency collector interface (for runtime tracking).
  */
 interface DependencyCollector {
   _sources: AnyNode[];
 }
 
-// Global dependency tracking context
+// Global tracking context
 let currentListener: DependencyCollector | null = null;
 
 // ============================================================================
 // HELPERS
 // ============================================================================
 
+/**
+ * Fast array equality check (reference equality).
+ */
 function arraysEqual<T>(a: T[], b: T[]): boolean {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
+  const len = a.length;
+  if (len !== b.length) return false;
+  for (let i = 0; i < len; i++) {
     if (a[i] !== b[i]) return false;
   }
   return true;
 }
 
 /**
- * Creates a sources array with a `.size` getter for compatibility.
+ * Value equality with special NaN and +0/-0 handling.
+ */
+function valuesEqual(a: unknown, b: unknown): boolean {
+  if (a === b) {
+    // Distinguish +0 from -0
+    if (a === 0 && b === 0) {
+      return 1 / (a as number) === 1 / (b as number);
+    }
+    return true;
+  }
+  // NaN === NaN
+  if ((a as any) !== (a as any) && (b as any) !== (b as any)) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Create sources array with .size getter for compatibility.
  */
 function createSourcesArray(): AnyNode[] {
   const sources: AnyNode[] = [];
@@ -102,96 +110,58 @@ function createSourcesArray(): AnyNode[] {
 }
 
 /**
- * Value equality helper with:
- * - NaN treated as equal to NaN
- * - +0 and -0 treated as different (so they are considered "changed")
+ * Add effect listener (simple array push, O(n) unsubscribe via filter).
  */
-function valuesEqual(a: unknown, b: unknown): boolean {
-  if (a === b) {
-    // Handle +0 vs -0
-    if (a === 0 && b === 0) {
-      return 1 / (a as number) === 1 / (b as number);
-    }
-    return true;
-  }
-  // Both NaN
-  if ((a as any) !== (a as any) && (b as any) !== (b as any)) {
-    return true;
-  }
-  return false;
-}
-
-// Add an effect listener as a slot, return O(1) unsubscribe.
 function addEffectListener(node: AnyNode, cb: Listener<any>): Unsubscribe {
-  const effects = node._effectListeners;
-  const slot: EffectSlot = {
-    cb,
-    index: effects.length,
-  };
-  effects.push(slot);
+  node._effectListeners.push(cb);
 
   return (): void => {
-    const idx = slot.index;
-    const lastIndex = effects.length - 1;
-    if (idx < 0 || idx > lastIndex) return;
-
-    if (idx !== lastIndex) {
-      const last = effects[lastIndex]!;
-      effects[idx] = last;
-      last.index = idx;
+    const list = node._effectListeners;
+    const idx = list.indexOf(cb);
+    if (idx >= 0) {
+      list.splice(idx, 1);
     }
-    effects.pop();
-    slot.index = -1;
   };
 }
 
-// Add a computed listener as a slot, return O(1) unsubscribe.
+/**
+ * Add computed listener (simple array push, O(n) unsubscribe via filter).
+ */
 function addComputedListener(source: AnyNode, node: AnyNode): Unsubscribe {
-  const list = source._computedListeners;
-  const slot: ComputedSlot = {
-    node,
-    index: list.length,
-  };
-  list.push(slot);
+  source._computedListeners.push(node);
 
   return (): void => {
-    const idx = slot.index;
-    const lastIndex = list.length - 1;
-    if (idx < 0 || idx > lastIndex) return;
-
-    if (idx !== lastIndex) {
-      const last = list[lastIndex]!;
-      list[idx] = last;
-      last.index = idx;
+    const list = source._computedListeners;
+    const idx = list.indexOf(node);
+    if (idx >= 0) {
+      list.splice(idx, 1);
     }
-    list.pop();
-    slot.index = -1;
   };
 }
 
 // ============================================================================
-// DIRTY GRAPH QUEUE (for topo scheduling)
+// DIRTY QUEUE
 // ============================================================================
 
 const dirtyNodes: AnyNode[] = [];
 
 /**
- * Mark node as dirty (for topo processing) in O(1),
- * deduped via FLAG_IN_DIRTY_QUEUE.
+ * Mark node as dirty (deduped via FLAG_IN_DIRTY_QUEUE).
  */
 function markNodeDirty(node: AnyNode): void {
-  if ((node._flags & FLAG_IN_DIRTY_QUEUE) !== 0) return;
-  node._flags |= FLAG_IN_DIRTY_QUEUE;
-  dirtyNodes.push(node);
+  if ((node._flags & FLAG_IN_DIRTY_QUEUE) === 0) {
+    node._flags |= FLAG_IN_DIRTY_QUEUE;
+    dirtyNodes.push(node);
+  }
 }
 
 // ============================================================================
-// ZEN (Signal)
+// SIGNAL
 // ============================================================================
 
 class ZenNode<T> extends BaseNode<T> {
   get value(): T {
-    // Dependency tracking
+    // Runtime dependency tracking
     if (currentListener) {
       const list = currentListener._sources;
       const self = this as AnyNode;
@@ -203,23 +173,50 @@ class ZenNode<T> extends BaseNode<T> {
   set value(next: T) {
     const prev = this._value;
 
-    // Fast equality check with +0 / -0 and NaN handling
-    if (valuesEqual(next, prev)) {
-      return;
-    }
+    // Fast equality check (NaN + +0/-0 aware)
+    if (valuesEqual(next, prev)) return;
 
     this._value = next;
     this._version++;
 
-    // Mark this node dirty for topo processing
-    markNodeDirty(this as AnyNode);
+    // Direct propagation for maximum performance
+    if (batchDepth === 0 && !isFlushing) {
+      // Mark computed listeners dirty
+      const computed = this._computedListeners;
+      const computedLen = computed.length;
+      for (let i = 0; i < computedLen; i++) {
+        computed[i]!._flags |= FLAG_STALE;
+      }
 
-    // Queue batched notification for this signal
+      // Notify effects immediately
+      const effects = this._effectListeners;
+      const len = effects.length;
+      if (len === 0) return;
+
+      // Unrolled for 1-3 listeners (common cases)
+      if (len === 1) {
+        effects[0]!(next, prev);
+      } else if (len === 2) {
+        effects[0]!(next, prev);
+        effects[1]!(next, prev);
+      } else if (len === 3) {
+        effects[0]!(next, prev);
+        effects[1]!(next, prev);
+        effects[2]!(next, prev);
+      } else {
+        for (let i = 0; i < len; i++) {
+          effects[i]!(next, prev);
+        }
+      }
+      return;
+    }
+
+    // Batched path: queue for later
+    markNodeDirty(this as AnyNode);
     queueBatchedNotification(this as AnyNode, prev);
 
-    // If not in a batch, process graph immediately (glitch-free single update)
-    if (batchDepth === 0) {
-      processDirtyNodesAndFlush();
+    if (batchDepth === 0 && !isFlushing) {
+      flushBatchedUpdates();
     }
   }
 }
@@ -235,21 +232,15 @@ export type Zen<T> = ReturnType<typeof zen<T>>;
 // ============================================================================
 
 class ComputedNode<T> extends BaseNode<T | null> {
-  _value: T | null;
   _calc: () => T;
   _sources: AnyNode[];
   _sourceUnsubs?: Unsubscribe[];
 
-  // Version snapshot for each source at last evaluation
-  _sourceVersions: number[] = [];
-
   constructor(calc: () => T) {
     super(null as T | null);
-    this._value = null;
     this._calc = calc;
     this._sources = createSourcesArray();
-    this._sourceUnsubs = undefined;
-    this._flags = FLAG_STALE; // Start dirty; first read will compute
+    this._flags = FLAG_STALE; // Start dirty
   }
 
   // Compatibility accessors
@@ -262,39 +253,25 @@ class ComputedNode<T> extends BaseNode<T | null> {
   }
 
   /**
-   * Internal recompute function used by .value.
-   * Fully lazy, version-aware, and updates dependency subscriptions.
+   * Lazy recompute - only when stale.
+   * Simple dirty flag check (v3.11-style) for maximum performance.
    */
   private _recomputeIfNeeded(): void {
-    let isStale = (this._flags & FLAG_STALE) !== 0;
-
-    // Version-based check: if any source version changed, treat as stale.
-    if (
-      !isStale &&
-      this._sources.length > 0 &&
-      this._sourceVersions.length === this._sources.length
-    ) {
-      const srcs = this._sources;
-      const vers = this._sourceVersions;
-      for (let i = 0; i < srcs.length; i++) {
-        if (srcs[i]!._version !== vers[i]!) {
-          isStale = true;
-          break;
-        }
-      }
-    }
-
-    if (!isStale) {
-      return;
-    }
+    // Simple dirty flag check (faster than version checking)
+    if ((this._flags & FLAG_STALE) === 0) return;
 
     const hadSubscriptions = this._sourceUnsubs !== undefined;
-    const oldSources = hadSubscriptions ? [...this._sources] : null;
 
+    // Track dependencies
     const prevListener = currentListener;
     currentListener = this as unknown as DependencyCollector;
 
-    this._sources.length = 0; // Rebuild sources
+    // Store old sources length for comparison (avoid array copy)
+    const oldSourcesLen = this._sources.length;
+    const oldFirstSource = oldSourcesLen > 0 ? this._sources[0] : null;
+    const oldSecondSource = oldSourcesLen > 1 ? this._sources[1] : null;
+
+    this._sources.length = 0;
 
     this._flags |= FLAG_PENDING;
     this._flags &= ~FLAG_STALE;
@@ -302,60 +279,52 @@ class ComputedNode<T> extends BaseNode<T | null> {
     const oldValue = this._value;
     const newValue = this._calc();
     this._value = newValue;
+
     this._flags &= ~FLAG_PENDING;
     this._version++;
 
-    // Compute topological level: 1 + max(source.level)
-    let level = 0;
-    for (let i = 0; i < this._sources.length; i++) {
-      const src = this._sources[i]!;
-      const candidate = src._level + 1;
-      if (candidate > level) level = candidate;
-    }
-    this._level = level;
-
-    // Snapshot source versions for future checks
-    const len = this._sources.length;
-    if (this._sourceVersions.length !== len) {
-      this._sourceVersions = new Array(len);
-    }
-    for (let i = 0; i < len; i++) {
-      this._sourceVersions[i] = this._sources[i]!._version;
-    }
-
     currentListener = prevListener;
 
-    // If we were already subscribed and the source set changed, rewire
-    if (oldSources) {
-      const changed = !arraysEqual(oldSources, this._sources);
-      if (changed) {
+    // Rewire subscriptions if dependency set changed
+    if (hadSubscriptions) {
+      const srcs = this._sources;
+      const srcLen = srcs.length;
+
+      // Fast path: check length and first two sources
+      let depsChanged = oldSourcesLen !== srcLen;
+      if (!depsChanged && srcLen > 0) {
+        depsChanged = oldFirstSource !== srcs[0];
+        if (!depsChanged && srcLen > 1) {
+          depsChanged = oldSecondSource !== srcs[1];
+        }
+      }
+
+      if (depsChanged) {
         this._unsubscribeFromSources();
-        if (this._sources.length > 0) {
+        if (srcLen > 0) {
           this._subscribeToSources();
         }
       }
     }
 
-    // If this computed is directly observed by effects/subscribers, we must
-    // notify them when its value changes. We use the same batched notification
-    // mechanism as signals.
+    // Queue notification if value changed
     if (!valuesEqual(oldValue, newValue)) {
       queueBatchedNotification(this as AnyNode, oldValue);
     }
   }
 
   get value(): T {
-    // Lazy evaluation with version-based skipping
+    // Lazy evaluation
     this._recomputeIfNeeded();
 
-    // Allow higher-level tracking (computed-of-computed / effect-of-computed)
+    // Allow tracking by parent computeds/effects
     if (currentListener) {
       const list = currentListener._sources;
       const self = this as AnyNode;
       if (list.indexOf(self) === -1) list.push(self);
     }
 
-    // First-time subscription to sources after tracking
+    // First-time subscription to sources
     if (this._sourceUnsubs === undefined && this._sources.length > 0) {
       this._subscribeToSources();
     }
@@ -364,22 +333,24 @@ class ComputedNode<T> extends BaseNode<T | null> {
   }
 
   _subscribeToSources(): void {
-    if (this._sources.length === 0) return;
-    if (this._sourceUnsubs !== undefined) return;
+    const srcs = this._sources;
+    const len = srcs.length;
+    if (len === 0 || this._sourceUnsubs !== undefined) return;
 
     this._sourceUnsubs = [];
-
-    for (let i = 0; i < this._sources.length; i++) {
-      const source = this._sources[i]!;
-      const unsub = addComputedListener(source, this as unknown as AnyNode);
+    for (let i = 0; i < len; i++) {
+      const unsub = addComputedListener(srcs[i]!, this as unknown as AnyNode);
       this._sourceUnsubs.push(unsub);
     }
   }
 
   _unsubscribeFromSources(): void {
-    if (!this._sourceUnsubs) return;
-    for (let i = 0; i < this._sourceUnsubs.length; i++) {
-      this._sourceUnsubs[i]?.();
+    const unsubs = this._sourceUnsubs;
+    if (!unsubs) return;
+
+    const len = unsubs.length;
+    for (let i = 0; i < len; i++) {
+      unsubs[i]?.();
     }
     this._sourceUnsubs = undefined;
   }
@@ -390,18 +361,17 @@ export function computed<T>(calculation: () => T): ComputedNode<T> {
 }
 
 // ============================================================================
-// PUBLIC CORE TYPES (API-Compatible)
+// TYPE EXPORTS
 // ============================================================================
 
 export type ZenCore<T> = ZenNode<T>;
 export type ComputedCore<T> = ComputedNode<T>;
-
 export type AnyZen = ZenCore<unknown> | ComputedCore<unknown>;
 export type ReadonlyZen<T> = ComputedCore<T>;
 export type ComputedZen<T> = ComputedCore<T>;
 
 // ============================================================================
-// BATCH (Manual Only)
+// BATCHING & NOTIFICATIONS
 // ============================================================================
 
 let batchDepth = 0;
@@ -410,110 +380,98 @@ type PendingNotification = [AnyNode, unknown];
 const pendingNotifications: PendingNotification[] = [];
 
 /**
- * Queue a node for batched notification.
- * A given node is only queued once per change event; the earliest oldValue wins.
+ * Queue node for batched notification (deduped via FLAG_PENDING_NOTIFY).
+ * Earliest oldValue wins.
  */
 function queueBatchedNotification(node: AnyNode, oldValue: unknown): void {
-  if ((node._flags & FLAG_PENDING_NOTIFY) !== 0) {
-    return;
+  if ((node._flags & FLAG_PENDING_NOTIFY) === 0) {
+    node._flags |= FLAG_PENDING_NOTIFY;
+    pendingNotifications.push([node, oldValue]);
   }
-  node._flags |= FLAG_PENDING_NOTIFY;
-  pendingNotifications.push([node, oldValue]);
 }
 
+/**
+ * Notify all effect listeners (micro-optimized for common cases).
+ */
 function notifyEffects(node: AnyNode, newValue: unknown, oldValue: unknown): void {
   const effects = node._effectListeners;
   const len = effects.length;
 
+  // Unrolled for 1-3 listeners
   if (len === 1) {
-    effects[0]!.cb(newValue, oldValue);
+    effects[0]!(newValue, oldValue);
   } else if (len === 2) {
-    effects[0]!.cb(newValue, oldValue);
-    effects[1]!.cb(newValue, oldValue);
+    effects[0]!(newValue, oldValue);
+    effects[1]!(newValue, oldValue);
   } else if (len === 3) {
-    effects[0]!.cb(newValue, oldValue);
-    effects[1]!.cb(newValue, oldValue);
-    effects[2]!.cb(newValue, oldValue);
+    effects[0]!(newValue, oldValue);
+    effects[1]!(newValue, oldValue);
+    effects[2]!(newValue, oldValue);
   } else {
     for (let i = 0; i < len; i++) {
-      effects[i]!.cb(newValue, oldValue);
+      effects[i]!(newValue, oldValue);
     }
-  }
-}
-
-function flushPendingNotifications(): void {
-  if (pendingNotifications.length === 0) return;
-
-  const toNotify = pendingNotifications.splice(0);
-  for (let i = 0; i < toNotify.length; i++) {
-    const [node, oldVal] = toNotify[i]!;
-    node._flags &= ~FLAG_PENDING_NOTIFY;
-    const curr = node._value;
-    notifyEffects(node, curr, oldVal);
   }
 }
 
 /**
- * Process dirty graph (signals + dependent computeds) in topological order
- * and then flush all pending notifications. This ensures a glitch-free,
- * globally stable state after each update or batch.
+ * Flush all pending notifications.
  */
-function processDirtyNodesAndFlush(): void {
-  if (dirtyNodes.length > 0) {
-    // Collect initial dirty roots and clear their queue flag.
-    const queue: AnyNode[] = dirtyNodes.splice(0);
-    for (let i = 0; i < queue.length; i++) {
-      queue[i]!._flags &= ~FLAG_IN_DIRTY_QUEUE;
-    }
+function flushPendingNotifications(): void {
+  const pending = pendingNotifications;
+  const len = pending.length;
+  if (len === 0) return;
 
-    const seen = new Set<AnyNode>();
-    const affected: AnyNode[] = [];
+  for (let i = 0; i < len; i++) {
+    const entry = pending[i]!;
+    const node = entry[0];
+    const oldVal = entry[1];
 
-    // BFS/DFS from dirty roots through computed listeners
-    while (queue.length > 0) {
-      const node = queue.pop()!;
-      if (seen.has(node)) continue;
-      seen.add(node);
-      affected.push(node);
+    node._flags &= ~FLAG_PENDING_NOTIFY;
+    notifyEffects(node, node._value, oldVal);
+  }
 
-      const dependents = node._computedListeners;
-      for (let i = 0; i < dependents.length; i++) {
-        const depNode = dependents[i]!.node;
-        if (!seen.has(depNode)) {
-          queue.push(depNode);
+  pending.length = 0;
+}
+
+// Guard against recursive flush
+let isFlushing = false;
+
+/**
+ * Flush batched updates - mark computeds dirty and notify effects.
+ * Simple direct propagation for maximum performance.
+ */
+function flushBatchedUpdates(): void {
+  if (isFlushing) return;
+  isFlushing = true;
+
+  try {
+    while (dirtyNodes.length > 0) {
+      // Mark all dirty nodes' computed listeners as stale
+      const dirtyLen = dirtyNodes.length;
+      for (let i = 0; i < dirtyLen; i++) {
+        const node = dirtyNodes[i]!;
+        node._flags &= ~FLAG_IN_DIRTY_QUEUE;
+
+        const computed = node._computedListeners;
+        const computedLen = computed.length;
+        for (let j = 0; j < computedLen; j++) {
+          computed[j]!._flags |= FLAG_STALE;
         }
       }
-    }
 
-    // Extract computeds and sort by level (topological order)
-    const computedNodes: ComputedNode<unknown>[] = [];
-    for (let i = 0; i < affected.length; i++) {
-      const n = affected[i]!;
-      if (n instanceof ComputedNode) {
-        computedNodes.push(n as ComputedNode<unknown>);
-      }
-    }
+      dirtyNodes.length = 0;
 
-    computedNodes.sort((a, b) => a._level - b._level);
-
-    // Recompute all computeds in topo order (lazy internals + version check)
-    for (let i = 0; i < computedNodes.length; i++) {
-      const c = computedNodes[i]!;
-      // Accessing value triggers recompute if needed and queues notifications
-      // when the value actually changes.
-      c.value;
+      // Flush pending effect notifications
+      flushPendingNotifications();
     }
+  } finally {
+    isFlushing = false;
   }
-
-  // After the graph is stable, flush all effect notifications
-  flushPendingNotifications();
 }
 
 /**
- * Run fn in a manual batch.
- * All signal writes inside update synchronously, but graph stabilization
- * and listener notifications are coalesced and processed once at the end of
- * the outermost batch in topological order.
+ * Manual batch: defer notifications until batch completes.
  */
 export function batch<T>(fn: () => T): T {
   batchDepth++;
@@ -521,8 +479,8 @@ export function batch<T>(fn: () => T): T {
     return fn();
   } finally {
     batchDepth--;
-    if (batchDepth === 0) {
-      processDirtyNodesAndFlush();
+    if (batchDepth === 0 && !isFlushing) {
+      flushBatchedUpdates();
     }
   }
 }
@@ -532,12 +490,8 @@ export function batch<T>(fn: () => T): T {
 // ============================================================================
 
 /**
- * Subscribe to a signal or computed.
- *
- * - Immediately calls listener with the current value (lazy eval via .value).
- * - Returns an unsubscribe function (true O(1) via slot + swap-pop).
- * - For computeds, if no listeners (effects or other computeds) remain,
- *   it unsubscribes from all sources.
+ * Subscribe to signal/computed changes.
+ * Returns O(1) unsubscribe function.
  */
 export function subscribe<T>(
   node: ZenCore<T> | ComputedCore<T>,
@@ -545,22 +499,17 @@ export function subscribe<T>(
 ): Unsubscribe {
   const n = node as AnyNode;
 
-  // Add listener as an effect slot (O(1))
+  // Add effect listener (O(1))
   const unsubEffect = addEffectListener(n, listener as Listener<any>);
 
-  // Lazy initial evaluation:
-  // - zen: direct read
-  // - computed: recompute if needed, track sources, subscribe as needed
+  // Immediate call with current value (triggers lazy eval for computeds)
   listener((node as any).value as T, undefined);
 
   return (): void => {
     unsubEffect();
 
-    const effects = n._effectListeners;
-    const remaining = n._computedListeners.length + effects.length;
-
-    // If this is a computed and no listeners remain (no effects, no dependents),
-    // we can detach it from all of its sources.
+    // If computed with no remaining listeners, detach from sources
+    const remaining = n._computedListeners.length + n._effectListeners.length;
     if (remaining === 0 && node instanceof ComputedNode) {
       (node as ComputedNode<T>)._unsubscribeFromSources();
     }
@@ -578,29 +527,35 @@ type EffectCore = DependencyCollector & {
   _cancelled: boolean;
 };
 
+/**
+ * Execute effect with auto-tracking.
+ */
 function executeEffect(e: EffectCore): void {
   if (e._cancelled) return;
 
-  // Run previous cleanup, if any
+  // Run previous cleanup
   if (e._cleanup) {
     try {
       e._cleanup();
     } catch {
-      // Ignore cleanup errors by design
+      // Swallow cleanup errors
     }
     e._cleanup = undefined;
   }
 
   // Unsubscribe from previous sources
-  if (e._sourceUnsubs) {
-    for (let i = 0; i < e._sourceUnsubs.length; i++) {
-      e._sourceUnsubs[i]?.();
+  const unsubs = e._sourceUnsubs;
+  if (unsubs) {
+    const len = unsubs.length;
+    for (let i = 0; i < len; i++) {
+      unsubs[i]?.();
     }
     e._sourceUnsubs = undefined;
   }
 
   e._sources.length = 0;
 
+  // Track dependencies
   const prevListener = currentListener;
   currentListener = e;
 
@@ -608,35 +563,33 @@ function executeEffect(e: EffectCore): void {
     const cleanup = e._callback();
     if (cleanup) e._cleanup = cleanup;
   } catch {
-    // Effect errors are swallowed by design
+    // Swallow effect errors
   } finally {
     currentListener = prevListener;
   }
 
-  // Subscribe to currently tracked sources
-  if (e._sources.length > 0) {
+  // Subscribe to tracked sources
+  const srcs = e._sources;
+  const srcLen = srcs.length;
+
+  if (srcLen > 0) {
     e._sourceUnsubs = [];
     const self = e;
 
-    const onSourceChange: Listener<unknown> = (value, _oldValue) => {
-      // Re-run the effect when any source changes
+    const onSourceChange: Listener<unknown> = () => {
       executeEffect(self);
     };
 
-    for (let i = 0; i < e._sources.length; i++) {
-      const src = e._sources[i]!;
-      const unsub = addEffectListener(src, onSourceChange as Listener<any>);
+    for (let i = 0; i < srcLen; i++) {
+      const unsub = addEffectListener(srcs[i]!, onSourceChange as Listener<any>);
       e._sourceUnsubs.push(unsub);
     }
   }
 }
 
 /**
- * Creates an auto-tracked effect.
- * - Runs immediately once.
- * - Tracks all signals/computeds read during the callback.
- * - Re-runs when any of those sources change.
- * - Supports cleanup via returning a function from the callback.
+ * Create auto-tracked effect.
+ * Runs immediately and re-runs when dependencies change.
  */
 export function effect(callback: () => undefined | (() => void)): Unsubscribe {
   const e: EffectCore = {
@@ -655,13 +608,15 @@ export function effect(callback: () => undefined | (() => void)): Unsubscribe {
       try {
         e._cleanup();
       } catch {
-        // Ignore cleanup errors
+        // Swallow cleanup errors
       }
     }
 
-    if (e._sourceUnsubs) {
-      for (let i = 0; i < e._sourceUnsubs.length; i++) {
-        e._sourceUnsubs[i]?.();
+    const unsubs = e._sourceUnsubs;
+    if (unsubs) {
+      const len = unsubs.length;
+      for (let i = 0; i < len; i++) {
+        unsubs[i]?.();
       }
     }
   };

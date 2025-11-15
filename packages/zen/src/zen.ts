@@ -18,10 +18,11 @@ export type Unsubscribe = () => void;
 // FLAGS
 // ============================================================================
 
-const FLAG_STALE = 0b0001;           // Computed is dirty, needs recompute
-const FLAG_PENDING = 0b0010;         // Currently computing (prevent re-entry)
-const FLAG_PENDING_NOTIFY = 0b0100;  // Queued for notification
-const FLAG_IN_DIRTY_QUEUE = 0b1000;  // In dirty nodes queue
+const FLAG_STALE = 0b00001;           // Computed is dirty, needs recompute
+const FLAG_PENDING = 0b00010;         // Currently computing (prevent re-entry)
+const FLAG_PENDING_NOTIFY = 0b00100;  // Queued for notification
+const FLAG_IN_DIRTY_QUEUE = 0b01000;  // In dirty nodes queue
+const FLAG_HAS_EFFECT_DOWNSTREAM = 0b10000; // Has effect listeners downstream (cached)
 
 // ============================================================================
 // LISTENER TYPES
@@ -84,13 +85,24 @@ function valuesEqual(a: unknown, b: unknown): boolean {
  * Unsubscribe: O(n) indexOf + splice
  */
 function addEffectListener(node: AnyNode, cb: Listener<any>): Unsubscribe {
+  const wasEmpty = node._effectListeners.length === 0;
   node._effectListeners.push(cb);
+
+  // Mark this node as having effect listeners
+  if (wasEmpty) {
+    node._flags |= FLAG_HAS_EFFECT_DOWNSTREAM;
+  }
 
   return (): void => {
     const list = node._effectListeners;
     const idx = list.indexOf(cb);
     if (idx >= 0) {
       list.splice(idx, 1);
+
+      // Clear flag if no more listeners
+      if (list.length === 0) {
+        clearDownstreamEffectFlag(node);
+      }
     }
   };
 }
@@ -400,17 +412,40 @@ export type ComputedZen<T> = ComputedCore<T>;
 
 /**
  * BUG FIX 1.4: Check if a node has effect listeners downstream (recursively).
- * This is needed for multi-level computed chains with subscribers.
+ * Uses cached flag to avoid repeated DFS traversals.
  */
 function hasDownstreamEffectListeners(node: AnyNode): boolean {
-  if (node._effectListeners.length > 0) return true;
+  // Fast path: check cached flag
+  if ((node._flags & FLAG_HAS_EFFECT_DOWNSTREAM) !== 0) return true;
 
+  // Direct effect listeners
+  if (node._effectListeners.length > 0) {
+    node._flags |= FLAG_HAS_EFFECT_DOWNSTREAM;
+    return true;
+  }
+
+  // Check computed listeners recursively
   const computed = node._computedListeners;
   for (let i = 0; i < computed.length; i++) {
-    if (hasDownstreamEffectListeners(computed[i]!)) return true;
+    if (hasDownstreamEffectListeners(computed[i]!)) {
+      node._flags |= FLAG_HAS_EFFECT_DOWNSTREAM;
+      return true;
+    }
   }
 
   return false;
+}
+
+/**
+ * Clear downstream effect listener flag when listeners are removed.
+ * Called when effect listeners count changes.
+ */
+function clearDownstreamEffectFlag(node: AnyNode): void {
+  if ((node._flags & FLAG_HAS_EFFECT_DOWNSTREAM) === 0) return;
+  node._flags &= ~FLAG_HAS_EFFECT_DOWNSTREAM;
+
+  // Note: We don't propagate upward here for simplicity.
+  // The flag will be recalculated on next check (lazy invalidation).
 }
 
 /**

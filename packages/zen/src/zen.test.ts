@@ -99,7 +99,7 @@ describe('zen-ultra: Subscribe', () => {
 
 		unsub1();
 		unsub2();
-		expect(count._listeners).toBeUndefined();
+		expect(count._listeners.length).toBe(0);
 	});
 });
 
@@ -490,11 +490,11 @@ describe('zen-ultra: Coverage Edge Cases', () => {
 		expect(() => unsub()).not.toThrow();
 	});
 
-	it('should handle subscribe when _listeners is undefined', () => {
+	it('should handle subscribe when _listeners is empty', () => {
 		const count = zen(0);
-		expect(count._listeners).toBeUndefined();
+		expect(count._listeners.length).toBe(0);
 		subscribe(count, vi.fn());
-		expect(count._listeners).toBeDefined();
+		expect(count._listeners.length).toBe(1);
 	});
 
 	it('should handle computed source change with listener', () => {

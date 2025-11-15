@@ -101,9 +101,10 @@ describe('computed', () => {
     // Initial computation
     expect(quadrupled.value).toBe(8);
 
-    // Known limitation: Computed chains without subscriptions
-    // don't cascade stale flags beyond direct dependencies
-    // This is by design for performance (lazy evaluation)
+    // Update source - both computeds should update
+    count.value = 5;
+    expect(doubled.value).toBe(10);
+    expect(quadrupled.value).toBe(20); // Now works! Computed chain bug fixed
   });
 
   it('should support dynamic dependencies', () => {

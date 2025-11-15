@@ -66,18 +66,6 @@ let currentListener: DependencyCollector | null = null;
 // ============================================================================
 
 /**
- * Fast array equality check (reference equality).
- */
-function arraysEqual<T>(a: T[], b: T[]): boolean {
-  const len = a.length;
-  if (len !== b.length) return false;
-  for (let i = 0; i < len; i++) {
-    if (a[i] !== b[i]) return false;
-  }
-  return true;
-}
-
-/**
  * Value equality with special NaN and +0/-0 handling.
  */
 function valuesEqual(a: unknown, b: unknown): boolean {
@@ -96,21 +84,9 @@ function valuesEqual(a: unknown, b: unknown): boolean {
 }
 
 /**
- * Create sources array with .size getter for compatibility.
- */
-function createSourcesArray(): AnyNode[] {
-  const sources: AnyNode[] = [];
-  Object.defineProperty(sources, "size", {
-    get() {
-      return (this as AnyNode[]).length;
-    },
-    enumerable: false,
-  });
-  return sources;
-}
-
-/**
- * Add effect listener (simple array push, O(n) unsubscribe via filter).
+ * Add effect listener.
+ * Subscribe: O(1) push
+ * Unsubscribe: O(n) indexOf + splice
  */
 function addEffectListener(node: AnyNode, cb: Listener<any>): Unsubscribe {
   node._effectListeners.push(cb);
@@ -239,7 +215,7 @@ class ComputedNode<T> extends BaseNode<T | null> {
   constructor(calc: () => T) {
     super(null as T | null);
     this._calc = calc;
-    this._sources = createSourcesArray();
+    this._sources = [];
     this._flags = FLAG_STALE; // Start dirty
   }
 
@@ -259,6 +235,11 @@ class ComputedNode<T> extends BaseNode<T | null> {
   private _recomputeIfNeeded(): void {
     // Simple dirty flag check (faster than version checking)
     if ((this._flags & FLAG_STALE) === 0) return;
+
+    // Prevent re-entry during computation (detect cyclic dependencies)
+    if ((this._flags & FLAG_PENDING) !== 0) {
+      throw new Error('[Zen] Cyclic dependency detected in computed');
+    }
 
     const hadSubscriptions = this._sourceUnsubs !== undefined;
 
@@ -309,6 +290,13 @@ class ComputedNode<T> extends BaseNode<T | null> {
 
     // Queue notification if value changed
     if (!valuesEqual(oldValue, newValue)) {
+      // CRITICAL: Mark downstream computeds as stale (fixes computed chain bug)
+      const downstream = this._computedListeners;
+      const downLen = downstream.length;
+      for (let i = 0; i < downLen; i++) {
+        downstream[i]!._flags |= FLAG_STALE;
+      }
+
       queueBatchedNotification(this as AnyNode, oldValue);
     }
   }

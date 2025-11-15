@@ -1,5 +1,24 @@
 # @sylph/router
 
+## 5.0.1
+
+### Patch Changes
+
+- 6ed0279: Fix dependency structure to prevent version inflation
+
+  Moved internal monorepo packages from peerDependencies to dependencies using workspace:\* protocol. This prevents unnecessary major version bumps when the core zen package receives minor updates. Follows industry best practices from TanStack Query, Zustand, and Jotai.
+
+  Changes:
+
+  - Internal packages (@sylphx/zen, @sylphx/zen-patterns, @sylphx/zen-router) now in dependencies with workspace:\*
+  - External frameworks (React, Vue, Preact, Solid, Svelte) remain in peerDependencies
+  - Fixes cascading major version bumps caused by peerDependency range updates
+
+- Updated dependencies [6ed0279]
+- Updated dependencies [06c29ef]
+  - @sylphx/zen-patterns@12.0.1
+  - @sylphx/zen@3.13.0
+
 ## 5.0.0
 
 ### Patch Changes

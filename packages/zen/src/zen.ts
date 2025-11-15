@@ -524,8 +524,8 @@ export function computed<T>(
   c._dirty = true;
   c._sources = explicitDeps ? new Set(explicitDeps) : new Set(); // Set for O(1) add
   c._calc = calculation;
-  c._unsubs = undefined;  // ULTRA: Explicit undefined for monomorphic shape
-  c._staticDeps = undefined;  // ULTRA: Explicit undefined for monomorphic shape
+  c._unsubs = undefined; // ULTRA: Explicit undefined for monomorphic shape
+  c._staticDeps = undefined; // ULTRA: Explicit undefined for monomorphic shape
 
   return c;
 }

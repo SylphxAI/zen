@@ -1,25 +1,21 @@
-// Main entry point for the functional zen state management library.
-// Minimal core - only essential features
+/**
+ * Zen - Ultra-Performance Reactivity
+ * Auto-tracking signals, computed, and effects
+ */
 
 // Core Types
-export type { Listener, Unsubscribe, AnyZen, ZenValue } from './types';
-import type { Zen as _Zen } from './zen';
-export type Zen<T = unknown> = _Zen<T>;
+export type { Listener, Unsubscribe, AnyZen } from './zen';
 
-// Other Types
-export type { ReadonlyZen, ComputedZen } from './computed';
+// Core Primitives
+export {
+  zen,
+  computed,
+  batch,
+  subscribe,
+  effect,
+} from './zen';
 
-// Core Factories
-import { zen as _zen } from './zen';
-export const zen: typeof _zen = _zen;
-export { computed } from './computed';
-export { effect } from './effect';
+export type { Zen, ReadonlyZen, ComputedZen } from './zen';
 
-// Core Functions
-import { batch as _batch, subscribe as _subscribe } from './zen';
-export const subscribe: typeof _subscribe = _subscribe;
-export const batch: typeof _batch = _batch;
-
-// Compiled Runtime (for compiler plugin)
-export type { CompiledGraph, CompiledSignal, CompiledComputed, CompiledGraphRuntime } from './compiled';
-export { createCompiledGraph } from './compiled';
+// Legacy compatibility exports
+export type { ZenValue } from './types';

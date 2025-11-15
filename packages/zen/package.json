@@ -28,7 +28,7 @@
       "name": "zen v3 (full)",
       "path": "dist/index.js",
       "import": "{ zen, computed, effect, subscribe, batch }",
-      "limit": "2.2 kB"
+      "limit": "1.6 kB"
     }
   ],
   "keywords": [
@@ -56,6 +56,7 @@
   },
   "devDependencies": {
     "bunup": "^0.15.13",
+    "solid-js": "^1.9.10",
     "typescript": "^5.8.3"
   }
 }

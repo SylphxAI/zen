@@ -54,6 +54,7 @@
   },
   "devDependencies": {
     "bunup": "^0.15.13",
+    "solid-js": "^1.9.10",
     "typescript": "^5.8.3"
   }
 }

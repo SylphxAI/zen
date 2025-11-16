@@ -310,6 +310,32 @@ describe('subscribe', () => {
     expect(listener).toHaveBeenCalledWith(12, 4);
     expect(listener).toHaveBeenCalledTimes(1);
   });
+
+  it('should not steal batched notifications when subscribing mid-batch', () => {
+    const count = zen(1);
+    const doubled = computed(() => count.value * 2);
+    const listenerA = vi.fn();
+    const listenerB = vi.fn();
+
+    // listenerA subscribes first
+    subscribe(doubled, listenerA);
+    listenerA.mockClear();
+
+    batch(() => {
+      // Change signal - queues notification for listenerA
+      count.value = 5;
+
+      // New subscription inside batch should not steal listenerA's notification
+      subscribe(doubled, listenerB);
+      listenerB.mockClear();
+    });
+
+    // Both listeners should have been notified
+    expect(listenerA).toHaveBeenCalledWith(10, 2);
+    expect(listenerA).toHaveBeenCalledTimes(1);
+    expect(listenerB).toHaveBeenCalledWith(10, 2);
+    expect(listenerB).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('effect', () => {

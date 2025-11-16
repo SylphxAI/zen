@@ -9,7 +9,7 @@
  * - Direct propagation (no topological scheduling overhead)
  * - Manual batching only (no auto-batching)
  * - Minimal allocations and bookkeeping
- * - Ref-counted effect tracking for O(1) downstream effect detection
+ * - Conservative cached flag for downstream effect detection (never decremented)
  */
 
 export type Listener<T> = (value: T, oldValue: T | undefined) => void;
@@ -163,34 +163,10 @@ class ZenNode<T> extends BaseNode<T> {
       // Unified path: mark computed listeners stale and recompute if needed
       propagateToComputeds(this as AnyNode);
 
-      // Notify effects immediately
-      const effects = this._effectListeners;
-      const len = effects.length;
-      if (len === 0) {
-        // Flush any queued computed notifications
-        if (pendingNotifications.length > 0) {
-          flushPendingNotifications();
-        }
-        return;
-      }
+      // Notify effects immediately (using shared micro-optimized function)
+      notifyEffects(this as AnyNode, next, prev);
 
-      // Unrolled for 1-3 listeners (common cases)
-      if (len === 1) {
-        effects[0]!(next, prev);
-      } else if (len === 2) {
-        effects[0]!(next, prev);
-        effects[1]!(next, prev);
-      } else if (len === 3) {
-        effects[0]!(next, prev);
-        effects[1]!(next, prev);
-        effects[2]!(next, prev);
-      } else {
-        for (let i = 0; i < len; i++) {
-          effects[i]!(next, prev);
-        }
-      }
-
-      // Flush any queued computed notifications after signal effects
+      // Flush any queued computed notifications
       if (pendingNotifications.length > 0) {
         flushPendingNotifications();
       }
@@ -492,6 +468,7 @@ let isFlushing = false;
  * Flush batched updates - mark computeds dirty and notify effects.
  * BUG FIX 1.3: Handle dirty nodes added during flush.
  * BUG FIX 1.4: Trigger recompute for computed nodes with subscribers.
+ * Note: dirtyNodes only contains signals (never computeds)
  */
 function flushBatchedUpdates(): void {
   if (isFlushing) return;
@@ -499,18 +476,14 @@ function flushBatchedUpdates(): void {
 
   try {
     while (dirtyNodes.length > 0) {
-      // Process all dirty nodes
+      // Process all dirty signals
       const dirtyLen = dirtyNodes.length;
       for (let i = 0; i < dirtyLen; i++) {
         const node = dirtyNodes[i]!;
         node._flags &= ~FLAG_IN_DIRTY_QUEUE;
 
-        // Unified path: propagate to computeds (recompute if needed)
-        if ((node._flags & FLAG_IS_COMPUTED) !== 0) {
-          (node as ComputedNode<any>)._recomputeIfNeeded();
-        } else {
-          propagateToComputeds(node);
-        }
+        // Propagate to downstream computeds (node is always a signal)
+        propagateToComputeds(node);
       }
 
       // Only clear processed items; preserve any added during flush
@@ -557,17 +530,19 @@ export function subscribe<T>(
   // Add effect listener (O(1))
   const unsubEffect = addEffectListener(n, listener as Listener<any>);
 
+  // Record pending notifications length before immediate call
+  const startLen = pendingNotifications.length;
+
   // Immediate call with current value (triggers lazy eval for computeds)
   listener((node as any).value as T, undefined);
 
-  // BUG FIX 1.4: Clear any queued notifications from initial computation
-  // The listener was already called directly above, so we don't need the queued notification
-  if ((n._flags & FLAG_PENDING_NOTIFY) !== 0) {
-    n._flags &= ~FLAG_PENDING_NOTIFY;
-    // Remove this node from pending notifications
-    const idx = pendingNotifications.findIndex(entry => entry[0] === n);
-    if (idx !== -1) {
-      pendingNotifications.splice(idx, 1);
+  // Only remove notifications added during subscribe (don't steal existing batched notifications)
+  for (let i = pendingNotifications.length - 1; i >= startLen; i--) {
+    const entry = pendingNotifications[i]!;
+    if (entry[0] === n) {
+      pendingNotifications.splice(i, 1);
+      n._flags &= ~FLAG_PENDING_NOTIFY;
+      break; // Only one new entry possible
     }
   }
 
@@ -658,10 +633,15 @@ function executeEffect(e: EffectCore): void {
  * Runs immediately and re-runs when dependencies change.
  */
 export function effect(callback: () => undefined | (() => void)): Unsubscribe {
+  // Define all properties upfront for V8 optimization (stable hidden class)
   const e: EffectCore = {
     _sources: [],
+    _epoch: 0,
+    _sourceUnsubs: undefined,
+    _cleanup: undefined,
     _callback: callback,
     _cancelled: false,
+    _onSourceChange: undefined as any,
   };
 
   // Create closure once to avoid allocation on every re-run
@@ -715,6 +695,14 @@ export function untrack<T>(fn: () => T): T {
  * Faster than untrack(() => signal.value) for single reads.
  */
 export function peek<T>(node: ZenCore<T> | ComputedCore<T>): T {
+  const anyNode = node as AnyNode;
+
+  // Signal fast path: direct _value read (no tracking context manipulation needed)
+  if ((anyNode._flags & FLAG_IS_COMPUTED) === 0) {
+    return (anyNode as unknown as ZenNode<T>)._value;
+  }
+
+  // Computed: temporarily disable tracking + lazy recompute
   const prev = currentListener;
   currentListener = null;
   try {

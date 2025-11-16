@@ -19,14 +19,16 @@ export type Unsubscribe = () => void;
 // FLAGS
 // ============================================================================
 
-const FLAG_STALE = 0b00000001;           // Computed is dirty, needs recompute
-const FLAG_PENDING = 0b00000010;         // Currently computing (prevent re-entry)
-const FLAG_PENDING_NOTIFY = 0b00000100;  // Queued for notification
-const FLAG_IN_DIRTY_QUEUE = 0b00001000;  // In dirty nodes queue
-const FLAG_IS_COMPUTED = 0b00010000;     // Node is a ComputedNode (avoid instanceof)
-const FLAG_HAD_EFFECT_DOWNSTREAM = 0b00100000; // Had effect listeners downstream (conservative cache)
-const FLAG_IN_COMPUTED_QUEUE = 0b01000000; // In dirty computeds queue (batch dedup)
-const FLAG_IN_SUBSCRIBE_CALL = 0b10000000; // Currently in subscribe initial call
+const FLAG_STALE = 0b0000000001;           // Computed is dirty, needs recompute
+const FLAG_PENDING = 0b0000000010;         // Currently computing (prevent re-entry)
+const FLAG_PENDING_NOTIFY = 0b0000000100;  // Queued for notification
+const FLAG_IN_DIRTY_QUEUE = 0b0000001000;  // In dirty nodes queue
+const FLAG_IS_COMPUTED = 0b0000010000;     // Node is a ComputedNode (avoid instanceof)
+const FLAG_HAD_EFFECT_DOWNSTREAM = 0b0000100000; // Had effect listeners downstream (conservative cache)
+const FLAG_IN_COMPUTED_QUEUE = 0b0001000000; // In dirty computeds queue (batch dedup)
+const FLAG_IN_SUBSCRIBE_CALL = 0b0010000000; // Currently in subscribe initial call
+const FLAG_IN_EFFECT_QUEUE = 0b0100000000; // In dirty effects queue (scheduler dedup)
+const FLAG_IS_EFFECT = 0b1000000000; // Node is an EffectNode (avoid instanceof)
 
 // ============================================================================
 // LISTENER TYPES
@@ -220,8 +222,8 @@ function addComputedListener(
   // Write back to observer side (source of truth)
   observer._sourceSlots[observerSourceIndex] = sourceSlot;
 
-  // Propagate effect flag upward if child has effects
-  if ((observer._flags & FLAG_HAD_EFFECT_DOWNSTREAM) !== 0) {
+  // Propagate effect flag upward if child is effect or has effects downstream
+  if ((observer._flags & (FLAG_HAD_EFFECT_DOWNSTREAM | FLAG_IS_EFFECT)) !== 0) {
     markHasEffectUpstream(source);
   }
 
@@ -268,6 +270,9 @@ let dirtyNodesHead = 0;
 const dirtyComputeds: ComputedNode<any>[] = [];
 let dirtyComputedsHead = 0;
 
+const dirtyEffects: EffectNode[] = [];
+let dirtyEffectsHead = 0;
+
 /**
  * Mark signal as dirty (deduped via FLAG_IN_DIRTY_QUEUE).
  */
@@ -295,6 +300,17 @@ function markComputedDirty(c: AnyNode): void {
   }
 }
 
+/**
+ * SCHEDULER REWRITE: Mark effect as dirty and queue for execution.
+ * Deduped via FLAG_IN_EFFECT_QUEUE to ensure each effect runs once per flush.
+ */
+function markEffectDirty(e: EffectNode): void {
+  if ((e._flags & FLAG_IN_EFFECT_QUEUE) === 0) {
+    e._flags |= FLAG_IN_EFFECT_QUEUE;
+    dirtyEffects.push(e);
+  }
+}
+
 // ============================================================================
 // SIGNAL
 // ============================================================================
@@ -314,25 +330,12 @@ class ZenNode<T> extends BaseNode<T> {
 
     this._value = next;
 
-    // Direct propagation for maximum performance
-    if (batchDepth === 0 && !isFlushing) {
-      // Unified path: mark computed listeners stale and recompute if needed
-      propagateToComputeds(this as AnyNode);
-
-      // Notify effects immediately (using shared micro-optimized function)
-      notifyEffects(this as AnyNode, next, prev);
-
-      // Flush any queued computed notifications
-      if (pendingNotifications.length > 0) {
-        flushPendingNotifications();
-      }
-      return;
-    }
-
-    // Batched path: queue for later (flushBatchedUpdates handles propagation)
+    // SCHEDULER REWRITE: Unified queue-based path (Solid-style)
+    // All updates go through queue to ensure each computation runs once per flush
     markNodeDirty(this as AnyNode);
     queueBatchedNotification(this as AnyNode, prev);
 
+    // Auto-flush when not in explicit batch
     if (batchDepth === 0 && !isFlushing) {
       flushBatchedUpdates();
     }
@@ -528,11 +531,11 @@ function hasDownstreamEffectListeners(node: AnyNode): boolean {
 }
 
 /**
- * Unified DFS: Mark computed listeners stale and trigger recompute if needed.
- * Merges propagateToComputeds + recomputeDownstreamWithListeners into single DFS.
- * Used by both immediate and batched update paths.
- * Optimization: if no effects exist globally, skip DFS and eager recompute.
- * BUG FIX 1.4: Recursively recompute downstream computeds that have effect listeners.
+ * SCHEDULER REWRITE: Queue-only propagation (Solid-style).
+ * Marks downstream computeds dirty and queues them for recompute if they have effects.
+ * Also queues EffectNodes directly.
+ * No direct recompute - everything goes through the scheduler queue.
+ * This ensures each computation runs at most once per flush (fixes diamond graph duplication).
  */
 function propagateToComputeds(node: AnyNode): void {
   const computed = node._computedListeners;
@@ -546,21 +549,19 @@ function propagateToComputeds(node: AnyNode): void {
     return;
   }
 
-  // Effects exist: mark dirty with dedup queue (for batch) or recompute recursively (for direct)
+  // SCHEDULER REWRITE: Unified queue-only path
+  // Mark dirty and queue - ComputedNodes for recompute, EffectNodes for execution
   for (let i = 0; i < len; i++) {
     const c = computed[i]!;
-
-    if (batchDepth > 0 || isFlushing) {
-      // Batched path: use dedup queue
+    if ((c._flags & FLAG_IS_EFFECT) !== 0) {
+      // EffectNode - queue for execution
+      markEffectDirty(c as unknown as EffectNode);
+    } else if ((c._flags & FLAG_IS_COMPUTED) !== 0) {
+      // ComputedNode - queue for recompute
       markComputedDirty(c);
     } else {
-      // Direct path: mark stale and recompute if has effects (merged DFS)
+      // Plain signal listener (shouldn't happen in _computedListeners)
       c._flags |= FLAG_STALE;
-      if (hasDownstreamEffectListeners(c)) {
-        (c as ComputedNode<any>)._recomputeIfNeeded();
-        // Recursively propagate downstream (unified DFS - no separate recompute function)
-        propagateToComputeds(c);
-      }
     }
   }
 }
@@ -645,14 +646,14 @@ function flushPendingNotifications(): void {
 let isFlushing = false;
 
 /**
- * Flush batched updates with two-phase approach:
- * Phase 1: Propagate dirty signals to computeds (dedup via queue)
+ * SCHEDULER REWRITE: Flush batched updates with unified queue approach (Solid-style).
+ * Phase 1: Propagate dirty signals to computeds/effects (dedup via queue)
  * Phase 2: Recompute dirty computeds once (avoid duplicate recomputes)
- * Phase 3: Notify all effect listeners
+ * Phase 3: Execute dirty effects once (avoid duplicate executions)
+ * Phase 4: Notify legacy effect listeners (subscribe API)
  *
  * Outer loop: Continue until all queues empty (handles updates during effect execution)
- * BUG FIX 1.5: Effects that modify signals during flush now propagate correctly
- * OPTIMIZATION: Dedup computeds to avoid recomputing same node multiple times.
+ * OPTIMIZATION: Each computation/effect runs at most once per flush (fixes diamond graph).
  */
 function flushBatchedUpdates(): void {
   if (isFlushing) return;
@@ -662,8 +663,13 @@ function flushBatchedUpdates(): void {
     // Outer loop: Continue until all queues are empty
     // This handles effects that modify signals during notification
     // Optimization 2.2: Index-based queue processing (no splice)
-    while (dirtyNodesHead < dirtyNodes.length || dirtyComputedsHead < dirtyComputeds.length || pendingNotifications.length > 0) {
-      // Phase 1: Mark all downstream computeds as dirty (via dedup queue)
+    while (
+      dirtyNodesHead < dirtyNodes.length ||
+      dirtyComputedsHead < dirtyComputeds.length ||
+      dirtyEffectsHead < dirtyEffects.length ||
+      pendingNotifications.length > 0
+    ) {
+      // Phase 1: Mark all downstream computeds/effects as dirty (via dedup queue)
       while (dirtyNodesHead < dirtyNodes.length) {
         const startHead = dirtyNodesHead;
         const endHead = dirtyNodes.length;
@@ -672,7 +678,7 @@ function flushBatchedUpdates(): void {
           const node = dirtyNodes[i]!;
           node._flags &= ~FLAG_IN_DIRTY_QUEUE;
 
-          // Propagate to downstream computeds (adds to dirtyComputeds queue)
+          // Propagate to downstream computeds/effects (adds to queues)
           propagateToComputeds(node);
         }
 
@@ -689,24 +695,48 @@ function flushBatchedUpdates(): void {
           c._flags &= ~FLAG_IN_COMPUTED_QUEUE;
 
           c._recomputeIfNeeded();
-          // Propagate downstream (unified DFS handles recursion)
+          // Propagate downstream (adds to queues)
           propagateToComputeds(c);
         }
 
         dirtyComputedsHead = endHead;
       }
 
-      // Phase 3: Notify all effect listeners
-      flushPendingNotifications();
-      // Outer loop checks if effect notifications added new dirty nodes/computeds
-    }
+      // Phase 3: Execute dirty effects (each effect only once, even if multiple sources changed)
+      // IMPORTANT: Clear flags before executing to prevent re-queuing in case of error
+      while (dirtyEffectsHead < dirtyEffects.length) {
+        const startHead = dirtyEffectsHead;
+        const endHead = dirtyEffects.length;
 
-    // Reset queues after full flush
+        // Clear all flags first (ensures queue state is consistent even if effects throw)
+        for (let i = startHead; i < endHead; i++) {
+          dirtyEffects[i]!._flags &= ~FLAG_IN_EFFECT_QUEUE;
+        }
+
+        // Execute effects (errors propagate to app for V8 optimization)
+        for (let i = startHead; i < endHead; i++) {
+          const e = dirtyEffects[i]!;
+          if (!e._cancelled) {
+            e._execute();
+          }
+          // Effects can propagate if they read signals during execution
+        }
+
+        dirtyEffectsHead = endHead;
+      }
+
+      // Phase 4: Notify legacy effect listeners (subscribe API)
+      flushPendingNotifications();
+      // Outer loop checks if effect notifications added new dirty nodes/computeds/effects
+    }
+  } finally {
+    // CRITICAL: Reset queues in finally block to ensure cleanup even if effects throw
     dirtyNodes.length = 0;
     dirtyNodesHead = 0;
     dirtyComputeds.length = 0;
     dirtyComputedsHead = 0;
-  } finally {
+    dirtyEffects.length = 0;
+    dirtyEffectsHead = 0;
     isFlushing = false;
   }
 }
@@ -773,21 +803,18 @@ export function subscribe<T>(
 /**
  * EffectNode: extends Computation for unified shape.
  * Optimization 3.3: Same data structure as ComputedNode for V8 optimization.
+ * SCHEDULER REWRITE: Effects are scheduled through queue like computeds.
  */
 class EffectNode extends Computation<void | (() => void)> {
-  _onSourceChange?: Listener<unknown>; // Reused closure
-
   constructor(callback: () => undefined | (() => void)) {
     super(callback, null);
-    // Create closure once to avoid allocation on every re-run
-    this._onSourceChange = () => {
-      this._execute();
-    };
+    this._flags = FLAG_IS_EFFECT; // Mark as effect for scheduler
   }
 
   /**
-   * Unified execution method (Solid-style).
-   * For Effect: eager push-based, no caching.
+   * SCHEDULER REWRITE: Unified execution method (Solid-style).
+   * For Effect: scheduled through queue like computeds.
+   * Called by scheduler, not directly on source changes.
    */
   _execute(): void {
     if (this._cancelled) return;
@@ -829,12 +856,10 @@ class EffectNode extends Computation<void | (() => void)> {
     if (srcLen > 0) {
       this._sourceUnsubs = [];
 
-      // Reuse closure to avoid allocation on every re-run
-      const onChange = this._onSourceChange!;
-
       for (let i = 0; i < srcLen; i++) {
-        // Effects use effect listeners, not computed listeners (no slot tracking needed for effects)
-        const unsub = addEffectListener(srcs[i]!, onChange as Listener<any>);
+        // SCHEDULER REWRITE: Subscribe using computed listener (slot-based)
+        // When source changes, mark this effect dirty (scheduler queues it)
+        const unsub = addComputedListener(srcs[i]!, this as unknown as AnyNode & DependencyCollector, i);
         this._sourceUnsubs.push(unsub);
       }
     }

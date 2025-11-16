@@ -69,9 +69,10 @@ let currentListener: DependencyCollector | null = null;
 // Global tracking epoch counter for O(1) dependency deduplication
 let TRACKING_EPOCH = 1;
 
-// Global flag: does the graph have any effects/subscribers?
-// Optimization: skip DFS when no effects exist (pure pull-style computed)
-let GLOBAL_HAS_EFFECTS = false;
+// Global effect count: tracks active effects/subscribers
+// Optimization: skip DFS when count is 0 (pure pull-style computed)
+// Decrements on unsubscribe for accurate tracking
+let GLOBAL_EFFECT_COUNT = 0;
 
 // ============================================================================
 // HELPERS
@@ -88,20 +89,21 @@ function valuesEqual(a: unknown, b: unknown): boolean {
 /**
  * Add effect listener.
  * Subscribe: O(1) push
- * Unsubscribe: O(n) indexOf + splice
+ * Unsubscribe: O(n) indexOf + splice, decrements global effect count
  */
 function addEffectListener(node: AnyNode, cb: Listener<any>): Unsubscribe {
   node._effectListeners.push(cb);
 
-  // Mark that effects exist globally + cache downstream flag
+  // Mark that effects exist + increment global count
   node._flags |= FLAG_HAD_EFFECT_DOWNSTREAM;
-  GLOBAL_HAS_EFFECTS = true;
+  GLOBAL_EFFECT_COUNT++;
 
   return (): void => {
     const list = node._effectListeners;
     const idx = list.indexOf(cb);
     if (idx >= 0) {
       list.splice(idx, 1);
+      GLOBAL_EFFECT_COUNT--;
     }
   };
 }
@@ -419,7 +421,7 @@ function propagateToComputeds(node: AnyNode): void {
   const len = computed.length;
 
   // Global shortcut: no effects exist, just mark stale (lazy evaluation only)
-  if (!GLOBAL_HAS_EFFECTS) {
+  if (GLOBAL_EFFECT_COUNT === 0) {
     for (let i = 0; i < len; i++) {
       computed[i]!._flags |= FLAG_STALE;
     }
@@ -512,7 +514,10 @@ let isFlushing = false;
  * Flush batched updates with two-phase approach:
  * Phase 1: Propagate dirty signals to computeds (dedup via queue)
  * Phase 2: Recompute dirty computeds once (avoid duplicate recomputes)
- * BUG FIX 1.3: Handle dirty nodes added during flush.
+ * Phase 3: Notify all effect listeners
+ *
+ * Outer loop: Continue until all queues empty (handles updates during effect execution)
+ * BUG FIX 1.5: Effects that modify signals during flush now propagate correctly
  * OPTIMIZATION: Dedup computeds to avoid recomputing same node multiple times.
  */
 function flushBatchedUpdates(): void {
@@ -520,38 +525,43 @@ function flushBatchedUpdates(): void {
   isFlushing = true;
 
   try {
-    // Phase 1: Mark all downstream computeds as dirty (via dedup queue)
-    while (dirtyNodes.length > 0) {
-      const dirtyLen = dirtyNodes.length;
-      for (let i = 0; i < dirtyLen; i++) {
-        const node = dirtyNodes[i]!;
-        node._flags &= ~FLAG_IN_DIRTY_QUEUE;
+    // Outer loop: Continue until all queues are empty
+    // This handles effects that modify signals during notification
+    while (dirtyNodes.length > 0 || dirtyComputeds.length > 0 || pendingNotifications.length > 0) {
+      // Phase 1: Mark all downstream computeds as dirty (via dedup queue)
+      while (dirtyNodes.length > 0) {
+        const dirtyLen = dirtyNodes.length;
+        for (let i = 0; i < dirtyLen; i++) {
+          const node = dirtyNodes[i]!;
+          node._flags &= ~FLAG_IN_DIRTY_QUEUE;
 
-        // Propagate to downstream computeds (adds to dirtyComputeds queue)
-        propagateToComputeds(node);
+          // Propagate to downstream computeds (adds to dirtyComputeds queue)
+          propagateToComputeds(node);
+        }
+
+        // Clear processed signals
+        dirtyNodes.splice(0, dirtyLen);
       }
 
-      // Clear processed signals
-      dirtyNodes.splice(0, dirtyLen);
-    }
+      // Phase 2: Recompute dirty computeds (each computed only once, even if multiple sources changed)
+      while (dirtyComputeds.length > 0) {
+        const len = dirtyComputeds.length;
+        for (let i = 0; i < len; i++) {
+          const c = dirtyComputeds[i]!;
+          c._flags &= ~FLAG_IN_COMPUTED_QUEUE;
 
-    // Phase 2: Recompute dirty computeds (each computed only once, even if multiple sources changed)
-    while (dirtyComputeds.length > 0) {
-      const len = dirtyComputeds.length;
-      for (let i = 0; i < len; i++) {
-        const c = dirtyComputeds[i]!;
-        c._flags &= ~FLAG_IN_COMPUTED_QUEUE;
+          c._recomputeIfNeeded();
+          recomputeDownstreamWithListeners(c);
+        }
 
-        c._recomputeIfNeeded();
-        recomputeDownstreamWithListeners(c);
+        // Clear processed computeds
+        dirtyComputeds.splice(0, len);
       }
 
-      // Clear processed computeds
-      dirtyComputeds.splice(0, len);
+      // Phase 3: Notify all effect listeners
+      flushPendingNotifications();
+      // Outer loop checks if effect notifications added new dirty nodes/computeds
     }
-
-    // Phase 3: Notify all effect listeners
-    flushPendingNotifications();
   } finally {
     isFlushing = false;
   }
@@ -596,13 +606,16 @@ export function subscribe<T>(
   listener((node as any).value as T, undefined);
 
   // Only remove notifications added during subscribe (don't steal existing batched notifications)
+  // Clear all new entries for this node (handles edge cases where listener triggers multiple batches)
   for (let i = pendingNotifications.length - 1; i >= startLen; i--) {
     const entry = pendingNotifications[i]!;
     if (entry[0] === n) {
       pendingNotifications.splice(i, 1);
-      n._flags &= ~FLAG_PENDING_NOTIFY;
-      break; // Only one new entry possible
     }
+  }
+  // Clear flag only if no pending notifications remain for this node
+  if (startLen === 0 || !pendingNotifications.some(entry => entry[0] === n)) {
+    n._flags &= ~FLAG_PENDING_NOTIFY;
   }
 
   return (): void => {

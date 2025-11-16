@@ -578,6 +578,36 @@ describe('batch', () => {
 
     expect(sum.value).toBe(30);
   });
+
+  it('should handle signal updates during effect execution in batch (Bug 1.5)', () => {
+    const a = zen(1);
+    const b = zen(2);
+    const sum = computed(() => a.value + b.value);
+    const results: number[] = [];
+
+    // Effect that modifies another signal during execution
+    effect(() => {
+      const val = sum.value;
+      results.push(val);
+
+      // Modify b during effect execution
+      if (val === 12) {
+        b.value = 30; // This should propagate to sum
+      }
+    });
+
+    results.length = 0; // Clear initial run
+
+    // Trigger batch that modifies a
+    batch(() => {
+      a.value = 10; // sum becomes 12, then effect runs and sets b=30, sum becomes 40
+    });
+
+    // Effect should run twice: once for a change (sum=12), once for b change (sum=40)
+    // Outer loop in flush ensures both updates propagate correctly
+    expect(results).toEqual([12, 40]);
+    expect(sum.value).toBe(40);
+  });
 });
 
 describe('integration', () => {

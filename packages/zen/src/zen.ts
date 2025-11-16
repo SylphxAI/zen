@@ -19,12 +19,13 @@ export type Unsubscribe = () => void;
 // FLAGS
 // ============================================================================
 
-const FLAG_STALE = 0b000001;           // Computed is dirty, needs recompute
-const FLAG_PENDING = 0b000010;         // Currently computing (prevent re-entry)
-const FLAG_PENDING_NOTIFY = 0b000100;  // Queued for notification
-const FLAG_IN_DIRTY_QUEUE = 0b001000;  // In dirty nodes queue
-const FLAG_IS_COMPUTED = 0b010000;     // Node is a ComputedNode (avoid instanceof)
-const FLAG_HAD_EFFECT_DOWNSTREAM = 0b100000; // Had effect listeners downstream (conservative cache)
+const FLAG_STALE = 0b0000001;           // Computed is dirty, needs recompute
+const FLAG_PENDING = 0b0000010;         // Currently computing (prevent re-entry)
+const FLAG_PENDING_NOTIFY = 0b0000100;  // Queued for notification
+const FLAG_IN_DIRTY_QUEUE = 0b0001000;  // In dirty nodes queue
+const FLAG_IS_COMPUTED = 0b0010000;     // Node is a ComputedNode (avoid instanceof)
+const FLAG_HAD_EFFECT_DOWNSTREAM = 0b0100000; // Had effect listeners downstream (conservative cache)
+const FLAG_IN_COMPUTED_QUEUE = 0b1000000; // In dirty computeds queue (batch dedup)
 
 // ============================================================================
 // LISTENER TYPES
@@ -68,6 +69,10 @@ let currentListener: DependencyCollector | null = null;
 // Global tracking epoch counter for O(1) dependency deduplication
 let TRACKING_EPOCH = 1;
 
+// Global flag: does the graph have any effects/subscribers?
+// Optimization: skip DFS when no effects exist (pure pull-style computed)
+let GLOBAL_HAS_EFFECTS = false;
+
 // ============================================================================
 // HELPERS
 // ============================================================================
@@ -87,6 +92,10 @@ function valuesEqual(a: unknown, b: unknown): boolean {
  */
 function addEffectListener(node: AnyNode, cb: Listener<any>): Unsubscribe {
   node._effectListeners.push(cb);
+
+  // Mark that effects exist globally + cache downstream flag
+  node._flags |= FLAG_HAD_EFFECT_DOWNSTREAM;
+  GLOBAL_HAS_EFFECTS = true;
 
   return (): void => {
     const list = node._effectListeners;
@@ -115,18 +124,36 @@ function addComputedListener(source: AnyNode, node: AnyNode): Unsubscribe {
 }
 
 // ============================================================================
-// DIRTY QUEUE
+// DIRTY QUEUES
 // ============================================================================
 
 const dirtyNodes: AnyNode[] = [];
+const dirtyComputeds: ComputedNode<any>[] = [];
 
 /**
- * Mark node as dirty (deduped via FLAG_IN_DIRTY_QUEUE).
+ * Mark signal as dirty (deduped via FLAG_IN_DIRTY_QUEUE).
  */
 function markNodeDirty(node: AnyNode): void {
   if ((node._flags & FLAG_IN_DIRTY_QUEUE) === 0) {
     node._flags |= FLAG_IN_DIRTY_QUEUE;
     dirtyNodes.push(node);
+  }
+}
+
+/**
+ * Mark computed as dirty and queue for recompute if has downstream effects.
+ * Deduped via FLAG_IN_COMPUTED_QUEUE to avoid duplicate recomputes in same batch.
+ */
+function markComputedDirty(c: AnyNode): void {
+  // Always mark stale
+  if ((c._flags & FLAG_STALE) === 0) {
+    c._flags |= FLAG_STALE;
+  }
+
+  // Queue for recompute only if has downstream effects and not already queued
+  if ((c._flags & FLAG_IN_COMPUTED_QUEUE) === 0 && hasDownstreamEffectListeners(c)) {
+    c._flags |= FLAG_IN_COMPUTED_QUEUE;
+    dirtyComputeds.push(c as ComputedNode<any>);
   }
 }
 
@@ -385,17 +412,34 @@ function recomputeDownstreamWithListeners(node: AnyNode): void {
 /**
  * Unified path: Mark computed listeners stale and trigger recompute if needed.
  * Used by both immediate and batched update paths.
+ * Optimization: if no effects exist globally, skip DFS and eager recompute.
  */
 function propagateToComputeds(node: AnyNode): void {
   const computed = node._computedListeners;
   const len = computed.length;
+
+  // Global shortcut: no effects exist, just mark stale (lazy evaluation only)
+  if (!GLOBAL_HAS_EFFECTS) {
+    for (let i = 0; i < len; i++) {
+      computed[i]!._flags |= FLAG_STALE;
+    }
+    return;
+  }
+
+  // Effects exist: mark dirty with dedup queue (for batch) or recompute (for direct)
   for (let i = 0; i < len; i++) {
     const c = computed[i]!;
-    c._flags |= FLAG_STALE;
-    // BUG FIX 1.4: If computed has effect listeners, trigger recompute + notify
-    if (hasDownstreamEffectListeners(c)) {
-      (c as ComputedNode<any>)._recomputeIfNeeded();
-      recomputeDownstreamWithListeners(c);
+
+    if (batchDepth > 0 || isFlushing) {
+      // Batched path: use dedup queue
+      markComputedDirty(c);
+    } else {
+      // Direct path: mark stale and recompute if has effects
+      c._flags |= FLAG_STALE;
+      if (hasDownstreamEffectListeners(c)) {
+        (c as ComputedNode<any>)._recomputeIfNeeded();
+        recomputeDownstreamWithListeners(c);
+      }
     }
   }
 }
@@ -465,34 +509,49 @@ function flushPendingNotifications(): void {
 let isFlushing = false;
 
 /**
- * Flush batched updates - mark computeds dirty and notify effects.
+ * Flush batched updates with two-phase approach:
+ * Phase 1: Propagate dirty signals to computeds (dedup via queue)
+ * Phase 2: Recompute dirty computeds once (avoid duplicate recomputes)
  * BUG FIX 1.3: Handle dirty nodes added during flush.
- * BUG FIX 1.4: Trigger recompute for computed nodes with subscribers.
- * Note: dirtyNodes only contains signals (never computeds)
+ * OPTIMIZATION: Dedup computeds to avoid recomputing same node multiple times.
  */
 function flushBatchedUpdates(): void {
   if (isFlushing) return;
   isFlushing = true;
 
   try {
+    // Phase 1: Mark all downstream computeds as dirty (via dedup queue)
     while (dirtyNodes.length > 0) {
-      // Process all dirty signals
       const dirtyLen = dirtyNodes.length;
       for (let i = 0; i < dirtyLen; i++) {
         const node = dirtyNodes[i]!;
         node._flags &= ~FLAG_IN_DIRTY_QUEUE;
 
-        // Propagate to downstream computeds (node is always a signal)
+        // Propagate to downstream computeds (adds to dirtyComputeds queue)
         propagateToComputeds(node);
       }
 
-      // Only clear processed items; preserve any added during flush
+      // Clear processed signals
       dirtyNodes.splice(0, dirtyLen);
-
-      // Flush pending effect notifications
-      flushPendingNotifications();
-      // Loop continues if new dirtyNodes were added
     }
+
+    // Phase 2: Recompute dirty computeds (each computed only once, even if multiple sources changed)
+    while (dirtyComputeds.length > 0) {
+      const len = dirtyComputeds.length;
+      for (let i = 0; i < len; i++) {
+        const c = dirtyComputeds[i]!;
+        c._flags &= ~FLAG_IN_COMPUTED_QUEUE;
+
+        c._recomputeIfNeeded();
+        recomputeDownstreamWithListeners(c);
+      }
+
+      // Clear processed computeds
+      dirtyComputeds.splice(0, len);
+    }
+
+    // Phase 3: Notify all effect listeners
+    flushPendingNotifications();
   } finally {
     isFlushing = false;
   }

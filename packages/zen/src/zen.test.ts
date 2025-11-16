@@ -534,6 +534,35 @@ describe('batch', () => {
     expect(listener).toHaveBeenCalledWith(5, 0);
   });
 
+  it('should dedup computed recomputes when multiple sources change in batch', () => {
+    const a = zen(1);
+    const b = zen(2);
+    const c = zen(3);
+    let computeCount = 0;
+
+    const sum = computed(() => {
+      computeCount++;
+      return a.value + b.value + c.value;
+    });
+
+    // Subscribe to trigger eager recompute
+    const listener = vi.fn();
+    subscribe(sum, listener);
+    listener.mockClear();
+    computeCount = 0;
+
+    // Change all 3 sources in batch - should only recompute once
+    batch(() => {
+      a.value = 10;
+      b.value = 20;
+      c.value = 30;
+    });
+
+    expect(computeCount).toBe(1); // Only computed once despite 3 source changes
+    expect(listener).toHaveBeenCalledWith(60, 6);
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
   it('should batch computed stale marking', () => {
     const a = zen(1);
     const b = zen(2);

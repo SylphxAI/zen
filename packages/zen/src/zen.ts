@@ -40,13 +40,18 @@ const FLAG_IN_COMPUTED_QUEUE = 0b1000000; // In dirty computeds queue (batch ded
 /**
  * Base class for all reactive nodes (signals and computeds).
  * Unified structure for the reactive graph.
+ * Optimization 2.3: Inline small-N effect listeners (1-2) for memory efficiency.
  */
 abstract class BaseNode<V> {
   _value: V;
   _computedListeners: AnyNode[] = [];
-  _effectListeners: Listener<any>[] = [];
   _flags = 0;
   _lastSeenEpoch = 0; // Epoch-based deduplication: O(1) tracking check
+
+  // Inline effect listeners (optimization 2.3)
+  _effectListener1?: Listener<any>;
+  _effectListener2?: Listener<any>;
+  _effectListeners?: Listener<any>[]; // Only allocated when >= 3 listeners
 
   constructor(initial: V) {
     this._value = initial;
@@ -87,23 +92,78 @@ function valuesEqual(a: unknown, b: unknown): boolean {
 }
 
 /**
+ * Propagate FLAG_HAD_EFFECT_DOWNSTREAM upward through the dependency graph.
+ * Optimization 2.1: Iterative approach using stack to avoid DFS during updates.
+ * Called during effect subscription to eagerly mark all upstream nodes.
+ */
+function markHasEffectUpstream(node: AnyNode): void {
+  const stack: AnyNode[] = [node];
+  while (stack.length > 0) {
+    const n = stack.pop()!;
+    if ((n._flags & FLAG_HAD_EFFECT_DOWNSTREAM) !== 0) continue;
+    n._flags |= FLAG_HAD_EFFECT_DOWNSTREAM;
+
+    // Propagate through computed's sources
+    if ((n._flags & FLAG_IS_COMPUTED) !== 0) {
+      const c = n as ComputedNode<any>;
+      for (let i = 0; i < c._sources.length; i++) {
+        stack.push(c._sources[i]!);
+      }
+    }
+  }
+}
+
+/**
  * Add effect listener.
- * Subscribe: O(1) push
- * Unsubscribe: O(n) indexOf + splice, decrements global effect count
+ * Subscribe: O(1)
+ * Unsubscribe: O(1) or O(n) depending on listener count
+ * Optimization 2.1: Propagates FLAG_HAD_EFFECT_DOWNSTREAM upward on subscription.
+ * Optimization 2.3: Inline storage for 1-2 listeners, array for 3+.
  */
 function addEffectListener(node: AnyNode, cb: Listener<any>): Unsubscribe {
-  node._effectListeners.push(cb);
+  // Inline storage for first 2 listeners
+  if (node._effectListener1 === undefined) {
+    node._effectListener1 = cb;
+  } else if (node._effectListener2 === undefined) {
+    node._effectListener2 = cb;
+  } else {
+    // Allocate array for 3+ listeners
+    if (node._effectListeners === undefined) {
+      node._effectListeners = [node._effectListener1, node._effectListener2, cb];
+    } else {
+      node._effectListeners.push(cb);
+    }
+  }
 
   // Mark that effects exist + increment global count
   node._flags |= FLAG_HAD_EFFECT_DOWNSTREAM;
   GLOBAL_EFFECT_COUNT++;
 
+  // Propagate flag upstream through dependency graph
+  markHasEffectUpstream(node);
+
   return (): void => {
-    const list = node._effectListeners;
-    const idx = list.indexOf(cb);
-    if (idx >= 0) {
-      list.splice(idx, 1);
+    // Handle inline storage
+    if (node._effectListener1 === cb) {
+      node._effectListener1 = node._effectListener2;
+      node._effectListener2 = undefined;
       GLOBAL_EFFECT_COUNT--;
+      return;
+    }
+    if (node._effectListener2 === cb) {
+      node._effectListener2 = undefined;
+      GLOBAL_EFFECT_COUNT--;
+      return;
+    }
+
+    // Handle array storage
+    if (node._effectListeners !== undefined) {
+      const list = node._effectListeners;
+      const idx = list.indexOf(cb);
+      if (idx >= 0) {
+        list.splice(idx, 1);
+        GLOBAL_EFFECT_COUNT--;
+      }
     }
   };
 }
@@ -112,9 +172,15 @@ function addEffectListener(node: AnyNode, cb: Listener<any>): Unsubscribe {
  * Add computed listener.
  * Subscribe: O(1) push
  * Unsubscribe: O(n) indexOf + splice
+ * Optimization 2.1: Propagate FLAG_HAD_EFFECT_DOWNSTREAM upward during subscription.
  */
 function addComputedListener(source: AnyNode, node: AnyNode): Unsubscribe {
   source._computedListeners.push(node);
+
+  // Propagate effect flag upward if child has effects
+  if ((node._flags & FLAG_HAD_EFFECT_DOWNSTREAM) !== 0) {
+    markHasEffectUpstream(source);
+  }
 
   return (): void => {
     const list = source._computedListeners;
@@ -130,7 +196,10 @@ function addComputedListener(source: AnyNode, node: AnyNode): Unsubscribe {
 // ============================================================================
 
 const dirtyNodes: AnyNode[] = [];
+let dirtyNodesHead = 0;
+
 const dirtyComputeds: ComputedNode<any>[] = [];
+let dirtyComputedsHead = 0;
 
 /**
  * Mark signal as dirty (deduped via FLAG_IN_DIRTY_QUEUE).
@@ -369,30 +438,17 @@ export type ComputedZen<T> = ComputedCore<T>;
 
 /**
  * Check if a node has effect listeners downstream.
- * Uses conservative caching - flag is set but never automatically cleared.
- * This means once a node had effects, it will always return true (safe but not optimal).
- * Trade-off: Simpler code, no ref-count overhead, but some unnecessary work after unsubscribe.
+ * Conservative cache: FLAG_HAD_EFFECT_DOWNSTREAM is eagerly set during subscription.
+ * Optimization 2.1: No DFS - flag is propagated upward during effect subscription.
+ * Optimization 2.3: Check inline listeners + array.
+ * Trade-off: Flag never clears, may over-trigger after unsubscribe, but eliminates hot-path DFS.
  */
 function hasDownstreamEffectListeners(node: AnyNode): boolean {
-  // Fast path: check cached flag (conservative - never cleared)
-  if ((node._flags & FLAG_HAD_EFFECT_DOWNSTREAM) !== 0) return true;
-
-  // Direct effect listeners
-  if (node._effectListeners.length > 0) {
-    node._flags |= FLAG_HAD_EFFECT_DOWNSTREAM;
-    return true;
-  }
-
-  // Check computed listeners recursively
-  const computed = node._computedListeners;
-  for (let i = 0; i < computed.length; i++) {
-    if (hasDownstreamEffectListeners(computed[i]!)) {
-      node._flags |= FLAG_HAD_EFFECT_DOWNSTREAM;
-      return true;
-    }
-  }
-
-  return false;
+  return (
+    (node._flags & FLAG_HAD_EFFECT_DOWNSTREAM) !== 0 ||
+    node._effectListener1 !== undefined ||
+    (node._effectListeners !== undefined && node._effectListeners.length > 0)
+  );
 }
 
 /**
@@ -464,22 +520,21 @@ function queueBatchedNotification(node: AnyNode, oldValue: unknown): void {
 
 /**
  * Notify all effect listeners (micro-optimized for common cases).
+ * Optimization 2.3: Handle inline listeners + array storage.
  */
 function notifyEffects(node: AnyNode, newValue: unknown, oldValue: unknown): void {
-  const effects = node._effectListeners;
-  const len = effects.length;
+  // Handle inline listeners (optimization 2.3)
+  if (node._effectListener1 !== undefined) {
+    node._effectListener1(newValue, oldValue);
+    if (node._effectListener2 !== undefined) {
+      node._effectListener2(newValue, oldValue);
+    }
+  }
 
-  // Unrolled for 1-3 listeners
-  if (len === 1) {
-    effects[0]!(newValue, oldValue);
-  } else if (len === 2) {
-    effects[0]!(newValue, oldValue);
-    effects[1]!(newValue, oldValue);
-  } else if (len === 3) {
-    effects[0]!(newValue, oldValue);
-    effects[1]!(newValue, oldValue);
-    effects[2]!(newValue, oldValue);
-  } else {
+  // Handle array storage (3+ listeners)
+  if (node._effectListeners !== undefined) {
+    const effects = node._effectListeners;
+    const len = effects.length;
     for (let i = 0; i < len; i++) {
       effects[i]!(newValue, oldValue);
     }
@@ -527,11 +582,14 @@ function flushBatchedUpdates(): void {
   try {
     // Outer loop: Continue until all queues are empty
     // This handles effects that modify signals during notification
-    while (dirtyNodes.length > 0 || dirtyComputeds.length > 0 || pendingNotifications.length > 0) {
+    // Optimization 2.2: Index-based queue processing (no splice)
+    while (dirtyNodesHead < dirtyNodes.length || dirtyComputedsHead < dirtyComputeds.length || pendingNotifications.length > 0) {
       // Phase 1: Mark all downstream computeds as dirty (via dedup queue)
-      while (dirtyNodes.length > 0) {
-        const dirtyLen = dirtyNodes.length;
-        for (let i = 0; i < dirtyLen; i++) {
+      while (dirtyNodesHead < dirtyNodes.length) {
+        const startHead = dirtyNodesHead;
+        const endHead = dirtyNodes.length;
+
+        for (let i = startHead; i < endHead; i++) {
           const node = dirtyNodes[i]!;
           node._flags &= ~FLAG_IN_DIRTY_QUEUE;
 
@@ -539,14 +597,15 @@ function flushBatchedUpdates(): void {
           propagateToComputeds(node);
         }
 
-        // Clear processed signals
-        dirtyNodes.splice(0, dirtyLen);
+        dirtyNodesHead = endHead;
       }
 
       // Phase 2: Recompute dirty computeds (each computed only once, even if multiple sources changed)
-      while (dirtyComputeds.length > 0) {
-        const len = dirtyComputeds.length;
-        for (let i = 0; i < len; i++) {
+      while (dirtyComputedsHead < dirtyComputeds.length) {
+        const startHead = dirtyComputedsHead;
+        const endHead = dirtyComputeds.length;
+
+        for (let i = startHead; i < endHead; i++) {
           const c = dirtyComputeds[i]!;
           c._flags &= ~FLAG_IN_COMPUTED_QUEUE;
 
@@ -554,14 +613,19 @@ function flushBatchedUpdates(): void {
           recomputeDownstreamWithListeners(c);
         }
 
-        // Clear processed computeds
-        dirtyComputeds.splice(0, len);
+        dirtyComputedsHead = endHead;
       }
 
       // Phase 3: Notify all effect listeners
       flushPendingNotifications();
       // Outer loop checks if effect notifications added new dirty nodes/computeds
     }
+
+    // Reset queues after full flush
+    dirtyNodes.length = 0;
+    dirtyNodesHead = 0;
+    dirtyComputeds.length = 0;
+    dirtyComputedsHead = 0;
   } finally {
     isFlushing = false;
   }
@@ -622,7 +686,10 @@ export function subscribe<T>(
     unsubEffect();
 
     // If computed with no remaining listeners, detach from sources
-    const remaining = n._computedListeners.length + n._effectListeners.length;
+    const remaining = n._computedListeners.length +
+      (n._effectListener1 !== undefined ? 1 : 0) +
+      (n._effectListener2 !== undefined ? 1 : 0) +
+      (n._effectListeners?.length ?? 0);
     if (remaining === 0 && (node._flags & FLAG_IS_COMPUTED) !== 0) {
       (node as ComputedNode<T>)._unsubscribeFromSources();
     }

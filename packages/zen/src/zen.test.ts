@@ -669,13 +669,17 @@ describe('integration', () => {
     const unsub1 = subscribe(doubled, vi.fn());
     const unsub2 = subscribe(doubled, vi.fn());
 
-    expect(doubled._effectListeners.length).toBe(2);
+    // Check inline listeners (optimization 2.3)
+    expect(doubled._effectListener1).toBeDefined();
+    expect(doubled._effectListener2).toBeDefined();
 
     unsub1();
-    expect(doubled._effectListeners.length).toBe(1);
+    expect(doubled._effectListener1).toBeDefined();
+    expect(doubled._effectListener2).toBeUndefined();
 
     unsub2();
-    expect(doubled._effectListeners.length).toBe(0);
+    expect(doubled._effectListener1).toBeUndefined();
+    expect(doubled._effectListener2).toBeUndefined();
     expect(doubled._sourceUnsubs).toBeUndefined();
   });
 });

@@ -409,9 +409,6 @@ class ComputedNode<T> extends Computation<T> {
     const hadSubscriptions = this._sourceUnsubs !== undefined;
     const prevListener = currentListener;
 
-    this._sources.length = 0;
-    this._sourceSlots.length = 0;
-
     this._flags |= FLAG_PENDING;
     this._flags &= ~FLAG_STALE;
 
@@ -420,18 +417,22 @@ class ComputedNode<T> extends Computation<T> {
 
     // BUG FIX 1.2: try/finally to ensure cleanup on error
     try {
-      // Set up new tracking epoch for O(1) dependency deduplication
+      // 1) Unsubscribe from old sources first (using old _sourceSlots mapping)
+      if (hadSubscriptions) {
+        this._unsubscribeFromSources(); // This clears _sourceSlots internally
+      }
+      // Clear _sources after unsubscribing (safe since unsubs don't need it)
+      this._sources.length = 0;
+
+      // 2) Track new dependencies
       currentListener = this as unknown as DependencyCollector;
       (currentListener as any)._epoch = ++TRACKING_EPOCH;
       newValue = this._fn();
       this._value = newValue;
 
-      // Always rewire subscriptions (simpler, fewer edge cases than diff)
-      if (hadSubscriptions) {
-        this._unsubscribeFromSources();
-        if (this._sources.length > 0) {
-          this._subscribeToSources();
-        }
+      // 3) Subscribe to new sources
+      if (this._sources.length > 0) {
+        this._subscribeToSources();
       }
 
       // Queue notification if value changed

@@ -35,7 +35,7 @@ After **15 optimization phases** across 2 major versions and comprehensive analy
 - Inlined critical functions (addObserver)
 - **Result**: +16% fanout 1→100 improvement
 
-### Phase 14: Failed Experiment (v3.27.0 - Rejected)
+### Phase 14: Failed Experiment (v3.27.0-alpha - Rejected)
 - Lazy array allocation experiment
 - **Result**: -9.3% read regression ❌
 - **Decision**: Rejected via ADR-007
@@ -45,6 +45,13 @@ After **15 optimization phases** across 2 major versions and comprehensive analy
 - Evaluated 7+ remaining optimizations
 - All rejected due to <1% benefit or unacceptable trade-offs
 - **Conclusion**: v3.26.0 at optimization limit
+
+### Phase 16: Micro-Optimization Implementation (v3.27.0-beta - Rejected)
+- Implemented 7 "high-impact" micro-optimizations
+- **Expected**: +3-4% across hot paths
+- **Actual**: -11% create, +3% read, -2.5% write, -11% no-op
+- **Decision**: Rejected via ADR-008 (net negative impact)
+- **Learning**: V8 JIT optimizes clean code better than hand-tuned micro-opts
 
 ## Key Optimizations Implemented
 
@@ -105,6 +112,7 @@ After **15 optimization phases** across 2 major versions and comprehensive analy
 
 ### Rejected
 7. **ADR-007**: Reject Lazy Allocation - -9.3% regression unacceptable
+8. **ADR-008**: Reject Micro-Optimizations - Net negative impact, V8 optimizes clean code better
 
 ## Key Learnings
 
@@ -119,12 +127,17 @@ After **15 optimization phases** across 2 major versions and comprehensive analy
 2. Theory needs validation - Memory savings unverified
 3. <1% gains not worth risk - Risk/reward ratio matters
 4. Hot path performance sacred - Read is most critical
+5. **V8 is very smart** - JIT optimizes clean code better than hand-tuned micro-opts
+6. **Simplicity has value** - Clean code easier for compiler to optimize
+7. **Cumulative effects non-linear** - Small optimizations can interfere with each other
 
 ### From Limit Analysis
 1. Architecture > Implementation - Design matters most
 2. Implementation has limits - v3.26.0 reached them
 3. Bottlenecks are algorithmic - Not implementation issues
 4. Ecosystem > Core - Next focus area
+5. **Two failed experiments prove limit** - Lazy allocation + micro-opts both failed
+6. **Trust the compiler** - Modern JIT is smarter than manual optimization
 
 ## Bottleneck Analysis
 
@@ -196,11 +209,13 @@ Further optimization requires either:
 
 ---
 
-**Total Effort**: 15 optimization phases, 2 rounds of comprehensive analysis, 1 controlled experiment, 7 documented ADRs
+**Total Effort**: 16 optimization phases, 3 rounds of comprehensive analysis, 2 failed experiments, 8 documented ADRs
 
 **Total Improvement**: +23% diamond pattern, +16% fanout performance, -6% bundle size
 
-**Status**: ✅ **COMPLETE - READY FOR RELEASE**
+**Failed Attempts**: 2 (lazy allocation: -9.3%, micro-opts: net negative)
+
+**Status**: ✅ **COMPLETE - OPTIMIZATION LIMIT CONFIRMED - READY FOR RELEASE**
 
 ---
 

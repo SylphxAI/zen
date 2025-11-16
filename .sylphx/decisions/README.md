@@ -9,6 +9,7 @@
 - [ADR-005: Zero-Allocation Flush (v3.26.0)](#005-zero-allocation-flush)
 - [ADR-006: Inline Critical Functions (v3.26.0)](#006-inline-critical-functions)
 - [ADR-007: Reject Lazy Array Allocation](#007-reject-lazy-array-allocation) ❌ Rejected
+- [ADR-008: Reject Micro-Optimizations (v3.27.0)](#008-reject-micro-optimizations) ❌ Rejected
 
 ---
 
@@ -24,3 +25,4 @@
 
 ### Rejected
 - [007-reject-lazy-allocation.md](007-reject-lazy-allocation.md) - Why lazy allocation failed (-9.3% read regression)
+- [008-reject-micro-optimizations.md](008-reject-micro-optimizations.md) - Why micro-optimizations failed (net negative impact)

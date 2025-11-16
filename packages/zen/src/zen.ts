@@ -245,9 +245,13 @@ class Computation<T> implements SourceType, ObserverType, Owner {
     // Track this source in current observer
     if (currentObserver) {
       track(this);
-    }
 
-    if (this._state & 3) {
+      // OPTIMIZATION: Only check if necessary
+      if (this._state & 3) {
+        this._updateIfNecessary();
+      }
+    } else if (this._state & 3) {
+      // No observer - still need to update if dirty
       this._updateIfNecessary();
     }
 
@@ -289,10 +293,11 @@ class Computation<T> implements SourceType, ObserverType, Owner {
       // SOLID.JS PATTERN: Check ALL sources recursively first
       const sources = this._sources;
       if (sources) {
-        for (let i = 0; i < sources.length; i++) {
+        const len = sources.length;
+        for (let i = 0; i < len; i++) {
           sources[i]._updateIfNecessary();
 
-          // After checking source, see if it changed
+          // OPTIMIZATION: Early exit if changed (avoid checking remaining sources)
           if (sources[i]._time > this._time) {
             this._state = (this._state & ~3) | STATE_DIRTY;
             break;
@@ -304,9 +309,10 @@ class Computation<T> implements SourceType, ObserverType, Owner {
     // Only update if still dirty after checking sources
     if ((this._state & 3) === STATE_DIRTY) {
       this.update();
+    } else if ((this._state & 3) === STATE_CHECK) {
+      // OPTIMIZATION: Set CLEAN if still CHECK after verifying all sources
+      this._state = (this._state & ~3) | STATE_CLEAN;
     }
-
-    // Don't set CLEAN here - update() will do it
   }
 
   /**
@@ -353,7 +359,8 @@ class Computation<T> implements SourceType, ObserverType, Owner {
         // Update sources array
         if (this._sources && newSourcesIndex > 0) {
           this._sources.length = newSourcesIndex + newSources.length;
-          for (let i = 0; i < newSources.length; i++) {
+          const newLen = newSources.length;
+          for (let i = 0; i < newLen; i++) {
             this._sources[newSourcesIndex + i] = newSources[i];
           }
         } else {
@@ -361,7 +368,8 @@ class Computation<T> implements SourceType, ObserverType, Owner {
         }
 
         // Add this observer to new sources
-        for (let i = newSourcesIndex; i < this._sources.length; i++) {
+        const sourcesLen = this._sources.length;
+        for (let i = newSourcesIndex; i < sourcesLen; i++) {
           const source = this._sources[i];
           if (!source._observers) {
             source._observers = [this];

@@ -430,8 +430,9 @@ class ComputedNode<T> extends Computation<T> {
 
   /**
    * Lazy recompute - only when stale.
-   * OPTIMIZATION: Incremental dependency tracking (Solid.js-style).
+   * OPTIMIZATION: Incremental dependency tracking (Solid.js-style) + single-source fast path.
    * Reuses prefix-matching subscriptions to avoid O(n) unsub+sub on stable deps.
+   * FAST PATH: Optimized for single stable source (most common case in deep chains).
    */
   protected _recomputeIfNeeded(): void {
     // Simple dirty flag check (faster than version checking)
@@ -446,11 +447,56 @@ class ComputedNode<T> extends Computation<T> {
     this._flags &= ~FLAG_STALE;
 
     const oldValue = this._value;
-
-    // Preserve old sources for incremental diffing
     const prevSources = this._sources;
     const prevUnsubs = this._sourceUnsubs;
+    const oldLen = prevSources.length;
 
+    // FAST PATH: Single stable source (most common in deep chains)
+    // Avoids incremental diff overhead, reuses arrays
+    if (oldLen === 1 && prevUnsubs !== undefined) {
+      const prevSource = prevSources[0]!;
+
+      // Reset tracking array for new tracking
+      this._sources.length = 0;
+
+      // Track dependencies
+      const prevListener = currentListener;
+      currentListener = this as unknown as DependencyCollector;
+      this._epoch = ++TRACKING_EPOCH;
+      const newValue = this._fn();
+      currentListener = prevListener;
+      this._value = newValue;
+
+      // Check if source stayed same (common case)
+      if (this._sources.length === 1 && this._sources[0] === prevSource) {
+        // Perfect stability - no unsub/resub needed, subscriptions already correct
+        this._flags &= ~FLAG_PENDING;
+
+        // Propagate changes (inlined for performance)
+        if (!valuesEqual(oldValue, newValue)) {
+          const downstream = this._computedListeners;
+          const downLen = downstream.length;
+
+          // Unrolled for small downstream (common)
+          if (downLen === 1) {
+            downstream[0]!._flags |= FLAG_STALE;
+          } else if (downLen === 2) {
+            downstream[0]!._flags |= FLAG_STALE;
+            downstream[1]!._flags |= FLAG_STALE;
+          } else if (downLen > 0) {
+            for (let i = 0; i < downLen; i++) {
+              downstream[i]!._flags |= FLAG_STALE;
+            }
+          }
+
+          queueBatchedNotification(this as AnyNode, oldValue);
+        }
+        return;
+      }
+      // else: source changed, fall through to full path
+    }
+
+    // FULL PATH: Multi-source or first run or source changed
     // Track into new arrays
     // CRITICAL: Do NOT clear _sourceSlots yet - unsubscribe closures need it
     this._sources = [];
@@ -467,11 +513,10 @@ class ComputedNode<T> extends Computation<T> {
     // Incremental dependency diffing
     const newSources = this._sources;
     const newLen = newSources.length;
-    const oldLen = prevSources ? prevSources.length : 0;
 
     // Find divergence point (prefix matching)
     let diverge = 0;
-    if (prevSources && prevUnsubs) {
+    if (prevSources.length > 0 && prevUnsubs) {
       const minLen = newLen < oldLen ? newLen : oldLen;
       // Reuse prefix where sources match
       while (diverge < minLen && prevSources[diverge] === newSources[diverge]) {
@@ -511,8 +556,17 @@ class ComputedNode<T> extends Computation<T> {
       // CRITICAL: Mark downstream computeds as stale (fixes computed chain bug)
       const downstream = this._computedListeners;
       const downLen = downstream.length;
-      for (let i = 0; i < downLen; i++) {
-        downstream[i]!._flags |= FLAG_STALE;
+
+      // Unrolled for small downstream (common)
+      if (downLen === 1) {
+        downstream[0]!._flags |= FLAG_STALE;
+      } else if (downLen === 2) {
+        downstream[0]!._flags |= FLAG_STALE;
+        downstream[1]!._flags |= FLAG_STALE;
+      } else if (downLen > 0) {
+        for (let i = 0; i < downLen; i++) {
+          downstream[i]!._flags |= FLAG_STALE;
+        }
       }
 
       queueBatchedNotification(this as AnyNode, oldValue);
@@ -575,11 +629,12 @@ function hasDownstreamEffectListeners(node: AnyNode): boolean {
 }
 
 /**
- * SCHEDULER REWRITE: Queue-only propagation (Solid-style).
+ * SCHEDULER REWRITE + PERFORMANCE: Inlined propagation (eliminates function call overhead).
  * Marks downstream computeds dirty and queues them for recompute if they have effects.
  * Also queues EffectNodes directly.
  * No direct recompute - everything goes through the scheduler queue.
  * This ensures each computation runs at most once per flush (fixes diamond graph duplication).
+ * OPTIMIZATION: Fully inlined markComputedDirty/markEffectDirty to eliminate calls in hot path.
  */
 function propagateToComputeds(node: AnyNode): void {
   const computed = node._computedListeners;
@@ -587,22 +642,51 @@ function propagateToComputeds(node: AnyNode): void {
 
   // Global shortcut: no effects exist, just mark stale (lazy evaluation only)
   if (GLOBAL_EFFECT_COUNT === 0) {
-    for (let i = 0; i < len; i++) {
-      computed[i]!._flags |= FLAG_STALE;
+    // Unrolled for small lengths (most common case)
+    if (len === 1) {
+      computed[0]!._flags |= FLAG_STALE;
+    } else if (len === 2) {
+      computed[0]!._flags |= FLAG_STALE;
+      computed[1]!._flags |= FLAG_STALE;
+    } else if (len === 3) {
+      computed[0]!._flags |= FLAG_STALE;
+      computed[1]!._flags |= FLAG_STALE;
+      computed[2]!._flags |= FLAG_STALE;
+    } else {
+      for (let i = 0; i < len; i++) {
+        computed[i]!._flags |= FLAG_STALE;
+      }
     }
     return;
   }
 
-  // SCHEDULER REWRITE: Unified queue-only path
-  // Mark dirty and queue - ComputedNodes for recompute, EffectNodes for execution
+  // SCHEDULER REWRITE: Unified queue-only path (inlined markComputedDirty/markEffectDirty)
   for (let i = 0; i < len; i++) {
     const c = computed[i]!;
-    if ((c._flags & FLAG_IS_EFFECT) !== 0) {
-      // EffectNode - queue for execution
-      markEffectDirty(c as unknown as EffectNode);
-    } else if ((c._flags & FLAG_IS_COMPUTED) !== 0) {
-      // ComputedNode - queue for recompute
-      markComputedDirty(c);
+    const flags = c._flags;
+
+    if ((flags & FLAG_IS_EFFECT) !== 0) {
+      // EffectNode - queue for execution (inlined markEffectDirty)
+      if ((flags & FLAG_IN_EFFECT_QUEUE) === 0) {
+        c._flags = flags | FLAG_IN_EFFECT_QUEUE;
+        dirtyEffects.push(c as unknown as EffectNode);
+      }
+    } else if ((flags & FLAG_IS_COMPUTED) !== 0) {
+      // ComputedNode - mark stale and queue if has downstream effects (inlined markComputedDirty)
+      const needsStale = (flags & FLAG_STALE) === 0;
+      const needsQueue = (flags & FLAG_IN_COMPUTED_QUEUE) === 0 &&
+                        GLOBAL_EFFECT_COUNT > 0 &&
+                        (flags & FLAG_HAD_EFFECT_DOWNSTREAM) !== 0;
+
+      if (needsStale && needsQueue) {
+        c._flags = flags | FLAG_STALE | FLAG_IN_COMPUTED_QUEUE;
+        dirtyComputeds.push(c as ComputedNode<any>);
+      } else if (needsStale) {
+        c._flags = flags | FLAG_STALE;
+      } else if (needsQueue) {
+        c._flags = flags | FLAG_IN_COMPUTED_QUEUE;
+        dirtyComputeds.push(c as ComputedNode<any>);
+      }
     } else {
       // Plain signal listener (shouldn't happen in _computedListeners)
       c._flags |= FLAG_STALE;

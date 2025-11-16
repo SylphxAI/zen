@@ -218,6 +218,28 @@ describe('subscribe', () => {
     expect(listener2).toHaveBeenCalledWith(5, 0);
   });
 
+  it('should handle undefined initial value correctly', () => {
+    const signal = zen<number | undefined>(undefined);
+    const listener = vi.fn();
+
+    subscribe(signal, listener);
+
+    // First update: undefined -> 1
+    signal.value = 1;
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(listener).toHaveBeenCalledWith(1, undefined);
+
+    // Second update: 1 -> undefined
+    signal.value = undefined;
+    expect(listener).toHaveBeenCalledTimes(2);
+    expect(listener).toHaveBeenCalledWith(undefined, 1);
+
+    // Third update: undefined -> 2
+    signal.value = 2;
+    expect(listener).toHaveBeenCalledTimes(3);
+    expect(listener).toHaveBeenCalledWith(2, undefined);
+  });
+
   it('should subscribe to computed and trigger initial evaluation', () => {
     const count = zen(2);
     let computeCount = 0;

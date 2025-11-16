@@ -574,8 +574,19 @@ let pendingNotificationsHead = 0;
 /**
  * Queue node for batched notification (deduped via FLAG_PENDING_NOTIFY).
  * Earliest oldValue wins.
+ * OPTIMIZATION: Skip queueing if no legacy effect listeners exist.
+ * With effect-based subscribe, legacy listeners are rarely used.
  */
 function queueBatchedNotification(node: AnyNode, oldValue: unknown): void {
+  // Fast path: no legacy listeners, skip queue entirely
+  if (
+    node._effectListener1 === undefined &&
+    node._effectListener2 === undefined &&
+    (node._effectListeners === undefined || node._effectListeners.length === 0)
+  ) {
+    return;
+  }
+
   if ((node._flags & FLAG_PENDING_NOTIFY) === 0) {
     node._flags |= FLAG_PENDING_NOTIFY;
     pendingNotifications.push([node, oldValue]);
@@ -723,7 +734,20 @@ function flushBatchedUpdates(): void {
       // Outer loop checks if effect notifications added new dirty nodes/computeds/effects
     }
   } finally {
-    // CRITICAL: Reset queues in finally block to ensure cleanup even if effects throw
+    // CRITICAL: Clear flags from all queued nodes to prevent stuck state on errors
+    // If an effect/computed throws, nodes may remain in queues with flags set
+    // Clearing flags ensures next update can properly schedule them again
+    for (let i = 0; i < dirtyNodes.length; i++) {
+      dirtyNodes[i]!._flags &= ~FLAG_IN_DIRTY_QUEUE;
+    }
+    for (let i = 0; i < dirtyComputeds.length; i++) {
+      dirtyComputeds[i]!._flags &= ~FLAG_IN_COMPUTED_QUEUE;
+    }
+    for (let i = 0; i < dirtyEffects.length; i++) {
+      dirtyEffects[i]!._flags &= ~FLAG_IN_EFFECT_QUEUE;
+    }
+
+    // Reset queues and state
     dirtyNodes.length = 0;
     dirtyNodesHead = 0;
     dirtyComputeds.length = 0;
@@ -763,13 +787,16 @@ export function subscribe<T>(
   node: ZenCore<T> | ComputedCore<T>,
   listener: Listener<T>,
 ): Unsubscribe {
-  let previousValue: T | undefined;
+  let hasValue = false;
+  let previousValue!: T;
 
   return effect(() => {
     const currentValue = node.value;
 
     // First run: just store value, no listener call
-    if (previousValue === undefined) {
+    // Use hasValue flag instead of undefined check to handle undefined initial values
+    if (!hasValue) {
+      hasValue = true;
       previousValue = currentValue;
       return;
     }

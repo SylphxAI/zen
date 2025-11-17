@@ -1,5 +1,13 @@
 # @sylphlab/zen-router-react
 
+## 5.0.34
+
+### Patch Changes
+
+- Updated dependencies [db5af02]
+  - @sylphx/zen@3.45.0
+  - @sylphx/zen-router@5.0.34
+
 ## 5.0.33
 
 ### Patch Changes

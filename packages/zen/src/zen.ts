@@ -364,8 +364,23 @@ class Computation<T> implements SourceType, ObserverType, Owner {
         this._value = newValue;
       }
 
-      // SOLID.JS PATTERN: Update sources incrementally
-      if (newSources) {
+      // OPTIMIZATION: Detect stable dependencies (no graph changes needed)
+      // When dependencies don't change, skip observer graph updates
+      const oldSources = this._sources;
+      const stableDeps =
+        newSources &&
+        oldSources &&
+        newSourcesIndex === 0 &&
+        newSources.length === oldSources.length &&
+        newSources.length === 1 &&
+        newSources[0] === oldSources[0];
+
+      if (stableDeps) {
+        // FAST PATH: Dependencies unchanged, skip graph operations
+        // Common case: computed(() => signal.value * factor)
+        // No need to update observer graph
+      } else if (newSources) {
+        // SOLID.JS PATTERN: Update sources incrementally
         // Remove old observers from tail
         if (this._sources) {
           removeSourceObservers(this, newSourcesIndex);

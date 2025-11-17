@@ -3,46 +3,13 @@ name: Release
 on:
   push:
     branches:
-      - main # Trigger on push to main branch
+      - main
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
   release:
-    name: Release Packages
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v4
-        with:
-          # Fetch history and tags for Changesets versioning
-          fetch-depth: 0
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.1
-
-      - name: Install Dependencies
-        run: bun install
-
-      - name: Build Packages
-        run: |
-          for dir in packages/*/; do
-            if [ -f "$dir/package.json" ] && grep -q '"build"' "$dir/package.json"; then
-              echo "Building $dir..."
-              (cd "$dir" && bun run build)
-            fi
-          done
-
-      - name: Run Tests
-        run: bun test packages/zen/src
-
-      - name: Create Release Pull Request or Publish to npm
-        id: changesets
-        uses: changesets/action@v1
-        with:
-          publish: bun run release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }} # Secret containing the npm token
+    uses: SylphxAI/.github/.github/workflows/publish-npm.yml@main
+    with:
+      bun-version: '1.3.1'
+    secrets: inherit

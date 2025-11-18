@@ -1,7 +1,7 @@
-import { signal, Show } from '@zen/zen';
 import * as Babel from '@babel/standalone';
-import * as Zen from '@zen/zen';
 import * as ZenSignal from '@zen/signal';
+import { Show, signal } from '@zen/zen';
+import * as Zen from '@zen/zen';
 
 export function Playground() {
   const code = signal(`import { signal, computed } from '@zen/zen';
@@ -57,8 +57,8 @@ preview.appendChild(app);`);
       // Execute transpiled code
       const fn = new Function(...Object.keys(zenContext), transformed.code);
       fn(...Object.values(zenContext));
-    } catch (e: any) {
-      error.value = e.message || 'Unknown error';
+    } catch (e: unknown) {
+      error.value = (e as Error).message || 'Unknown error';
       const previewEl = document.getElementById('preview');
       if (previewEl) {
         previewEl.innerHTML = `<div style="padding: 20px; color: #ef4444; font-family: monospace; white-space: pre-wrap;">${error.value}</div>`;
@@ -141,8 +141,8 @@ preview.appendChild(app);`);
             <li>All Zen features are available: signal, computed, effect, components</li>
           </ul>
           <p class="note">
-            <strong>Note:</strong> This playground uses Babel Standalone for runtime JSX transpilation.
-            Your code runs directly in the browser with access to all Zen APIs.
+            <strong>Note:</strong> This playground uses Babel Standalone for runtime JSX
+            transpilation. Your code runs directly in the browser with access to all Zen APIs.
           </p>
         </div>
       </div>

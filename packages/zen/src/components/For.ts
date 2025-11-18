@@ -11,6 +11,7 @@
 
 import { effect } from '@zen/signal';
 import type { AnyZen } from '@zen/signal';
+import { onCleanup, disposeNode } from '../lifecycle.js';
 
 interface ForProps<T, U extends Node> {
   each: T[] | AnyZen;
@@ -33,7 +34,7 @@ export function For<T, U extends Node>(props: ForProps<T, U>): Node {
   const marker = document.createComment('for');
 
   // Track rendered items
-  const items = new Map<T, { node: U; index: number; dispose?: () => void }>();
+  const items = new Map<T, { node: U; index: number }>();
 
   // Get parent for DOM operations
   let parent: Node | null = null;
@@ -54,11 +55,11 @@ export function For<T, U extends Node>(props: ForProps<T, U>): Node {
     // Show fallback if empty
     if (array.length === 0 && fallback) {
       // Clear existing items
-      for (const [, { node, dispose }] of items) {
+      for (const [, { node }] of items) {
         if (node.parentNode) {
           node.parentNode.removeChild(node);
         }
-        dispose?.();
+        disposeNode(node);
       }
       items.clear();
 
@@ -79,7 +80,7 @@ export function For<T, U extends Node>(props: ForProps<T, U>): Node {
     if (!parent) return;
 
     // Build new items map
-    const newItems = new Map<T, { node: U; index: number; dispose?: () => void }>();
+    const newItems = new Map<T, { node: U; index: number }>();
     const fragment = document.createDocumentFragment();
 
     for (let i = 0; i < array.length; i++) {
@@ -105,12 +106,12 @@ export function For<T, U extends Node>(props: ForProps<T, U>): Node {
     }
 
     // Remove items no longer in array
-    for (const [item, { node, dispose }] of items) {
+    for (const [item, { node }] of items) {
       if (!newItems.has(item)) {
         if (node.parentNode) {
           node.parentNode.removeChild(node);
         }
-        dispose?.();
+        disposeNode(node);
       }
     }
 
@@ -126,17 +127,17 @@ export function For<T, U extends Node>(props: ForProps<T, U>): Node {
     return undefined;
   });
 
-  // Cleanup on dispose
-  (marker as any)._dispose = () => {
+  // Register cleanup via owner system
+  onCleanup(() => {
     dispose();
-    for (const [, { node, dispose }] of items) {
+    for (const [, { node }] of items) {
       if (node.parentNode) {
         node.parentNode.removeChild(node);
       }
-      dispose?.();
+      disposeNode(node);
     }
     items.clear();
-  };
+  });
 
   return marker;
 }

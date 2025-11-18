@@ -11,6 +11,7 @@
 
 import { effect, untrack } from '@zen/signal';
 import type { AnyZen } from '@zen/signal';
+import { onCleanup, disposeNode } from '../lifecycle.js';
 
 interface ShowProps<T> {
   when: T | AnyZen | (() => T);
@@ -39,21 +40,20 @@ export function Show<T>(props: ShowProps<T>): Node {
 
   // Track current node
   let currentNode: Node | null = null;
-  let currentDispose: (() => void) | undefined;
 
   // Effect to update conditional
   const dispose = effect(() => {
     // Evaluate condition
     const condition = typeof when === 'function' ? (when as Function)() : when;
 
-    // Cleanup previous
-    if (currentNode?.parentNode) {
-      currentNode.parentNode.removeChild(currentNode);
+    // Cleanup previous node
+    if (currentNode) {
+      if (currentNode.parentNode) {
+        currentNode.parentNode.removeChild(currentNode);
+      }
+      // Dispose child component's owner
+      disposeNode(currentNode);
       currentNode = null;
-    }
-    if (currentDispose) {
-      currentDispose();
-      currentDispose = undefined;
     }
 
     // Render appropriate branch
@@ -78,26 +78,21 @@ export function Show<T>(props: ShowProps<T>): Node {
     // Insert into DOM
     if (currentNode && marker.parentNode) {
       marker.parentNode.insertBefore(currentNode, marker);
-
-      // Store dispose if available
-      if ((currentNode as any)._dispose) {
-        currentDispose = (currentNode as any)._dispose;
-      }
     }
 
     return undefined;
   });
 
-  // Cleanup
-  (marker as any)._dispose = () => {
+  // Register cleanup via owner system
+  onCleanup(() => {
     dispose();
-    if (currentNode?.parentNode) {
-      currentNode.parentNode.removeChild(currentNode);
+    if (currentNode) {
+      if (currentNode.parentNode) {
+        currentNode.parentNode.removeChild(currentNode);
+      }
+      disposeNode(currentNode);
     }
-    if (currentDispose) {
-      currentDispose();
-    }
-  };
+  });
 
   return marker;
 }

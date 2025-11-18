@@ -9,6 +9,8 @@
  * - Maintains reactive context
  */
 
+import { onCleanup, disposeNode } from '../lifecycle.js';
+
 interface PortalProps {
   mount?: Element;
   children: Node;
@@ -33,12 +35,13 @@ export function Portal(props: PortalProps): Node {
     mount.appendChild(children);
   }
 
-  // Cleanup on dispose
-  (marker as any)._dispose = () => {
+  // Register cleanup via owner system
+  onCleanup(() => {
     if (children instanceof Node && children.parentNode === mount) {
       mount.removeChild(children);
+      disposeNode(children);
     }
-  };
+  });
 
   return marker;
 }

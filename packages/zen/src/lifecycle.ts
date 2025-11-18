@@ -11,10 +11,12 @@ type CleanupFunction = () => void;
 
 /**
  * Owner represents a component's lifecycle context
- * Tracks cleanups to run when component is disposed
+ * Forms a tree structure for hierarchical cleanup
  */
 type Owner = {
   cleanups: CleanupFunction[];
+  children: Owner[];
+  parent: Owner | null;
   disposed: boolean;
 };
 
@@ -52,13 +54,16 @@ const nodeOwners = new WeakMap<Node, Owner>();
  * ```
  */
 export function onMount(callback: () => undefined | CleanupFunction): void {
+  // Capture owner synchronously (before queueMicrotask)
+  const owner = currentOwner;
+
   // Use queueMicrotask to ensure DOM is inserted
   queueMicrotask(() => {
     const cleanup = callback();
 
-    // Track cleanup function in current owner
-    if (typeof cleanup === 'function' && currentOwner && !currentOwner.disposed) {
-      currentOwner.cleanups.push(cleanup);
+    // Track cleanup function in captured owner
+    if (typeof cleanup === 'function' && owner && !owner.disposed) {
+      owner.cleanups.push(cleanup);
     }
   });
 }
@@ -133,12 +138,22 @@ export function createEffect(effectFn: () => undefined | CleanupFunction): void 
 /**
  * Create a new owner context for a component
  * Owner tracks all cleanups registered during component rendering
+ * Establishes parent-child relationship for hierarchical disposal
  */
 export function createOwner(): Owner {
-  return {
+  const owner: Owner = {
     cleanups: [],
+    children: [],
+    parent: currentOwner,
     disposed: false,
   };
+
+  // Register as child of current owner
+  if (currentOwner) {
+    currentOwner.children.push(owner);
+  }
+
+  return owner;
 }
 
 /**
@@ -158,6 +173,7 @@ export function getOwner(): Owner | null {
 
 /**
  * Dispose an owner, running all registered cleanups
+ * Recursively disposes all children first (tree disposal)
  * Called when a component is removed from the DOM
  */
 export function disposeOwner(owner: Owner): void {
@@ -165,16 +181,20 @@ export function disposeOwner(owner: Owner): void {
 
   owner.disposed = true;
 
+  // Dispose all children first (depth-first)
+  for (const child of owner.children) {
+    disposeOwner(child);
+  }
+
   // Run all cleanups in reverse order (LIFO)
   for (let i = owner.cleanups.length - 1; i >= 0; i--) {
     try {
       owner.cleanups[i]();
-    } catch (error) {
-      console.error('Error in cleanup function:', error);
-    }
+    } catch (error) {}
   }
 
   owner.cleanups = [];
+  owner.children = [];
 }
 
 /**

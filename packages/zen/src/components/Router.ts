@@ -10,6 +10,7 @@
  */
 
 import { computed, effect, signal, untrack } from '@zen/signal';
+import { onCleanup, disposeNode } from '../lifecycle.js';
 
 // Current route (lazy initialization for SSR/test compatibility)
 export const currentRoute = signal(
@@ -54,7 +55,6 @@ export function Router(props: RouterProps): Node {
 
   const marker = document.createComment('router');
   let currentNode: Node | null = null;
-  let currentDispose: (() => void) | undefined;
   let effectDispose: (() => void) | undefined;
 
   // Wait for marker to be in DOM before setting up effect
@@ -66,13 +66,12 @@ export function Router(props: RouterProps): Node {
       const route = routes.find((r) => r.path === path) || null;
 
       // Cleanup previous
-      if (currentNode?.parentNode) {
-        currentNode.parentNode.removeChild(currentNode);
+      if (currentNode) {
+        if (currentNode.parentNode) {
+          currentNode.parentNode.removeChild(currentNode);
+        }
+        disposeNode(currentNode);
         currentNode = null;
-      }
-      if (currentDispose) {
-        currentDispose();
-        currentDispose = undefined;
       }
 
       // Render new route
@@ -89,29 +88,24 @@ export function Router(props: RouterProps): Node {
       // Insert into DOM
       if (currentNode && marker.parentNode) {
         marker.parentNode.insertBefore(currentNode, marker);
-
-        if ((currentNode as any)._dispose) {
-          currentDispose = (currentNode as any)._dispose;
-        }
-      } else {
       }
 
       return undefined;
     });
   });
 
-  // Cleanup
-  (marker as any)._dispose = () => {
+  // Register cleanup via owner system
+  onCleanup(() => {
     if (effectDispose) {
       effectDispose();
     }
-    if (currentNode?.parentNode) {
-      currentNode.parentNode.removeChild(currentNode);
+    if (currentNode) {
+      if (currentNode.parentNode) {
+        currentNode.parentNode.removeChild(currentNode);
+      }
+      disposeNode(currentNode);
     }
-    if (currentDispose) {
-      currentDispose();
-    }
-  };
+  });
 
   return marker;
 }

@@ -11,6 +11,7 @@
 
 import { effect, untrack } from '@zen/signal';
 import type { AnyZen } from '@zen/signal';
+import { onCleanup, disposeNode } from '../lifecycle.js';
 
 interface SwitchProps {
   fallback?: Node | (() => Node);
@@ -56,18 +57,16 @@ export function Switch(props: SwitchProps): Node {
 
   // Track current node
   let currentNode: Node | null = null;
-  let currentDispose: (() => void) | undefined;
 
   // Effect to evaluate conditions
   const dispose = effect(() => {
     // Cleanup previous
-    if (currentNode?.parentNode) {
-      currentNode.parentNode.removeChild(currentNode);
+    if (currentNode) {
+      if (currentNode.parentNode) {
+        currentNode.parentNode.removeChild(currentNode);
+      }
+      disposeNode(currentNode);
       currentNode = null;
-    }
-    if (currentDispose) {
-      currentDispose();
-      currentDispose = undefined;
     }
 
     // Find first matching branch
@@ -107,25 +106,21 @@ export function Switch(props: SwitchProps): Node {
     // Insert into DOM
     if (currentNode && marker.parentNode) {
       marker.parentNode.insertBefore(currentNode, marker);
-
-      if ((currentNode as any)._dispose) {
-        currentDispose = (currentNode as any)._dispose;
-      }
     }
 
     return undefined;
   });
 
-  // Cleanup
-  (marker as any)._dispose = () => {
+  // Register cleanup via owner system
+  onCleanup(() => {
     dispose();
-    if (currentNode?.parentNode) {
-      currentNode.parentNode.removeChild(currentNode);
+    if (currentNode) {
+      if (currentNode.parentNode) {
+        currentNode.parentNode.removeChild(currentNode);
+      }
+      disposeNode(currentNode);
     }
-    if (currentDispose) {
-      currentDispose();
-    }
-  };
+  });
 
   return marker;
 }

@@ -33,19 +33,18 @@ const EFFECT_PURE = 0;
 const EFFECT_USER = 2;
 
 // ============================================================================
-// GLOBALS (from Solid.js pattern)
+// GLOBALS
 // ============================================================================
 
 let currentObserver: Computation<any> | null = null;
-let currentOwner: Owner | null = null;
 let batchDepth = 0;
-let clock = 0; // Global clock (Solid.js uses this instead of per-node epoch)
+let clock = 0; // Global clock for time-based change detection
 
 const pendingEffects: Computation<any>[] = [];
 let pendingCount = 0;
 let isFlushScheduled = false;
 
-// OPTIMIZATION: Queue-based notification for massive fanouts (Solid.js pattern)
+// OPTIMIZATION: Queue-based notification for massive fanouts
 const pendingUpdates: ObserverType[] = [];
 let pendingUpdateCount = 0;
 
@@ -64,12 +63,6 @@ interface ObserverType {
   _time: number;
   _state: number;
   _notify(state: number): void;
-}
-
-interface Owner {
-  _parent: Owner | null;
-  _context: Record<symbol, any> | null;
-  _disposal: (() => void)[] | null;
 }
 
 // ============================================================================
@@ -127,18 +120,6 @@ function flushEffects() {
   if (error) throw error;
 }
 
-// ============================================================================
-// OWNER SYSTEM
-// ============================================================================
-
-function disposeOwner(owner: Owner) {
-  if (owner._disposal) {
-    for (let i = owner._disposal.length - 1; i >= 0; i--) {
-      owner._disposal[i]?.();
-    }
-    owner._disposal = null;
-  }
-}
 
 // ============================================================================
 // DEPENDENCY TRACKING (Solid.js incremental algorithm)
@@ -220,11 +201,9 @@ function runUpdate(computation: Computation<any>): void {
   }
 
   // Save previous context
-  const prevOwner = currentOwner;
   const prevObserver = currentObserver;
 
   // Set new context
-  currentOwner = computation;
   currentObserver = computation;
   computation._trackingSources = null;
   computation._trackingIndex = 0;
@@ -288,7 +267,6 @@ function runUpdate(computation: Computation<any>): void {
   } finally {
     // Restore context
     currentObserver = prevObserver;
-    currentOwner = prevOwner;
   }
 }
 
@@ -391,18 +369,14 @@ function removeSourceObservers(observer: ObserverType, fromIndex: number) {
 }
 
 // ============================================================================
-// COMPUTATION (complete Solid.js algorithm)
+// COMPUTATION
 // ============================================================================
 
-class Computation<T> implements SourceType, ObserverType, Owner {
+class Computation<T> implements SourceType, ObserverType {
   _sources: SourceType[] | null = null;
   _observers: ObserverType[] | null = null;
   _state = STATE_DIRTY;
   _time = -1;
-
-  _parent: Owner | null;
-  _context: Record<symbol, any> | null;
-  _disposal: (() => void)[] | null = null;
 
   _fn: () => T;
   _value: T;
@@ -423,8 +397,6 @@ class Computation<T> implements SourceType, ObserverType, Owner {
     this._fn = fn;
     this._value = initialValue;
     this._effectType = effectType;
-    this._parent = currentOwner;
-    this._context = currentOwner?._context ?? null;
   }
 
   read(): T {
@@ -498,8 +470,6 @@ class Computation<T> implements SourceType, ObserverType, Owner {
       this._cleanup();
       this._cleanup = null;
     }
-
-    disposeOwner(this);
 
     if (this._pending) {
       this._pending = false;

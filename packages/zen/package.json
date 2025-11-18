@@ -1,7 +1,7 @@
 {
   "name": "@sylphx/zen",
-  "version": "3.45.2",
-  "description": "Zen state management library - extreme minimalism, extreme speed. V3.42: Chunked batching for massive fanouts (500+ observers).",
+  "version": "3.46.0",
+  "description": "Zen state management library - extreme minimalism, extreme speed. V3.46: Removed unused Owner system (~250 bytes smaller).",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

@@ -21,29 +21,37 @@ export function Demo() {
   };
 
   return (
-    <section class="demo">
-      <div class="container">
-        <h2 class="section-title">Live Demos</h2>
+    <section class="py-16 px-0 bg-bg-light">
+      <div class="max-w-screen-xl mx-auto px-6">
+        <h2 class="text-5xl font-bold text-center mb-16 text-text">Live Demos</h2>
 
-        <div class="demo-grid">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Counter Demo */}
-          <div class="demo-card">
-            <h3 class="demo-title">Counter</h3>
-            <div class="demo-content">
-              <div class="demo-display">
-                <div class="demo-value">{count}</div>
-                <div class="demo-computed">Doubled: {doubled}</div>
+          <div class="bg-bg border border-border rounded-zen p-8">
+            <h3 class="text-2xl font-semibold mb-6 text-text">Counter</h3>
+            <div class="mb-6">
+              <div class="text-center mb-8">
+                <div class="text-6xl font-bold text-primary mb-4">{count}</div>
+                <div class="text-xl text-text-muted">Doubled: {doubled}</div>
               </div>
-              <div class="demo-actions">
-                <button type="button" class="btn" onClick={() => count.value--}>
+              <div class="flex gap-3 justify-center">
+                <button
+                  type="button"
+                  class="px-6 py-2 bg-bg-lighter hover:bg-bg border border-border text-text font-medium rounded-zen transition-colors"
+                  onClick={() => count.value--}
+                >
                   -
                 </button>
-                <button type="button" class="btn" onClick={() => count.value++}>
+                <button
+                  type="button"
+                  class="px-6 py-2 bg-bg-lighter hover:bg-bg border border-border text-text font-medium rounded-zen transition-colors"
+                  onClick={() => count.value++}
+                >
                   +
                 </button>
                 <button
                   type="button"
-                  class="btn btn-secondary"
+                  class="px-6 py-2 bg-secondary hover:bg-secondary/80 text-white font-medium rounded-zen transition-colors"
                   onClick={() => {
                     count.value = 0;
                   }}
@@ -52,7 +60,7 @@ export function Demo() {
                 </button>
               </div>
             </div>
-            <pre class="demo-code">{`const count = signal(0);
+            <pre class="bg-bg-lighter border border-border rounded-zen p-4 text-sm text-text-muted overflow-x-auto font-mono">{`const count = signal(0);
 const doubled = computed(() => count.value * 2);
 
 <div>{count}</div>
@@ -61,10 +69,10 @@ const doubled = computed(() => count.value * 2);
           </div>
 
           {/* Todo Demo */}
-          <div class="demo-card">
-            <h3 class="demo-title">Todo List</h3>
-            <div class="demo-content">
-              <div class="todo-input">
+          <div class="bg-bg border border-border rounded-zen p-8">
+            <h3 class="text-2xl font-semibold mb-6 text-text">Todo List</h3>
+            <div class="mb-6">
+              <div class="flex gap-2 mb-4">
                 <input
                   type="text"
                   value={newTodo.value}
@@ -73,18 +81,26 @@ const doubled = computed(() => count.value * 2);
                   }}
                   onKeyPress={(e) => e.key === 'Enter' && addTodo()}
                   placeholder="Add a todo..."
-                  class="input"
+                  class="flex-1 px-4 py-2 bg-bg-lighter border border-border rounded-zen text-text placeholder-text-muted focus:outline-none focus:border-primary transition-colors"
                 />
-                <button type="button" onClick={addTodo} class="btn btn-primary">
+                <button
+                  type="button"
+                  onClick={addTodo}
+                  class="px-6 py-2 bg-primary hover:bg-primary-dark text-white font-medium rounded-zen transition-colors"
+                >
                   Add
                 </button>
               </div>
-              <ul class="todo-list">
+              <ul class="space-y-2">
                 <For each={todos}>
                   {(todo, index) => (
-                    <li class="todo-item">
-                      <span>{todo}</span>
-                      <button type="button" onClick={() => removeTodo(index())} class="btn-icon">
+                    <li class="flex items-center justify-between p-3 bg-bg-lighter border border-border rounded-zen">
+                      <span class="text-text">{todo}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeTodo(index())}
+                        class="w-8 h-8 flex items-center justify-center bg-bg hover:bg-border text-text-muted hover:text-text rounded transition-colors text-xl leading-none"
+                      >
                         ×
                       </button>
                     </li>
@@ -92,10 +108,10 @@ const doubled = computed(() => count.value * 2);
                 </For>
               </ul>
               <Show when={todos.value.length === 0}>
-                <div class="todo-empty">No todos yet. Add one above!</div>
+                <div class="text-center text-text-muted py-8">No todos yet. Add one above!</div>
               </Show>
             </div>
-            <pre class="demo-code">{`const todos = signal<string[]>([]);
+            <pre class="bg-bg-lighter border border-border rounded-zen p-4 text-sm text-text-muted overflow-x-auto font-mono">{`const todos = signal<string[]>([]);
 const newTodo = signal('');
 
 const addTodo = () => {

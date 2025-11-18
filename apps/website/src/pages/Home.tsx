@@ -7,7 +7,7 @@ import { Packages } from '../components/Packages.tsx';
 
 export function Home() {
   return (
-    <div class="page-home">
+    <div>
       <Hero />
       <Features />
       <Demo />

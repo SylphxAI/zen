@@ -1,46 +1,57 @@
-import { signal } from '@zen/zen';
-
 export function Hero() {
   return (
-    <section class="hero">
-      <div class="container">
-        <div class="hero-badge">
-          <span class="badge">Ultra-fast</span>
-          <span class="badge">Fine-grained</span>
-          <span class="badge">No VDOM</span>
+    <section class="py-30 px-0 pb-20 text-center bg-gradient-to-b from-bg to-bg-light">
+      <div class="max-w-screen-xl mx-auto px-6">
+        <div class="flex gap-3 justify-center mb-6">
+          <span class="px-4 py-1.5 bg-bg-lighter border border-border rounded-full text-sm text-primary">
+            Ultra-fast
+          </span>
+          <span class="px-4 py-1.5 bg-bg-lighter border border-border rounded-full text-sm text-primary">
+            Fine-grained
+          </span>
+          <span class="px-4 py-1.5 bg-bg-lighter border border-border rounded-full text-sm text-primary">
+            No VDOM
+          </span>
         </div>
 
-        <h1 class="hero-title">Zen Ecosystem</h1>
+        <h1 class="text-7xl font-extrabold mb-6 bg-gradient-to-br from-primary to-secondary bg-clip-text text-transparent">
+          Zen Ecosystem
+        </h1>
 
-        <p class="hero-subtitle">
-          <strong>@zen/signal</strong> - Ultra-fast reactive primitives
+        <p class="text-2xl text-text-muted mb-12 leading-relaxed">
+          <strong class="text-text font-semibold">@zen/signal</strong> - Ultra-fast reactive
+          primitives
           <br />
-          <strong>@zen/zen</strong> - Fine-grained framework with no virtual DOM
+          <strong class="text-text font-semibold">@zen/zen</strong> - Fine-grained framework with
+          no virtual DOM
         </p>
 
-        <div class="hero-stats">
-          <div class="stat">
-            <div class="stat-value">1.75 KB</div>
-            <div class="stat-label">Signal Core</div>
+        <div class="flex gap-12 justify-center mb-12">
+          <div class="text-center">
+            <div class="text-4xl font-bold text-primary mb-2">1.75 KB</div>
+            <div class="text-sm text-text-muted uppercase tracking-wider">Signal Core</div>
           </div>
-          <div class="stat">
-            <div class="stat-value">&lt;5 KB</div>
-            <div class="stat-label">Framework</div>
+          <div class="text-center">
+            <div class="text-4xl font-bold text-primary mb-2">&lt;5 KB</div>
+            <div class="text-sm text-text-muted uppercase tracking-wider">Framework</div>
           </div>
-          <div class="stat">
-            <div class="stat-value">150M+</div>
-            <div class="stat-label">ops/sec</div>
+          <div class="text-center">
+            <div class="text-4xl font-bold text-primary mb-2">150M+</div>
+            <div class="text-sm text-text-muted uppercase tracking-wider">ops/sec</div>
           </div>
         </div>
 
-        <div class="hero-actions">
-          <a href="#packages" class="btn btn-primary">
+        <div class="flex gap-4 justify-center">
+          <a
+            href="#packages"
+            class="px-8 py-3 bg-primary hover:bg-primary-dark text-white font-medium rounded-zen shadow-zen transition-colors duration-200"
+          >
             Explore Packages
           </a>
           <a
             href="https://github.com/SylphxAI/zen"
             target="_blank"
-            class="btn btn-secondary"
+            class="px-8 py-3 bg-bg-lighter hover:bg-bg border border-border text-text font-medium rounded-zen transition-colors duration-200"
             rel="noreferrer"
           >
             GitHub

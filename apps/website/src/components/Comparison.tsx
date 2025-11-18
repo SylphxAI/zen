@@ -15,31 +15,50 @@ export function Comparison() {
   ];
 
   return (
-    <section class="comparison">
-      <div class="container">
-        <h2 class="section-title">Framework Comparison</h2>
-        <p class="section-description">See how Zen compares to other popular frameworks</p>
-        <div class="comparison-table-wrapper">
-          <table class="comparison-table">
+    <section class="py-16 px-0 bg-bg-light">
+      <div class="max-w-screen-xl mx-auto px-6">
+        <h2 class="text-5xl font-bold text-center mb-4 text-text">Framework Comparison</h2>
+        <p class="text-xl text-center text-text-muted mb-12">
+          See how Zen compares to other popular frameworks
+        </p>
+        <div class="overflow-x-auto">
+          <table class="w-full border-collapse bg-bg border border-border rounded-zen overflow-hidden">
             <thead>
-              <tr>
-                <th>Framework</th>
-                <th>Bundle Size</th>
-                <th>Performance</th>
-                <th>Virtual DOM</th>
-                <th>Reactivity</th>
+              <tr class="bg-bg-lighter">
+                <th class="text-left p-4 text-text font-semibold border-b border-border">
+                  Framework
+                </th>
+                <th class="text-left p-4 text-text font-semibold border-b border-border">
+                  Bundle Size
+                </th>
+                <th class="text-left p-4 text-text font-semibold border-b border-border">
+                  Performance
+                </th>
+                <th class="text-left p-4 text-text font-semibold border-b border-border">
+                  Virtual DOM
+                </th>
+                <th class="text-left p-4 text-text font-semibold border-b border-border">
+                  Reactivity
+                </th>
               </tr>
             </thead>
             <tbody>
               {frameworks.map((fw) => (
-                <tr key={fw.name} class={fw.highlight ? 'highlight' : ''}>
-                  <td>
-                    <strong>{fw.name}</strong>
+                <tr
+                  key={fw.name}
+                  class={
+                    fw.highlight
+                      ? 'bg-primary/10 border-l-4 border-l-primary'
+                      : 'hover:bg-bg-lighter transition-colors'
+                  }
+                >
+                  <td class="p-4 border-b border-border">
+                    <strong class="text-text">{fw.name}</strong>
                   </td>
-                  <td>{fw.size}</td>
-                  <td>{fw.perf}</td>
-                  <td>{fw.vdom}</td>
-                  <td>{fw.reactivity}</td>
+                  <td class="p-4 border-b border-border text-text-muted">{fw.size}</td>
+                  <td class="p-4 border-b border-border text-text-muted">{fw.perf}</td>
+                  <td class="p-4 border-b border-border text-text-muted">{fw.vdom}</td>
+                  <td class="p-4 border-b border-border text-text-muted">{fw.reactivity}</td>
                 </tr>
               ))}
             </tbody>

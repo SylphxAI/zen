@@ -103,38 +103,31 @@ if (preview) {
   };
 
   return (
-    <div class="page-playground">
-      <div class="playground-container">
-        <div class="playground-header">
-          <h1>Interactive Playground</h1>
-          <button type="button" onClick={runCode} class="btn btn-primary">
-            ▶ Run Code
+    <div class="min-h-screen bg-bg py-8">
+      <div class="max-w-screen-2xl mx-auto px-6">
+        <div class="flex items-center justify-between mb-8">
+          <h1 class="text-4xl font-bold text-text">Interactive Playground</h1>
+          <button
+            type="button"
+            onClick={runCode}
+            class="px-6 py-3 bg-primary hover:bg-primary-dark text-white font-medium rounded-zen shadow-zen transition-colors flex items-center gap-2"
+          >
+            <span>▶</span>
+            Run Code
           </button>
         </div>
 
         <Show when={error.value !== ''}>
-          <div
-            class="playground-error"
-            style={{
-              margin: '1rem 0',
-              padding: '1rem',
-              background: '#fee',
-              border: '1px solid #fcc',
-              borderRadius: '4px',
-              color: '#c33',
-              fontFamily: 'monospace',
-              whiteSpace: 'pre-wrap',
-            }}
-          >
+          <div class="my-4 p-4 bg-red-900/20 border border-red-500/50 rounded-zen text-red-400 font-mono whitespace-pre-wrap">
             <strong>Error:</strong> {error}
           </div>
         </Show>
 
-        <div class="playground-layout">
-          <div class="playground-editor">
-            <div class="editor-header">
-              <span>Code Editor</span>
-              <select class="editor-select">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div class="flex flex-col">
+            <div class="flex items-center justify-between bg-bg-lighter border border-border rounded-t-zen px-4 py-2">
+              <span class="text-text font-medium">Code Editor</span>
+              <select class="px-3 py-1 bg-bg border border-border rounded text-text text-sm focus:outline-none focus:border-primary">
                 <option>Counter</option>
                 <option>Todo App</option>
                 <option>Form</option>
@@ -142,7 +135,7 @@ if (preview) {
               </select>
             </div>
             <textarea
-              class="code-editor"
+              class="flex-1 min-h-[500px] p-4 bg-bg-lighter border border-t-0 border-border rounded-b-zen text-text font-mono text-sm resize-none focus:outline-none focus:border-primary"
               value={code.value}
               onInput={(e) => {
                 code.value = (e.target as HTMLTextAreaElement).value;
@@ -151,12 +144,12 @@ if (preview) {
             />
           </div>
 
-          <div class="playground-preview">
-            <div class="preview-header">
-              <span>Preview</span>
+          <div class="flex flex-col">
+            <div class="flex items-center justify-between bg-bg-lighter border border-border rounded-t-zen px-4 py-2">
+              <span class="text-text font-medium">Preview</span>
               <button
                 type="button"
-                class="btn btn-small"
+                class="px-3 py-1 bg-bg hover:bg-border border border-border text-text text-sm rounded transition-colors"
                 onClick={() => {
                   document.getElementById('preview').innerHTML = '';
                 }}
@@ -164,21 +157,37 @@ if (preview) {
                 Clear
               </button>
             </div>
-            <div id="preview" class="preview-content" />
+            <div
+              id="preview"
+              class="flex-1 min-h-[500px] p-4 bg-white border border-t-0 border-border rounded-b-zen overflow-auto"
+            />
           </div>
         </div>
 
-        <div class="playground-info">
-          <h3>💡 Playground Tips</h3>
-          <ul>
-            <li>Write JSX code using Zen's API</li>
-            <li>Click "Run Code" to see your component</li>
-            <li>Try modifying the example to see live updates</li>
-            <li>All Zen features are available: signal, computed, effect, components</li>
+        <div class="bg-bg-light border border-border rounded-zen p-6">
+          <h3 class="text-xl font-semibold text-text mb-4">💡 Playground Tips</h3>
+          <ul class="space-y-2 mb-4 text-text-muted">
+            <li class="flex items-start gap-2">
+              <span class="text-primary">•</span>
+              Write JSX code using Zen's API
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-primary">•</span>
+              Click "Run Code" to see your component
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-primary">•</span>
+              Try modifying the example to see live updates
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-primary">•</span>
+              All Zen features are available: signal, computed, effect, components
+            </li>
           </ul>
-          <p class="note">
-            <strong>Note:</strong> This playground uses Babel Standalone for runtime JSX
-            transpilation. Your code runs directly in the browser with access to all Zen APIs.
+          <p class="text-sm text-text-muted bg-bg border border-border rounded p-3">
+            <strong class="text-text">Note:</strong> This playground uses Babel Standalone for
+            runtime JSX transpilation. Your code runs directly in the browser with access to all Zen
+            APIs.
           </p>
         </div>
       </div>

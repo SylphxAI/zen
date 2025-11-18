@@ -32,53 +32,64 @@ export function Packages() {
   ];
 
   return (
-    <section id="packages" class="packages">
-      <div class="container">
-        <h2 class="section-title">Packages</h2>
+    <section id="packages" class="py-16 px-0 bg-bg">
+      <div class="max-w-screen-xl mx-auto px-6">
+        <h2 class="text-5xl font-bold text-center mb-16 text-text">Packages</h2>
 
-        <div class="packages-section">
-          <h3 class="packages-subtitle">Core Packages</h3>
-          <div class="packages-grid-large">
+        <div class="mb-16">
+          <h3 class="text-3xl font-semibold mb-8 text-text">Core Packages</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             <For each={corePackages}>
               {(pkg) => (
-                <div class="package-card-large">
-                  <div class="package-header">
-                    <h4 class="package-name">{pkg.name}</h4>
-                    <span class="package-size">{pkg.size}</span>
+                <div class="bg-bg-light border border-border rounded-zen p-8 hover:border-primary transition-colors">
+                  <div class="flex items-start justify-between mb-4">
+                    <h4 class="text-xl font-semibold text-primary">{pkg.name}</h4>
+                    <span class="px-3 py-1 bg-bg border border-border rounded-full text-xs text-primary">
+                      {pkg.size}
+                    </span>
                   </div>
-                  <p class="package-description">{pkg.description}</p>
-                  <ul class="package-features">
-                    <For each={pkg.features}>{(feature) => <li>{feature}</li>}</For>
+                  <p class="text-text-muted mb-4">{pkg.description}</p>
+                  <ul class="space-y-2 mb-6">
+                    <For each={pkg.features}>
+                      {(feature) => (
+                        <li class="text-text text-sm flex items-center gap-2">
+                          <span class="text-success">✓</span>
+                          {feature}
+                        </li>
+                      )}
+                    </For>
                   </ul>
-                  <pre class="package-install">npm install {pkg.name}</pre>
+                  <pre class="bg-bg border border-border rounded-zen p-3 text-sm text-primary font-mono overflow-x-auto">
+                    npm install {pkg.name}
+                  </pre>
                 </div>
               )}
             </For>
           </div>
         </div>
 
-        <div class="packages-section">
-          <h3 class="packages-subtitle">Framework Integrations</h3>
-          <div class="packages-grid">
+        <div class="mb-16">
+          <h3 class="text-3xl font-semibold mb-8 text-text">Framework Integrations</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <For each={integrations}>
               {(pkg) => (
-                <div class="package-card">
-                  <h4 class="package-name">{pkg.name}</h4>
-                  <p class="package-description">{pkg.desc}</p>
+                <div class="bg-bg-light border border-border rounded-zen p-6 hover:border-primary transition-colors">
+                  <h4 class="text-lg font-semibold text-primary mb-2">{pkg.name}</h4>
+                  <p class="text-text-muted text-sm">{pkg.desc}</p>
                 </div>
               )}
             </For>
           </div>
         </div>
 
-        <div class="packages-section">
-          <h3 class="packages-subtitle">Utilities</h3>
-          <div class="packages-grid">
+        <div>
+          <h3 class="text-3xl font-semibold mb-8 text-text">Utilities</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <For each={utilities}>
               {(pkg) => (
-                <div class="package-card">
-                  <h4 class="package-name">{pkg.name}</h4>
-                  <p class="package-description">{pkg.desc}</p>
+                <div class="bg-bg-light border border-border rounded-zen p-6 hover:border-primary transition-colors">
+                  <h4 class="text-lg font-semibold text-primary mb-2">{pkg.name}</h4>
+                  <p class="text-text-muted text-sm">{pkg.desc}</p>
                 </div>
               )}
             </For>

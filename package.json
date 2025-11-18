@@ -58,7 +58,7 @@
     "rimraf": "^6.1.0",
     "size-limit": "^11.2.0",
     "solid-js": "^1.9.10",
-    "tailwindcss": "^4.1.17",
+    "tailwindcss": "^3",
     "terser": "^5.44.1",
     "tsup": "^8.5.1",
     "turbo": "^2.6.1",

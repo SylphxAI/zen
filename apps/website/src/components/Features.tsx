@@ -35,16 +35,16 @@ export function Features() {
   ];
 
   return (
-    <section class="features">
-      <div class="container">
-        <h2 class="section-title">Why Zen?</h2>
-        <div class="features-grid">
+    <section class="py-16 px-0 bg-bg">
+      <div class="max-w-screen-xl mx-auto px-6">
+        <h2 class="text-5xl font-bold text-center mb-16 text-text">Why Zen?</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           <For each={features}>
             {(feature) => (
-              <div class="feature-card">
-                <div class="feature-icon">{feature.icon}</div>
-                <h3 class="feature-title">{feature.title}</h3>
-                <p class="feature-description">{feature.description}</p>
+              <div class="bg-bg-light border border-border rounded-zen p-8 hover:border-primary transition-colors">
+                <div class="text-5xl mb-4">{feature.icon}</div>
+                <h3 class="text-xl font-semibold mb-3 text-text">{feature.title}</h3>
+                <p class="text-text-muted leading-relaxed">{feature.description}</p>
               </div>
             )}
           </For>

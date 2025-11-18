@@ -13,7 +13,6 @@ export {
   batch,
   subscribe,
   effect,
-  onCleanup,
   untrack,
   peek,
 } from './zen';

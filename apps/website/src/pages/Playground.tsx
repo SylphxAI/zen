@@ -2,12 +2,16 @@ import * as Babel from '@babel/standalone';
 import * as ZenSignal from '@zen/signal';
 import { Show, signal } from '@zen/zen';
 import * as Zen from '@zen/zen';
-import { jsx, Fragment } from '@zen/zen/jsx-runtime';
+import { Fragment, jsx } from '@zen/zen/jsx-runtime';
 
 export function Playground() {
-  const code = signal(`// Create reactive state
+  const code = signal(`console.log('Code is running!');
+
+// Create reactive state
 const count = signal(0);
 const doubled = computed(() => count.value * 2);
+
+console.log('Signals created:', count, doubled);
 
 // Create component
 const app = (
@@ -22,10 +26,19 @@ const app = (
   </div>
 );
 
+console.log('Component created:', app);
+
 // Render to preview
 const preview = document.getElementById('preview');
-preview.innerHTML = '';
-preview.appendChild(app);`);
+console.log('Preview element:', preview);
+
+if (preview) {
+  preview.innerHTML = '';
+  preview.appendChild(app);
+  console.log('Component appended to preview');
+} else {
+  console.error('Preview element not found!');
+}`);
 
   const error = signal('');
 
@@ -56,6 +69,8 @@ preview.appendChild(app);`);
         filename: 'playground.tsx',
       });
 
+      console.log('Transpiled code:', transformed.code);
+
       // Create execution context with Zen API
       const zenContext = {
         ...Zen,
@@ -66,10 +81,15 @@ preview.appendChild(app);`);
         console,
       };
 
+      console.log('Execution context keys:', Object.keys(zenContext));
+
       // Execute transpiled code
       const fn = new Function(...Object.keys(zenContext), transformed.code);
       fn(...Object.values(zenContext));
+
+      console.log('Code executed successfully');
     } catch (e: unknown) {
+      console.error('Execution error:', e);
       error.value = (e as Error).message || 'Unknown error';
       const previewEl = document.getElementById('preview');
       if (previewEl) {

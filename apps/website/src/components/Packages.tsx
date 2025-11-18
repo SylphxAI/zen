@@ -48,9 +48,7 @@ export function Packages() {
                   </div>
                   <p class="package-description">{pkg.description}</p>
                   <ul class="package-features">
-                    <For each={pkg.features}>
-                      {(feature) => <li>{feature}</li>}
-                    </For>
+                    <For each={pkg.features}>{(feature) => <li>{feature}</li>}</For>
                   </ul>
                   <pre class="package-install">npm install {pkg.name}</pre>
                 </div>

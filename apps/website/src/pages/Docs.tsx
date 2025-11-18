@@ -1,4 +1,4 @@
-import { signal, Show } from '@zen/zen';
+import { Show, signal } from '@zen/zen';
 
 export function Docs() {
   const activeSection = signal('intro');
@@ -20,8 +20,10 @@ export function Docs() {
           <nav class="docs-nav">
             {sections.map((section) => (
               <button
-                class={activeSection.value === section.id ? 'docs-nav-item active' : 'docs-nav-item'}
-                onClick={() => activeSection.value = section.id}
+                class={
+                  activeSection.value === section.id ? 'docs-nav-item active' : 'docs-nav-item'
+                }
+                onClick={() => (activeSection.value = section.id)}
               >
                 <span class="docs-nav-icon">{section.icon}</span>
                 {section.title}
@@ -36,16 +38,27 @@ export function Docs() {
               <h1>Introduction to Zen Ecosystem</h1>
               <p class="lead">
                 Zen is a modern reactive ecosystem consisting of two core packages:
-                <strong>@zen/signal</strong> for reactive primitives and <strong>@zen/zen</strong> for the fine-grained framework.
+                <strong>@zen/signal</strong> for reactive primitives and <strong>@zen/zen</strong>{' '}
+                for the fine-grained framework.
               </p>
 
               <h2>Why Zen?</h2>
               <ul>
-                <li><strong>Ultra-fast</strong>: 150M+ signal updates per second</li>
-                <li><strong>Tiny</strong>: Signal core is only 1.75 KB, full framework &lt;5 KB</li>
-                <li><strong>No Virtual DOM</strong>: Direct DOM updates for maximum performance</li>
-                <li><strong>Fine-grained</strong>: Only changed nodes update, not entire components</li>
-                <li><strong>Auto-tracking</strong>: Dependencies tracked automatically</li>
+                <li>
+                  <strong>Ultra-fast</strong>: 150M+ signal updates per second
+                </li>
+                <li>
+                  <strong>Tiny</strong>: Signal core is only 1.75 KB, full framework &lt;5 KB
+                </li>
+                <li>
+                  <strong>No Virtual DOM</strong>: Direct DOM updates for maximum performance
+                </li>
+                <li>
+                  <strong>Fine-grained</strong>: Only changed nodes update, not entire components
+                </li>
+                <li>
+                  <strong>Auto-tracking</strong>: Dependencies tracked automatically
+                </li>
               </ul>
 
               <h2>Architecture</h2>
@@ -64,9 +77,10 @@ export function Docs() {
 
               <h2>Philosophy</h2>
               <p>
-                Zen is built on the principle of <strong>extreme minimalism meets maximum power</strong>.
-                Every feature is carefully designed to provide the best developer experience
-                while maintaining the smallest possible bundle size and fastest possible performance.
+                Zen is built on the principle of{' '}
+                <strong>extreme minimalism meets maximum power</strong>. Every feature is carefully
+                designed to provide the best developer experience while maintaining the smallest
+                possible bundle size and fastest possible performance.
               </p>
             </article>
           </Show>
@@ -75,8 +89,8 @@ export function Docs() {
             <article>
               <h1>@zen/signal</h1>
               <p class="lead">
-                Ultra-fast reactive primitives with automatic dependency tracking.
-                The foundation of the Zen ecosystem.
+                Ultra-fast reactive primitives with automatic dependency tracking. The foundation of
+                the Zen ecosystem.
               </p>
 
               <h2>signal()</h2>
@@ -146,8 +160,8 @@ count.value++; // Effect won't run`}</pre>
             <article>
               <h1>@zen/zen Framework</h1>
               <p class="lead">
-                Fine-grained reactive framework with no virtual DOM.
-                Components render once, signals handle all updates.
+                Fine-grained reactive framework with no virtual DOM. Components render once, signals
+                handle all updates.
               </p>
 
               <h2>JSX Setup</h2>
@@ -185,10 +199,18 @@ render(() => <Counter />, document.getElementById('app'));`}</pre>
 
               <h2>How It Works</h2>
               <ul>
-                <li><strong>Component runs once</strong>: Function executes only during initial render</li>
-                <li><strong>Signals auto-update</strong>: DOM nodes update when signal values change</li>
-                <li><strong>No re-renders</strong>: No virtual DOM diffing, no component re-execution</li>
-                <li><strong>Fine-grained</strong>: Only exact DOM nodes that need updating are touched</li>
+                <li>
+                  <strong>Component runs once</strong>: Function executes only during initial render
+                </li>
+                <li>
+                  <strong>Signals auto-update</strong>: DOM nodes update when signal values change
+                </li>
+                <li>
+                  <strong>No re-renders</strong>: No virtual DOM diffing, no component re-execution
+                </li>
+                <li>
+                  <strong>Fine-grained</strong>: Only exact DOM nodes that need updating are touched
+                </li>
               </ul>
 
               <h2>Event Handling</h2>
@@ -215,9 +237,7 @@ render(() => <Counter />, document.getElementById('app'));`}</pre>
           <Show when={activeSection.value === 'components'}>
             <article>
               <h1>Built-in Components</h1>
-              <p class="lead">
-                Zen provides powerful components for common patterns.
-              </p>
+              <p class="lead">Zen provides powerful components for common patterns.</p>
 
               <h2>For - List Rendering</h2>
               <p>Optimized keyed list rendering with minimal DOM operations</p>
@@ -312,9 +332,7 @@ const showModal = signal(false);
           <Show when={activeSection.value === 'patterns'}>
             <article>
               <h1>Common Patterns</h1>
-              <p class="lead">
-                Best practices and patterns for building with Zen.
-              </p>
+              <p class="lead">Best practices and patterns for building with Zen.</p>
 
               <h2>Global State</h2>
               <pre class="code-block">{`// store.ts
@@ -426,9 +444,7 @@ const activeCount = computed(() =>
           <Show when={activeSection.value === 'integrations'}>
             <article>
               <h1>Framework Integrations</h1>
-              <p class="lead">
-                Use Zen Signal with your favorite frameworks.
-              </p>
+              <p class="lead">Use Zen Signal with your favorite frameworks.</p>
 
               <h2>React</h2>
               <pre class="code-block">{`import { useZen } from '@zen/signal-react';
@@ -499,11 +515,21 @@ export function Counter() {
 
               <h2>Available Packages</h2>
               <ul>
-                <li><strong>@zen/signal-react</strong> - React hooks integration</li>
-                <li><strong>@zen/signal-vue</strong> - Vue 3 Composition API</li>
-                <li><strong>@zen/signal-svelte</strong> - Svelte stores compatibility</li>
-                <li><strong>@zen/signal-solid</strong> - SolidJS primitives</li>
-                <li><strong>@zen/signal-preact</strong> - Preact signals integration</li>
+                <li>
+                  <strong>@zen/signal-react</strong> - React hooks integration
+                </li>
+                <li>
+                  <strong>@zen/signal-vue</strong> - Vue 3 Composition API
+                </li>
+                <li>
+                  <strong>@zen/signal-svelte</strong> - Svelte stores compatibility
+                </li>
+                <li>
+                  <strong>@zen/signal-solid</strong> - SolidJS primitives
+                </li>
+                <li>
+                  <strong>@zen/signal-preact</strong> - Preact signals integration
+                </li>
               </ul>
             </article>
           </Show>

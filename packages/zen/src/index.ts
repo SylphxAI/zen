@@ -30,5 +30,8 @@ export { Router, Link, navigate, currentRoute } from './components/Router.js';
 // JSX
 export { render, Fragment } from './jsx-runtime.js';
 
+// Lifecycle
+export { onMount, onCleanup, createEffect } from './lifecycle.js';
+
 // Types
 export type { Signal, ComputedZen as Computed } from '@zen/signal';

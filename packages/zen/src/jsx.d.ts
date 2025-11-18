@@ -2,7 +2,7 @@
  * JSX Type Definitions for ZenJS
  */
 
-import type { Signal, ComputedZen } from '@zen/signal';
+import type { ComputedZen, Signal } from '@zen/signal';
 
 export namespace JSX {
   export type Element = Node;

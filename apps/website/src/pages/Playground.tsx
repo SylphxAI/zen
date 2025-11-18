@@ -27,11 +27,10 @@ render(() => (
         previewEl.innerHTML = '';
         // In a real playground, you'd transpile and execute the code
         // For now, just show a message
-        previewEl.innerHTML = '<div style="padding: 20px; color: #10b981;">Code would run here (requires runtime transpilation)</div>';
+        previewEl.innerHTML =
+          '<div style="padding: 20px; color: #10b981;">Code would run here (requires runtime transpilation)</div>';
       }
-    } catch (e) {
-      console.error(e);
-    }
+    } catch (_e) {}
   };
 
   return (
@@ -58,7 +57,7 @@ render(() => (
             <textarea
               class="code-editor"
               value={code.value}
-              onInput={(e) => code.value = (e.target as HTMLTextAreaElement).value}
+              onInput={(e) => (code.value = (e.target as HTMLTextAreaElement).value)}
               spellcheck={false}
             />
           </div>
@@ -66,11 +65,14 @@ render(() => (
           <div class="playground-preview">
             <div class="preview-header">
               <span>Preview</span>
-              <button class="btn btn-small" onClick={() => document.getElementById('preview').innerHTML = ''}>
+              <button
+                class="btn btn-small"
+                onClick={() => (document.getElementById('preview').innerHTML = '')}
+              >
                 Clear
               </button>
             </div>
-            <div id="preview" class="preview-content"></div>
+            <div id="preview" class="preview-content" />
           </div>
         </div>
 

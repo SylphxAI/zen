@@ -15,27 +15,49 @@ export function Footer() {
           <div class="footer-section">
             <h4>Packages</h4>
             <ul class="footer-links">
-              <li><a href="#/docs">@zen/signal</a></li>
-              <li><a href="#/docs">@zen/zen</a></li>
-              <li><a href="#/docs">Integrations</a></li>
-              <li><a href="#/docs">Utilities</a></li>
+              <li>
+                <a href="#/docs">@zen/signal</a>
+              </li>
+              <li>
+                <a href="#/docs">@zen/zen</a>
+              </li>
+              <li>
+                <a href="#/docs">Integrations</a>
+              </li>
+              <li>
+                <a href="#/docs">Utilities</a>
+              </li>
             </ul>
           </div>
           <div class="footer-section">
             <h4>Resources</h4>
             <ul class="footer-links">
-              <li><a href="#/docs">Documentation</a></li>
-              <li><a href="#/examples">Examples</a></li>
-              <li><a href="#/playground">Playground</a></li>
-              <li><a href="https://github.com/SylphxAI/zen">GitHub</a></li>
+              <li>
+                <a href="#/docs">Documentation</a>
+              </li>
+              <li>
+                <a href="#/examples">Examples</a>
+              </li>
+              <li>
+                <a href="#/playground">Playground</a>
+              </li>
+              <li>
+                <a href="https://github.com/SylphxAI/zen">GitHub</a>
+              </li>
             </ul>
           </div>
           <div class="footer-section">
             <h4>Community</h4>
             <ul class="footer-links">
-              <li><a href="https://github.com/SylphxAI/zen/issues">Issues</a></li>
-              <li><a href="https://github.com/SylphxAI/zen/discussions">Discussions</a></li>
-              <li><a href="https://x.com/SylphxAI">Twitter</a></li>
+              <li>
+                <a href="https://github.com/SylphxAI/zen/issues">Issues</a>
+              </li>
+              <li>
+                <a href="https://github.com/SylphxAI/zen/discussions">Discussions</a>
+              </li>
+              <li>
+                <a href="https://x.com/SylphxAI">Twitter</a>
+              </li>
             </ul>
           </div>
         </div>

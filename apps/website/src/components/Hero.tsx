@@ -10,12 +10,11 @@ export function Hero() {
           <span class="badge">No VDOM</span>
         </div>
 
-        <h1 class="hero-title">
-          Zen Ecosystem
-        </h1>
+        <h1 class="hero-title">Zen Ecosystem</h1>
 
         <p class="hero-subtitle">
-          <strong>@zen/signal</strong> - Ultra-fast reactive primitives<br/>
+          <strong>@zen/signal</strong> - Ultra-fast reactive primitives
+          <br />
           <strong>@zen/zen</strong> - Fine-grained framework with no virtual DOM
         </p>
 
@@ -38,7 +37,12 @@ export function Hero() {
           <a href="#packages" class="btn btn-primary">
             Explore Packages
           </a>
-          <a href="https://github.com/SylphxAI/zen" target="_blank" class="btn btn-secondary">
+          <a
+            href="https://github.com/SylphxAI/zen"
+            target="_blank"
+            class="btn btn-secondary"
+            rel="noreferrer"
+          >
             GitHub
           </a>
         </div>

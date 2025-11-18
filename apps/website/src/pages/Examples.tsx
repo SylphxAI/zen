@@ -1,4 +1,4 @@
-import { signal, computed, For, Show } from '@zen/zen';
+import { For, Show, computed, signal } from '@zen/zen';
 
 export function Examples() {
   const activeExample = signal('counter');
@@ -25,8 +25,12 @@ export function Examples() {
             <For each={examples}>
               {(example) => (
                 <button
-                  class={activeExample.value === example.id ? 'example-nav-item active' : 'example-nav-item'}
-                  onClick={() => activeExample.value = example.id}
+                  class={
+                    activeExample.value === example.id
+                      ? 'example-nav-item active'
+                      : 'example-nav-item'
+                  }
+                  onClick={() => (activeExample.value = example.id)}
                 >
                   <span class="example-icon">{example.icon}</span>
                   {example.title}
@@ -82,14 +86,22 @@ function CounterExample() {
             <input
               type="number"
               value={step.value}
-              onInput={(e) => step.value = parseInt((e.target as HTMLInputElement).value) || 1}
+              onInput={(e) =>
+                (step.value = Number.parseInt((e.target as HTMLInputElement).value) || 1)
+              }
               class="input input-small"
             />
           </label>
           <div class="button-group">
-            <button class="btn" onClick={() => count.value -= step.value}>- {step.value}</button>
-            <button class="btn btn-primary" onClick={() => count.value += step.value}>+ {step.value}</button>
-            <button class="btn btn-secondary" onClick={() => count.value = 0}>Reset</button>
+            <button class="btn" onClick={() => (count.value -= step.value)}>
+              - {step.value}
+            </button>
+            <button class="btn btn-primary" onClick={() => (count.value += step.value)}>
+              + {step.value}
+            </button>
+            <button class="btn btn-secondary" onClick={() => (count.value = 0)}>
+              Reset
+            </button>
           </div>
         </div>
       </div>
@@ -116,34 +128,33 @@ function TodoExample() {
   const filteredTodos = computed(() => {
     const f = filter.value;
     const t = todos.value;
-    if (f === 'active') return t.filter(t => !t.done);
-    if (f === 'completed') return t.filter(t => t.done);
+    if (f === 'active') return t.filter((t) => !t.done);
+    if (f === 'completed') return t.filter((t) => t.done);
     return t;
   });
 
-  const activeCount = computed(() =>
-    todos.value.filter(t => !t.done).length
-  );
+  const activeCount = computed(() => todos.value.filter((t) => !t.done).length);
 
   const addTodo = () => {
     if (newTodo.value.trim()) {
-      todos.value = [...todos.value, {
-        id: Date.now(),
-        text: newTodo.value,
-        done: false,
-      }];
+      todos.value = [
+        ...todos.value,
+        {
+          id: Date.now(),
+          text: newTodo.value,
+          done: false,
+        },
+      ];
       newTodo.value = '';
     }
   };
 
   const toggleTodo = (id: number) => {
-    todos.value = todos.value.map(t =>
-      t.id === id ? { ...t, done: !t.done } : t
-    );
+    todos.value = todos.value.map((t) => (t.id === id ? { ...t, done: !t.done } : t));
   };
 
   const removeTodo = (id: number) => {
-    todos.value = todos.value.filter(t => t.id !== id);
+    todos.value = todos.value.filter((t) => t.id !== id);
   };
 
   return (
@@ -157,30 +168,32 @@ function TodoExample() {
             <input
               type="text"
               value={newTodo.value}
-              onInput={(e) => newTodo.value = (e.target as HTMLInputElement).value}
+              onInput={(e) => (newTodo.value = (e.target as HTMLInputElement).value)}
               onKeyPress={(e) => (e as KeyboardEvent).key === 'Enter' && addTodo()}
               placeholder="What needs to be done?"
               class="input"
             />
-            <button onClick={addTodo} class="btn btn-primary">Add</button>
+            <button onClick={addTodo} class="btn btn-primary">
+              Add
+            </button>
           </div>
 
           <div class="todo-filters">
             <button
               class={filter.value === 'all' ? 'filter-btn active' : 'filter-btn'}
-              onClick={() => filter.value = 'all'}
+              onClick={() => (filter.value = 'all')}
             >
               All
             </button>
             <button
               class={filter.value === 'active' ? 'filter-btn active' : 'filter-btn'}
-              onClick={() => filter.value = 'active'}
+              onClick={() => (filter.value = 'active')}
             >
               Active ({activeCount.value})
             </button>
             <button
               class={filter.value === 'completed' ? 'filter-btn active' : 'filter-btn'}
-              onClick={() => filter.value = 'completed'}
+              onClick={() => (filter.value = 'completed')}
             >
               Completed
             </button>
@@ -190,13 +203,11 @@ function TodoExample() {
             <For each={filteredTodos.value}>
               {(todo) => (
                 <li class={todo.done ? 'todo-item done' : 'todo-item'}>
-                  <input
-                    type="checkbox"
-                    checked={todo.done}
-                    onChange={() => toggleTodo(todo.id)}
-                  />
+                  <input type="checkbox" checked={todo.done} onChange={() => toggleTodo(todo.id)} />
                   <span class="todo-text">{todo.text}</span>
-                  <button onClick={() => removeTodo(todo.id)} class="btn-icon">×</button>
+                  <button onClick={() => removeTodo(todo.id)} class="btn-icon">
+                    ×
+                  </button>
                 </li>
               )}
             </For>
@@ -231,27 +242,21 @@ function FormExample() {
   const confirmPassword = signal('');
   const submitted = signal(false);
 
-  const emailValid = computed(() =>
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)
+  const emailValid = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value));
+
+  const passwordValid = computed(() => password.value.length >= 8);
+
+  const passwordsMatch = computed(
+    () => password.value === confirmPassword.value && password.value.length > 0,
   );
 
-  const passwordValid = computed(() =>
-    password.value.length >= 8
-  );
-
-  const passwordsMatch = computed(() =>
-    password.value === confirmPassword.value && password.value.length > 0
-  );
-
-  const formValid = computed(() =>
-    emailValid.value && passwordValid.value && passwordsMatch.value
-  );
+  const formValid = computed(() => emailValid.value && passwordValid.value && passwordsMatch.value);
 
   const handleSubmit = (e: Event) => {
     e.preventDefault();
     if (formValid.value) {
       submitted.value = true;
-      setTimeout(() => submitted.value = false, 3000);
+      setTimeout(() => (submitted.value = false), 3000);
     }
   };
 
@@ -267,7 +272,7 @@ function FormExample() {
             <input
               type="email"
               value={email.value}
-              onInput={(e) => email.value = (e.target as HTMLInputElement).value}
+              onInput={(e) => (email.value = (e.target as HTMLInputElement).value)}
               class="input"
             />
             <Show when={email.value && !emailValid.value}>
@@ -283,7 +288,7 @@ function FormExample() {
             <input
               type="password"
               value={password.value}
-              onInput={(e) => password.value = (e.target as HTMLInputElement).value}
+              onInput={(e) => (password.value = (e.target as HTMLInputElement).value)}
               class="input"
             />
             <Show when={password.value && !passwordValid.value}>
@@ -299,7 +304,7 @@ function FormExample() {
             <input
               type="password"
               value={confirmPassword.value}
-              onInput={(e) => confirmPassword.value = (e.target as HTMLInputElement).value}
+              onInput={(e) => (confirmPassword.value = (e.target as HTMLInputElement).value)}
               class="input"
             />
             <Show when={confirmPassword.value && !passwordsMatch.value}>
@@ -363,13 +368,17 @@ function AsyncExample() {
             <input
               type="number"
               value={userId.value}
-              onInput={(e) => userId.value = parseInt((e.target as HTMLInputElement).value) || 1}
+              onInput={(e) =>
+                (userId.value = Number.parseInt((e.target as HTMLInputElement).value) || 1)
+              }
               min="1"
               max="10"
               class="input input-small"
             />
           </label>
-          <button onClick={fetchUser} class="btn btn-primary">Fetch User</button>
+          <button onClick={fetchUser} class="btn btn-primary">
+            Fetch User
+          </button>
         </div>
 
         <div class="async-result">
@@ -385,10 +394,18 @@ function AsyncExample() {
             {(u) => (
               <div class="user-card">
                 <h3>{u.name}</h3>
-                <p><strong>Email:</strong> {u.email}</p>
-                <p><strong>Phone:</strong> {u.phone}</p>
-                <p><strong>Website:</strong> {u.website}</p>
-                <p><strong>Company:</strong> {u.company?.name}</p>
+                <p>
+                  <strong>Email:</strong> {u.email}
+                </p>
+                <p>
+                  <strong>Phone:</strong> {u.phone}
+                </p>
+                <p>
+                  <strong>Website:</strong> {u.website}
+                </p>
+                <p>
+                  <strong>Company:</strong> {u.company?.name}
+                </p>
               </div>
             )}
           </Show>
@@ -460,17 +477,17 @@ function PortalExample() {
       <p>Render content outside parent DOM hierarchy</p>
 
       <div class="example-demo">
-        <button onClick={() => showModal.value = true} class="btn btn-primary">
+        <button onClick={() => (showModal.value = true)} class="btn btn-primary">
           Open Modal
         </button>
 
         <Show when={showModal.value}>
-          <div class="modal-overlay" onClick={() => showModal.value = false}>
+          <div class="modal-overlay" onClick={() => (showModal.value = false)}>
             <div class="modal-content" onClick={(e) => e.stopPropagation()}>
               <h3>Modal Title</h3>
               <p>This modal is rendered using a Portal component!</p>
               <p>It's rendered outside the normal DOM hierarchy.</p>
-              <button onClick={() => showModal.value = false} class="btn btn-secondary">
+              <button onClick={() => (showModal.value = false)} class="btn btn-secondary">
                 Close
               </button>
             </div>

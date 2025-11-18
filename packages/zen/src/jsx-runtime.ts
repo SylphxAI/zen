@@ -87,13 +87,9 @@ function setAttribute(element: Element, key: string, value: any): void {
       return;
     }
 
-    // Defer effect with queueMicrotask for proper DOM insertion
-    queueMicrotask(() => {
-      effect(() => {
-        const val = value.value;
-        setStaticAttribute(element, key, val);
-        return undefined;
-      });
+    effect(() => {
+      setStaticAttribute(element, key, value.value);
+      return undefined;
     });
     return;
   }
@@ -151,13 +147,10 @@ function appendChild(parent: Element, child: any): void {
     const textNode = document.createTextNode('');
     parent.appendChild(textNode);
 
-    // Defer effect with queueMicrotask for proper DOM insertion
-    queueMicrotask(() => {
-      effect(() => {
-        const value = child.value;
-        textNode.data = String(value ?? '');
-        return undefined;
-      });
+    effect(() => {
+      const value = child.value;
+      textNode.data = String(value ?? '');
+      return undefined;
     });
     return;
   }

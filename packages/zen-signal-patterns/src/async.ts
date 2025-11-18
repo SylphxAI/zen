@@ -1,5 +1,5 @@
-import { effect, zen } from '@zen/signal';
-import type { Zen } from '@zen/signal';
+import { effect, signal } from '@zen/signal';
+import type { Signal } from '@zen/signal';
 
 export interface AsyncState<T> {
   loading: boolean;
@@ -8,7 +8,7 @@ export interface AsyncState<T> {
 }
 
 export interface AsyncStore<T> {
-  state: Zen<AsyncState<T>>;
+  value: AsyncState<T>;
   refetch: () => Promise<void>;
   abort: () => void;
 }
@@ -23,18 +23,18 @@ export interface AsyncStore<T> {
  *   return res.json();
  * });
  *
- * // Access state
- * console.log(user.state.value.loading);
- * console.log(user.state.value.data);
- * console.log(user.state.value.error);
+ * // Access state directly
+ * console.log(user.value.loading);
+ * console.log(user.value.data);
+ * console.log(user.value.error);
  *
  * // Refetch
  * user.refetch();
  * ```
  */
 // biome-ignore lint/suspicious/noExplicitAny: Generic dependency tracking requires any type
-export function computedAsync<T>(asyncFn: () => Promise<T>, deps: Zen<any>[] = []): AsyncStore<T> {
-  const state = zen<AsyncState<T>>({
+export function computedAsync<T>(asyncFn: () => Promise<T>, deps: Signal<any>[] = []): AsyncStore<T> {
+  const state = signal<AsyncState<T>>({
     loading: false,
     data: undefined,
     error: undefined,
@@ -89,9 +89,10 @@ export function computedAsync<T>(asyncFn: () => Promise<T>, deps: Zen<any>[] = [
     execute();
   }
 
-  return {
-    state,
-    refetch: execute,
-    abort: () => abortController?.abort(),
-  };
+  // Attach methods to the signal itself
+  const store = state as AsyncStore<T>;
+  store.refetch = execute;
+  store.abort = () => abortController?.abort();
+
+  return store;
 }

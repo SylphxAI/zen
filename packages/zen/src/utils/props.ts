@@ -17,9 +17,7 @@
  * );
  * ```
  */
-export function mergeProps<T extends readonly object[]>(
-  ...sources: T
-): T[number] {
+export function mergeProps<T extends readonly object[]>(...sources: T): T[number] {
   const result: any = {};
 
   for (const source of sources) {
@@ -50,14 +48,14 @@ export function mergeProps<T extends readonly object[]>(
 export function splitProps<
   T extends Record<string, any>,
   K1 extends readonly (keyof T)[],
-  K2 extends readonly (Exclude<keyof T, K1[number]>)[] = []
+  K2 extends readonly Exclude<keyof T, K1[number]>[] = [],
 >(
   props: T,
   ...keys: [K1, K2?]
 ): [
   Pick<T, K1[number]>,
   K2 extends readonly any[] ? Pick<T, K2[number]> : {},
-  Omit<T, K1[number] | (K2 extends readonly any[] ? K2[number] : never)>
+  Omit<T, K1[number] | (K2 extends readonly any[] ? K2[number] : never)>,
 ] {
   const result: any[] = [];
   const rest: any = {};
@@ -74,7 +72,7 @@ export function splitProps<
     let found = false;
     for (let i = 0; i < keys.length; i++) {
       const keyGroup = keys[i];
-      if (keyGroup && keyGroup.includes(key as any)) {
+      if (keyGroup?.includes(key as any)) {
         result[i][key] = props[key];
         found = true;
         break;

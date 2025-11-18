@@ -14,7 +14,7 @@
  * ```
  */
 
-import { signal } from '@zen/signal';
+import { computedAsync } from '@zen/signal-patterns';
 
 type Component<P = any> = (props: P) => Node;
 type ComponentModule<P = any> = { default: Component<P> };
@@ -22,30 +22,17 @@ type ComponentModule<P = any> = { default: Component<P> };
 /**
  * Lazy load a component
  */
-export function lazy<P = any>(
-  loader: () => Promise<ComponentModule<P>>
-): Component<P> {
-  // Track loading state
-  const module = signal<ComponentModule<P> | null>(null);
-  const loading = signal(true);
-  const error = signal<Error | null>(null);
-
-  // Start loading immediately
-  loader()
-    .then((mod) => {
-      module.value = mod;
-      loading.value = false;
-    })
-    .catch((err) => {
-      error.value = err instanceof Error ? err : new Error(String(err));
-      loading.value = false;
-    });
+export function lazy<P = any>(loader: () => Promise<ComponentModule<P>>): Component<P> {
+  // Use computedAsync for state management
+  const module = computedAsync(loader);
 
   // Return a component that renders the loaded module
   return (props: P) => {
+    const state = module.value;
+
     // If still loading, return placeholder comment
     // Suspense will handle showing fallback
-    if (loading.value) {
+    if (state.loading) {
       const comment = document.createComment('lazy-loading');
       // Attach loading state for Suspense to detect
       (comment as any)._zenLazyLoading = true;
@@ -53,16 +40,15 @@ export function lazy<P = any>(
     }
 
     // If error, throw for ErrorBoundary
-    if (error.value) {
-      throw error.value;
+    if (state.error) {
+      throw state.error;
     }
 
     // Render loaded component
-    const mod = module.value;
-    if (!mod) {
+    if (!state.data) {
       throw new Error('Lazy component failed to load');
     }
 
-    return mod.default(props);
+    return state.data.default(props);
   };
 }

@@ -74,7 +74,7 @@ export function Suspense(props: SuspenseProps): Node {
   const wrapper = document.createElement('div');
   wrapper.style.display = 'contents'; // Don't affect layout
 
-  let currentContent: Node = container;
+  const currentContent: Node = container;
 
   // Function to check and update loading state
   const checkLoading = () => {

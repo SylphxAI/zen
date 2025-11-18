@@ -104,7 +104,7 @@ export function For<T, U extends Node>(props: ForProps<T, U>): Node {
       } else {
         // Create new node
         const node = children(item, () => {
-          const entry = Array.from(newItems.values()).find(e => e.item === item);
+          const entry = Array.from(newItems.values()).find((e) => e.item === item);
           return entry ? entry.index : -1;
         });
 

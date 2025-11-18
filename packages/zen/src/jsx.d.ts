@@ -2,7 +2,7 @@
  * JSX Type Definitions for ZenJS
  */
 
-import type { ComputedZen, Signal } from '@zen/signal';
+import type { Computed, Signal } from '@zen/signal';
 
 export namespace JSX {
   export type Element = Node;
@@ -185,7 +185,7 @@ export namespace JSX {
 }
 
 type EventHandler<E extends Event = Event> = (event: E) => void;
-type ReactiveValue<T> = T | Signal<T> | ComputedZen<T>;
+type ReactiveValue<T> = T | Signal<T> | Computed<T>;
 
 interface DOMAttributes<T extends EventTarget> {
   children?: any;

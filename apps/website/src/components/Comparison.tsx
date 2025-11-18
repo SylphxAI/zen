@@ -32,7 +32,7 @@ export function Comparison() {
             </thead>
             <tbody>
               {frameworks.map((fw) => (
-                <tr class={fw.highlight ? 'highlight' : ''}>
+                <tr key={fw.name} class={fw.highlight ? 'highlight' : ''}>
                   <td>
                     <strong>{fw.name}</strong>
                   </td>

@@ -20,10 +20,14 @@ export function Docs() {
           <nav class="docs-nav">
             {sections.map((section) => (
               <button
+                key={section.id}
+                type="button"
                 class={
                   activeSection.value === section.id ? 'docs-nav-item active' : 'docs-nav-item'
                 }
-                onClick={() => (activeSection.value = section.id)}
+                onClick={() => {
+                  activeSection.value = section.id;
+                }}
               >
                 <span class="docs-nav-icon">{section.icon}</span>
                 {section.title}

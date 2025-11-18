@@ -25,12 +25,15 @@ export function Examples() {
             <For each={examples}>
               {(example) => (
                 <button
+                  type="button"
                   class={
                     activeExample.value === example.id
                       ? 'example-nav-item active'
                       : 'example-nav-item'
                   }
-                  onClick={() => (activeExample.value = example.id)}
+                  onClick={() => {
+                    activeExample.value = example.id;
+                  }}
                 >
                   <span class="example-icon">{example.icon}</span>
                   {example.title}
@@ -86,20 +89,38 @@ function CounterExample() {
             <input
               type="number"
               value={step.value}
-              onInput={(e) =>
-                (step.value = Number.parseInt((e.target as HTMLInputElement).value) || 1)
-              }
+              onInput={(e) => {
+                step.value = Number.parseInt((e.target as HTMLInputElement).value) || 1;
+              }}
               class="input input-small"
             />
           </label>
           <div class="button-group">
-            <button class="btn" onClick={() => (count.value -= step.value)}>
+            <button
+              type="button"
+              class="btn"
+              onClick={() => {
+                count.value -= step.value;
+              }}
+            >
               - {step.value}
             </button>
-            <button class="btn btn-primary" onClick={() => (count.value += step.value)}>
+            <button
+              type="button"
+              class="btn btn-primary"
+              onClick={() => {
+                count.value += step.value;
+              }}
+            >
               + {step.value}
             </button>
-            <button class="btn btn-secondary" onClick={() => (count.value = 0)}>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onClick={() => {
+                count.value = 0;
+              }}
+            >
               Reset
             </button>
           </div>
@@ -168,32 +189,43 @@ function TodoExample() {
             <input
               type="text"
               value={newTodo.value}
-              onInput={(e) => (newTodo.value = (e.target as HTMLInputElement).value)}
+              onInput={(e) => {
+                newTodo.value = (e.target as HTMLInputElement).value;
+              }}
               onKeyPress={(e) => (e as KeyboardEvent).key === 'Enter' && addTodo()}
               placeholder="What needs to be done?"
               class="input"
             />
-            <button onClick={addTodo} class="btn btn-primary">
+            <button type="button" onClick={addTodo} class="btn btn-primary">
               Add
             </button>
           </div>
 
           <div class="todo-filters">
             <button
+              type="button"
               class={filter.value === 'all' ? 'filter-btn active' : 'filter-btn'}
-              onClick={() => (filter.value = 'all')}
+              onClick={() => {
+                filter.value = 'all';
+              }}
             >
               All
             </button>
             <button
+              type="button"
               class={filter.value === 'active' ? 'filter-btn active' : 'filter-btn'}
-              onClick={() => (filter.value = 'active')}
+              onClick={() => {
+                filter.value = 'active';
+              }}
             >
               Active ({activeCount.value})
             </button>
             <button
+              type="button"
               class={filter.value === 'completed' ? 'filter-btn active' : 'filter-btn'}
-              onClick={() => (filter.value = 'completed')}
+              onClick={() => {
+                filter.value = 'completed';
+              }}
             >
               Completed
             </button>
@@ -205,7 +237,7 @@ function TodoExample() {
                 <li class={todo.done ? 'todo-item done' : 'todo-item'}>
                   <input type="checkbox" checked={todo.done} onChange={() => toggleTodo(todo.id)} />
                   <span class="todo-text">{todo.text}</span>
-                  <button onClick={() => removeTodo(todo.id)} class="btn-icon">
+                  <button type="button" onClick={() => removeTodo(todo.id)} class="btn-icon">
                     ×
                   </button>
                 </li>
@@ -256,7 +288,9 @@ function FormExample() {
     e.preventDefault();
     if (formValid.value) {
       submitted.value = true;
-      setTimeout(() => (submitted.value = false), 3000);
+      setTimeout(() => {
+        submitted.value = false;
+      }, 3000);
     }
   };
 
@@ -268,13 +302,17 @@ function FormExample() {
       <div class="example-demo">
         <form onSubmit={handleSubmit} class="demo-form">
           <div class="form-field">
-            <label>Email</label>
-            <input
-              type="email"
-              value={email.value}
-              onInput={(e) => (email.value = (e.target as HTMLInputElement).value)}
-              class="input"
-            />
+            <label>
+              Email
+              <input
+                type="email"
+                value={email.value}
+                onInput={(e) => {
+                  email.value = (e.target as HTMLInputElement).value;
+                }}
+                class="input"
+              />
+            </label>
             <Show when={email.value && !emailValid.value}>
               <div class="form-error">Invalid email format</div>
             </Show>
@@ -284,13 +322,17 @@ function FormExample() {
           </div>
 
           <div class="form-field">
-            <label>Password (min 8 characters)</label>
-            <input
-              type="password"
-              value={password.value}
-              onInput={(e) => (password.value = (e.target as HTMLInputElement).value)}
-              class="input"
-            />
+            <label>
+              Password (min 8 characters)
+              <input
+                type="password"
+                value={password.value}
+                onInput={(e) => {
+                  password.value = (e.target as HTMLInputElement).value;
+                }}
+                class="input"
+              />
+            </label>
             <Show when={password.value && !passwordValid.value}>
               <div class="form-error">Password must be at least 8 characters</div>
             </Show>
@@ -300,13 +342,17 @@ function FormExample() {
           </div>
 
           <div class="form-field">
-            <label>Confirm Password</label>
-            <input
-              type="password"
-              value={confirmPassword.value}
-              onInput={(e) => (confirmPassword.value = (e.target as HTMLInputElement).value)}
-              class="input"
-            />
+            <label>
+              Confirm Password
+              <input
+                type="password"
+                value={confirmPassword.value}
+                onInput={(e) => {
+                  confirmPassword.value = (e.target as HTMLInputElement).value;
+                }}
+                class="input"
+              />
+            </label>
             <Show when={confirmPassword.value && !passwordsMatch.value}>
               <div class="form-error">Passwords don't match</div>
             </Show>
@@ -368,15 +414,15 @@ function AsyncExample() {
             <input
               type="number"
               value={userId.value}
-              onInput={(e) =>
-                (userId.value = Number.parseInt((e.target as HTMLInputElement).value) || 1)
-              }
+              onInput={(e) => {
+                userId.value = Number.parseInt((e.target as HTMLInputElement).value) || 1;
+              }}
               min="1"
               max="10"
               class="input input-small"
             />
           </label>
-          <button onClick={fetchUser} class="btn btn-primary">
+          <button type="button" onClick={fetchUser} class="btn btn-primary">
             Fetch User
           </button>
         </div>
@@ -477,17 +523,43 @@ function PortalExample() {
       <p>Render content outside parent DOM hierarchy</p>
 
       <div class="example-demo">
-        <button onClick={() => (showModal.value = true)} class="btn btn-primary">
+        <button
+          type="button"
+          onClick={() => {
+            showModal.value = true;
+          }}
+          class="btn btn-primary"
+        >
           Open Modal
         </button>
 
         <Show when={showModal.value}>
-          <div class="modal-overlay" onClick={() => (showModal.value = false)}>
-            <div class="modal-content" onClick={(e) => e.stopPropagation()}>
+          <div
+            class="modal-overlay"
+            onClick={() => {
+              showModal.value = false;
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                showModal.value = false;
+              }
+            }}
+          >
+            <div
+              class="modal-content"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+            >
               <h3>Modal Title</h3>
               <p>This modal is rendered using a Portal component!</p>
               <p>It's rendered outside the normal DOM hierarchy.</p>
-              <button onClick={() => (showModal.value = false)} class="btn btn-secondary">
+              <button
+                type="button"
+                onClick={() => {
+                  showModal.value = false;
+                }}
+                class="btn btn-secondary"
+              >
                 Close
               </button>
             </div>

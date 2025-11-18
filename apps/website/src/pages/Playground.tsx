@@ -38,7 +38,7 @@ render(() => (
       <div class="playground-container">
         <div class="playground-header">
           <h1>Interactive Playground</h1>
-          <button onClick={runCode} class="btn btn-primary">
+          <button type="button" onClick={runCode} class="btn btn-primary">
             ▶ Run Code
           </button>
         </div>
@@ -57,7 +57,9 @@ render(() => (
             <textarea
               class="code-editor"
               value={code.value}
-              onInput={(e) => (code.value = (e.target as HTMLTextAreaElement).value)}
+              onInput={(e) => {
+                code.value = (e.target as HTMLTextAreaElement).value;
+              }}
               spellcheck={false}
             />
           </div>
@@ -66,8 +68,11 @@ render(() => (
             <div class="preview-header">
               <span>Preview</span>
               <button
+                type="button"
                 class="btn btn-small"
-                onClick={() => (document.getElementById('preview').innerHTML = '')}
+                onClick={() => {
+                  document.getElementById('preview').innerHTML = '';
+                }}
               >
                 Clear
               </button>

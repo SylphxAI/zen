@@ -35,13 +35,19 @@ export function Demo() {
                 <div class="demo-computed">Doubled: {doubled.value}</div>
               </div>
               <div class="demo-actions">
-                <button class="btn" onClick={() => count.value--}>
+                <button type="button" class="btn" onClick={() => count.value--}>
                   -
                 </button>
-                <button class="btn" onClick={() => count.value++}>
+                <button type="button" class="btn" onClick={() => count.value++}>
                   +
                 </button>
-                <button class="btn btn-secondary" onClick={() => (count.value = 0)}>
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  onClick={() => {
+                    count.value = 0;
+                  }}
+                >
                   Reset
                 </button>
               </div>
@@ -62,12 +68,14 @@ const doubled = computed(() => count.value * 2);
                 <input
                   type="text"
                   value={newTodo.value}
-                  onInput={(e) => (newTodo.value = (e.target as HTMLInputElement).value)}
+                  onInput={(e) => {
+                    newTodo.value = (e.target as HTMLInputElement).value;
+                  }}
                   onKeyPress={(e) => e.key === 'Enter' && addTodo()}
                   placeholder="Add a todo..."
                   class="input"
                 />
-                <button onClick={addTodo} class="btn btn-primary">
+                <button type="button" onClick={addTodo} class="btn btn-primary">
                   Add
                 </button>
               </div>
@@ -76,7 +84,7 @@ const doubled = computed(() => count.value * 2);
                   {(todo, index) => (
                     <li class="todo-item">
                       <span>{todo}</span>
-                      <button onClick={() => removeTodo(index())} class="btn-icon">
+                      <button type="button" onClick={() => removeTodo(index())} class="btn-icon">
                         ×
                       </button>
                     </li>

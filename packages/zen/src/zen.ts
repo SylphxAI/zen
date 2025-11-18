@@ -32,8 +32,6 @@ const STATE_DISPOSED = 3;
 const EFFECT_PURE = 0;
 const EFFECT_USER = 2;
 
-const FLAG_PENDING = 4;
-
 // ============================================================================
 // GLOBALS (from Solid.js pattern)
 // ============================================================================
@@ -79,9 +77,9 @@ interface Owner {
 // ============================================================================
 
 function scheduleEffect(effect: Computation<any>) {
-  if (effect._state & FLAG_PENDING) return;
+  if (effect._pending) return;
 
-  effect._state |= FLAG_PENDING;
+  effect._pending = true;
 
   // OPTIMIZATION: Use indexed assignment instead of push
   pendingEffects[pendingCount++] = effect;
@@ -108,7 +106,7 @@ function flushEffects() {
     for (let i = 0; i < count; i++) {
       const effect = pendingEffects[i];
 
-      if ((effect._state & 3) !== STATE_DISPOSED) {
+      if (effect._state !== STATE_DISPOSED) {
         try {
           effect.update();
         } catch (err) {
@@ -116,8 +114,8 @@ function flushEffects() {
         }
       }
 
-      // Clear FLAG_PENDING AFTER update completes
-      effect._state &= ~FLAG_PENDING;
+      // Clear pending flag AFTER update completes
+      effect._pending = false;
     }
 
     // Clear pending array after processing all effects
@@ -238,6 +236,9 @@ class Computation<T> implements SourceType, ObserverType, Owner {
   _trackingSources: SourceType[] | null = null;
   _trackingIndex = 0;
 
+  // OPTIMIZATION: Separate pending flag from state for direct comparisons
+  _pending = false;
+
   constructor(fn: () => T, initialValue: T, effectType: number = EFFECT_PURE) {
     this._fn = fn;
     this._value = initialValue;
@@ -259,14 +260,12 @@ class Computation<T> implements SourceType, ObserverType, Owner {
       }
 
       // Only check if not CLEAN
-      const state = this._state & 3;
-      if (state !== STATE_CLEAN) {
+      if (this._state !== STATE_CLEAN) {
         this._updateIfNecessary();
       }
     } else {
       // OPTIMIZATION: Fast path for untracked reads - check CLEAN first
-      const state = this._state & 3;
-      if (state !== STATE_CLEAN && state !== STATE_DISPOSED) {
+      if (this._state !== STATE_CLEAN && this._state !== STATE_DISPOSED) {
         this._updateIfNecessary();
       }
     }
@@ -283,7 +282,7 @@ class Computation<T> implements SourceType, ObserverType, Owner {
 
     this._value = value;
     this._time = ++clock;
-    this._state = (this._state & ~3) | STATE_CLEAN;
+    this._state = STATE_CLEAN;
 
     this._notifyObservers(STATE_DIRTY);
   }
@@ -299,12 +298,10 @@ class Computation<T> implements SourceType, ObserverType, Owner {
    * break the loop early.
    */
   _updateIfNecessary(): void {
-    const state = this._state & 3;
-
     // OPTIMIZATION: Fast exit for CLEAN or DISPOSED
-    if (state === STATE_CLEAN || state === STATE_DISPOSED) return;
+    if (this._state === STATE_CLEAN || this._state === STATE_DISPOSED) return;
 
-    if (state === STATE_CHECK) {
+    if (this._state === STATE_CHECK) {
       const sources = this._sources;
       if (sources) {
         const myTime = this._time;
@@ -316,21 +313,21 @@ class Computation<T> implements SourceType, ObserverType, Owner {
 
           // Early exit optimization
           if (sources[i]._time > myTime) {
-            this._state = (this._state & ~3) | STATE_DIRTY;
+            this._state = STATE_DIRTY;
             break;
           }
         }
       }
 
       // After checking, if still CHECK, mark CLEAN
-      if ((this._state & 3) === STATE_CHECK) {
-        this._state = (this._state & ~3) | STATE_CLEAN;
+      if (this._state === STATE_CHECK) {
+        this._state = STATE_CLEAN;
         return;
       }
     }
 
     // Only update if DIRTY
-    if ((this._state & 3) === STATE_DIRTY) {
+    if (this._state === STATE_DIRTY) {
       this.update();
     }
   }
@@ -403,7 +400,7 @@ class Computation<T> implements SourceType, ObserverType, Owner {
 
       // Update time and notify AFTER sources are updated (Solid.js pattern)
       this._time = clock + 1;
-      this._state = (this._state & ~3) | STATE_CLEAN;
+      this._state = STATE_CLEAN;
 
       // Only notify if value actually changed
       if (valueChanged) {
@@ -411,7 +408,7 @@ class Computation<T> implements SourceType, ObserverType, Owner {
       }
     } catch (err) {
       this._error = err;
-      this._state = (this._state & ~3) | STATE_CLEAN;
+      this._state = STATE_CLEAN;
       throw err;
     } finally {
       // Restore context
@@ -421,20 +418,18 @@ class Computation<T> implements SourceType, ObserverType, Owner {
   }
 
   _notify(state: number): void {
-    const currentState = this._state & 3;
-
     // OPTIMIZATION: Fast path - already at or past this state
-    if (currentState >= state || currentState === STATE_DISPOSED) {
+    if (this._state >= state || this._state === STATE_DISPOSED) {
       // Special handling for self-executing effects
       if (currentObserver === this && state >= STATE_CHECK && this._effectType !== EFFECT_PURE) {
-        this._state |= FLAG_PENDING;
+        this._pending = true;
         pendingEffects[pendingCount++] = this;
       }
       return;
     }
 
     // Update state
-    this._state = (this._state & ~3) | state;
+    this._state = state;
 
     // Schedule user effects
     if (this._effectType !== EFFECT_PURE) {
@@ -474,9 +469,9 @@ class Computation<T> implements SourceType, ObserverType, Owner {
   }
 
   dispose(): void {
-    if ((this._state & 3) === STATE_DISPOSED) return;
+    if (this._state === STATE_DISPOSED) return;
 
-    this._state = (this._state & ~3) | STATE_DISPOSED;
+    this._state = STATE_DISPOSED;
 
     if (this._sources) {
       removeSourceObservers(this, 0);
@@ -490,8 +485,8 @@ class Computation<T> implements SourceType, ObserverType, Owner {
 
     disposeOwner(this);
 
-    if (this._state & FLAG_PENDING) {
-      this._state &= ~FLAG_PENDING;
+    if (this._pending) {
+      this._pending = false;
     }
   }
 }
@@ -558,15 +553,14 @@ class Signal<T> implements SourceType {
       // Queue all observers with inline state updates
       for (let i = 0; i < len; i++) {
         const obs = observers[i];
-        const currentState = obs._state & 3;
 
         // Skip if already dirty or disposed
-        if (currentState >= STATE_DIRTY || currentState === STATE_DISPOSED) {
+        if (obs._state >= STATE_DIRTY || obs._state === STATE_DISPOSED) {
           continue;
         }
 
         // Mark as DIRTY directly (inline, no function call)
-        obs._state = (obs._state & ~3) | STATE_DIRTY;
+        obs._state = STATE_DIRTY;
 
         // Schedule effects
         if ((obs as any)._effectType !== EFFECT_PURE) {
@@ -671,7 +665,7 @@ export function subscribe<T>(
   if (batchDepth > 0) {
     const computation = (node as any)._computation;
     if (computation) {
-      if ((computation._state & 3) === STATE_DIRTY || (computation._state & 3) === STATE_CHECK) {
+      if (computation._state === STATE_DIRTY || computation._state === STATE_CHECK) {
         previousValue = computation._value;
         hasValue = true;
       } else if (computation._oldValue !== undefined) {

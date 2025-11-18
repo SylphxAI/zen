@@ -40,9 +40,18 @@ preview.appendChild(app);`);
       // Remove import statements (Zen API is provided via context)
       const codeWithoutImports = code.value.replace(/import\s+.*?from\s+['"].*?['"];?\s*/g, '');
 
-      // Transpile JSX to JavaScript
+      // Transpile JSX to JavaScript using classic runtime
       const transformed = Babel.transform(codeWithoutImports, {
-        presets: [['react', { runtime: 'automatic', importSource: '@zen/zen' }]],
+        presets: [
+          [
+            'react',
+            {
+              runtime: 'classic',
+              pragma: 'jsx',
+              pragmaFrag: 'Fragment',
+            },
+          ],
+        ],
         filename: 'playground.tsx',
       });
 

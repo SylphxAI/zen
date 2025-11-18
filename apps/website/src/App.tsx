@@ -3,7 +3,7 @@ import { Footer } from './components/Footer.tsx';
 import { Header } from './components/Header.tsx';
 import { Docs } from './pages/Docs.tsx';
 import { Examples } from './pages/Examples.tsx';
-import { Home } from './pages/Home.tsx';
+import { NewHome } from './pages/NewHome.tsx';
 import { Playground } from './pages/Playground.tsx';
 
 export function App() {
@@ -13,7 +13,7 @@ export function App() {
       <main>
         <Router
           routes={[
-            { path: '/', component: () => <Home /> },
+            { path: '/', component: () => <NewHome /> },
             { path: '/docs', component: () => <Docs /> },
             { path: '/examples', component: () => <Examples /> },
             { path: '/playground', component: () => <Playground /> },

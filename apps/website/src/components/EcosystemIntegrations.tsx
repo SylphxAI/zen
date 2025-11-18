@@ -266,7 +266,9 @@ const doubled = computed(() => count.value * 2)  // Computed<number>`,
       <div class="max-w-screen-xl mx-auto px-6">
         <div class="text-center mb-12">
           <h2 class="text-4xl md:text-5xl font-bold text-text mb-4">Ecosystem Integrations</h2>
-          <p class="text-xl text-text-muted max-w-3xl mx-auto">Works perfectly with popular tools, ready out of the box</p>
+          <p class="text-xl text-text-muted max-w-3xl mx-auto">
+            Works perfectly with popular tools, ready out of the box
+          </p>
         </div>
 
         {/* Category tabs */}
@@ -329,7 +331,9 @@ const doubled = computed(() => count.value * 2)  // Computed<number>`,
           <p class="text-lg text-text mb-2">
             <span class="font-semibold text-primary">Fully compatible with existing ecosystem</span>
           </p>
-          <p class="text-text-muted">No special configuration needed, works with any JavaScript/TypeScript tool</p>
+          <p class="text-text-muted">
+            No special configuration needed, works with any JavaScript/TypeScript tool
+          </p>
         </div>
       </div>
     </section>

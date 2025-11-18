@@ -204,7 +204,9 @@ settings.value.language = 'en'`,
 
         {/* CTA */}
         <div class="mt-12 text-center">
-          <p class="text-lg text-text-muted mb-6">All packages can be used independently, no need to migrate your entire project</p>
+          <p class="text-lg text-text-muted mb-6">
+            All packages can be used independently, no need to migrate your entire project
+          </p>
           <a
             href="#/docs/packages"
             class="inline-block px-8 py-4 bg-primary hover:bg-primary-dark text-white font-semibold rounded-zen shadow-zen transition-all hover:scale-105"

@@ -10,6 +10,7 @@
  */
 
 import { signal } from '@zen/signal';
+import { disposeNode, onCleanup } from '../lifecycle.js';
 
 interface ErrorBoundaryProps {
   fallback: (error: Error, reset: () => void) => Node;
@@ -34,6 +35,7 @@ export function ErrorBoundary(props: ErrorBoundaryProps): Node {
 
   const error = signal<Error | null>(null);
   const container = document.createElement('div');
+  let currentChild: Node | null = null;
 
   const reset = () => {
     error.value = null;
@@ -42,24 +44,36 @@ export function ErrorBoundary(props: ErrorBoundaryProps): Node {
 
   const render = () => {
     try {
-      // Clear container
-      container.innerHTML = '';
+      // Dispose previous child
+      if (currentChild) {
+        if (container.contains(currentChild)) {
+          container.removeChild(currentChild);
+        }
+        disposeNode(currentChild);
+        currentChild = null;
+      }
 
       if (error.value) {
         // Show fallback
-        const fallbackNode = fallback(error.value, reset);
-        container.appendChild(fallbackNode);
+        currentChild = fallback(error.value, reset);
+        container.appendChild(currentChild);
       } else {
         // Show children
-        const childNode = typeof children === 'function' ? children() : children;
-        container.appendChild(childNode);
+        currentChild = typeof children === 'function' ? children() : children;
+        container.appendChild(currentChild);
       }
     } catch (err) {
       error.value = err as Error;
       // Retry render with error state
-      const fallbackNode = fallback(err as Error, reset);
-      container.innerHTML = '';
-      container.appendChild(fallbackNode);
+      if (currentChild) {
+        if (container.contains(currentChild)) {
+          container.removeChild(currentChild);
+        }
+        disposeNode(currentChild);
+        currentChild = null;
+      }
+      currentChild = fallback(err as Error, reset);
+      container.appendChild(currentChild);
     }
   };
 
@@ -77,10 +91,16 @@ export function ErrorBoundary(props: ErrorBoundaryProps): Node {
 
   window.addEventListener('error', errorHandler);
 
-  // Cleanup
-  (container as any)._dispose = () => {
+  // Register cleanup via owner system
+  onCleanup(() => {
     window.removeEventListener('error', errorHandler);
-  };
+    if (currentChild) {
+      if (container.contains(currentChild)) {
+        container.removeChild(currentChild);
+      }
+      disposeNode(currentChild);
+    }
+  });
 
   return container;
 }

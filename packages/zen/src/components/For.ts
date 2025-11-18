@@ -11,7 +11,7 @@
 
 import { effect } from '@zen/signal';
 import type { AnyZen } from '@zen/signal';
-import { onCleanup, disposeNode } from '../lifecycle.js';
+import { disposeNode, onCleanup } from '../lifecycle.js';
 
 interface ForProps<T, U extends Node> {
   each: T[] | AnyZen;

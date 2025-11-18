@@ -9,7 +9,7 @@
  * - Maintains reactive context
  */
 
-import { onCleanup, disposeNode } from '../lifecycle.js';
+import { disposeNode, onCleanup } from '../lifecycle.js';
 
 interface PortalProps {
   mount?: Element;

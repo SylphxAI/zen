@@ -11,7 +11,7 @@
 
 import { effect, untrack } from '@zen/signal';
 import type { AnyZen } from '@zen/signal';
-import { onCleanup, disposeNode } from '../lifecycle.js';
+import { disposeNode, onCleanup } from '../lifecycle.js';
 
 interface ShowProps<T> {
   when: T | AnyZen | (() => T);

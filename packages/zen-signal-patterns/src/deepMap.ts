@@ -1,5 +1,5 @@
 import { computed, subscribe, zen } from '@zen/signal';
-import type { ComputedZen, Unsubscribe, Zen } from '@zen/signal';
+import type { Computed, Unsubscribe, Zen } from '@zen/signal';
 
 export type Path = string | (string | number)[];
 
@@ -8,10 +8,10 @@ export interface DeepMapStore<T extends object> {
   // biome-ignore lint/suspicious/noExplicitAny: Paths can point to values of any type
   setPath(path: Path, value: any): void;
   // biome-ignore lint/suspicious/noExplicitAny: Path values can be any type
-  selectPath(path: Path): ComputedZen<any>;
+  selectPath(path: Path): Computed<any>;
   _state: Zen<T>;
   // biome-ignore lint/suspicious/noExplicitAny: Cache stores computed values of unknown types
-  _cache: Map<string, ComputedZen<any>>;
+  _cache: Map<string, Computed<any>>;
 }
 
 // Helper: path to cache key
@@ -104,7 +104,7 @@ const setDeep = (obj: any, path: Path, value: any): any => {
 export function deepMap<T extends object>(initial: T): DeepMapStore<T> {
   const state = zen(initial);
   // biome-ignore lint/suspicious/noExplicitAny: Cache stores computed values of unknown types
-  const cache = new Map<string, ComputedZen<any>>();
+  const cache = new Map<string, Computed<any>>();
 
   return {
     get value() {
@@ -117,7 +117,7 @@ export function deepMap<T extends object>(initial: T): DeepMapStore<T> {
     },
 
     // biome-ignore lint/suspicious/noExplicitAny: Path values can be any type
-    selectPath(path: Path): ComputedZen<any> {
+    selectPath(path: Path): Computed<any> {
       const key = pathToKey(path);
 
       if (!cache.has(key)) {

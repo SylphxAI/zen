@@ -390,8 +390,8 @@ export function computed<T>(
   return c;
 }
 
-export type ReadonlyZen<T> = ComputedCore<T>;
-export type ComputedZen<T> = ComputedCore<T>;
+export type ReadonlySignal<T> = ComputedCore<T>;
+export type Computed<T> = ComputedCore<T>;
 
 // ============================================================================
 // EFFECT (Side Effects with Auto-tracking)

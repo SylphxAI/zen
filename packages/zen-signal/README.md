@@ -485,7 +485,7 @@ Zen is written in TypeScript and provides excellent type inference:
 const count = signal(0);        // Zen<number>
 const name = signal('Alice');   // Zen<string>
 
-const doubled = computed(() => count.value * 2);  // ComputedZen<number>
+const doubled = computed(() => count.value * 2);  // Computed<number>
 
 const user = zen<{ id: number; name: string } | null>(null);  // Zen<User | null>
 

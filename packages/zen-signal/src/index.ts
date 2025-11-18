@@ -17,7 +17,7 @@ export {
   peek,
 } from './zen';
 
-export type { Signal, ReadonlyZen, ComputedZen } from './zen';
+export type { Signal, ReadonlySignal, Computed } from './zen';
 
 // Legacy compatibility exports
 export type { ZenValue } from './types';

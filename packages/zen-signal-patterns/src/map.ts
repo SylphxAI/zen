@@ -1,13 +1,13 @@
 import { computed, subscribe, zen } from '@zen/signal';
-import type { ComputedZen, Unsubscribe, Zen } from '@zen/signal';
+import type { Computed, Unsubscribe, Zen } from '@zen/signal';
 
 export interface MapStore<T extends object> {
   readonly value: T;
   setKey<K extends keyof T>(key: K, value: T[K]): void;
-  selectKey<K extends keyof T>(key: K): ComputedZen<T[K]>;
+  selectKey<K extends keyof T>(key: K): Computed<T[K]>;
   _state: Zen<T>;
   // biome-ignore lint/suspicious/noExplicitAny: Cache stores computed values of unknown types
-  _cache: Map<keyof T, ComputedZen<any>>;
+  _cache: Map<keyof T, Computed<any>>;
 }
 
 /**
@@ -35,7 +35,7 @@ export interface MapStore<T extends object> {
 export function map<T extends object>(initial: T): MapStore<T> {
   const state = zen(initial);
   // biome-ignore lint/suspicious/noExplicitAny: Cache stores computed values of unknown types
-  const cache = new Map<keyof T, ComputedZen<any>>();
+  const cache = new Map<keyof T, Computed<any>>();
 
   return {
     get value() {
@@ -46,7 +46,7 @@ export function map<T extends object>(initial: T): MapStore<T> {
       state.value = { ...state.value, [key]: value };
     },
 
-    selectKey<K extends keyof T>(key: K): ComputedZen<T[K]> {
+    selectKey<K extends keyof T>(key: K): Computed<T[K]> {
       if (!cache.has(key)) {
         cache.set(
           key,

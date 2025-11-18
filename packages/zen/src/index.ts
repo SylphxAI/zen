@@ -34,4 +34,4 @@ export { render, Fragment } from './jsx-runtime.js';
 export { onMount, onCleanup, createEffect } from './lifecycle.js';
 
 // Types
-export type { Signal, ComputedZen as Computed } from '@zen/signal';
+export type { Signal, Computed } from '@zen/signal';

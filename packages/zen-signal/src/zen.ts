@@ -409,6 +409,9 @@ type EffectCore = {
   _execute: () => void;
 };
 
+// Track cleanup functions registered via onCleanup during effect execution
+let currentCleanups: Array<() => void> = [];
+
 function executeEffect(e: EffectCore): void {
   if (e._cancelled) return;
 
@@ -435,11 +438,27 @@ function executeEffect(e: EffectCore): void {
     currentListener = e as any;
   }
 
+  // Reset cleanups array for collecting onCleanup calls
+  currentCleanups = [];
+
   try {
     const cleanup = e._callback();
-    if (cleanup) e._cleanup = cleanup;
+
+    // Combine returned cleanup with onCleanup calls
+    if (cleanup || currentCleanups.length > 0) {
+      const registeredCleanups = currentCleanups.slice(); // Capture cleanups
+      e._cleanup = () => {
+        if (cleanup) cleanup();
+        for (let i = 0; i < registeredCleanups.length; i++) {
+          try {
+            registeredCleanups[i]();
+          } catch (_) {}
+        }
+      };
+    }
   } catch (_err) {
   } finally {
+    currentCleanups = [];
     currentListener = prevListener;
   }
 
@@ -485,11 +504,27 @@ export function effect(
     currentListener = e as any;
   }
 
+  // Reset cleanups array for collecting onCleanup calls
+  currentCleanups = [];
+
   try {
     const cleanup = e._callback();
-    if (cleanup) e._cleanup = cleanup;
+
+    // Combine returned cleanup with onCleanup calls
+    if (cleanup || currentCleanups.length > 0) {
+      const registeredCleanups = currentCleanups.slice(); // Capture cleanups
+      e._cleanup = () => {
+        if (cleanup) cleanup();
+        for (let i = 0; i < registeredCleanups.length; i++) {
+          try {
+            registeredCleanups[i]();
+          } catch (_) {}
+        }
+      };
+    }
   } catch (_err) {
   } finally {
+    currentCleanups = [];
     currentListener = prevListener;
   }
 
@@ -513,6 +548,17 @@ export function effect(
     // Unsubscribe from sources
     if (e._unsubs) cleanUnsubs(e._unsubs);
   };
+}
+
+/**
+ * Register a cleanup function to run when the current effect disposes
+ * Similar to SolidJS onCleanup
+ */
+export function onCleanup(fn: () => void): void {
+  if (currentListener && '_callback' in currentListener) {
+    // We're inside an effect context
+    currentCleanups.push(fn);
+  }
 }
 
 // ============================================================================

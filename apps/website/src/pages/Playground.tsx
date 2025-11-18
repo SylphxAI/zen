@@ -59,11 +59,19 @@ console.log('🎨 Component created');
 const count = signal(0);
 const renderCount = signal(0);
 
-// Auto-increment every second
-const timer = setInterval(() => {
-  count.value++;
-  console.log(\`⏰ Timer: count = \${count.value}\`);
-}, 1000);
+// Auto-increment every second with cleanup
+effect(() => {
+  const timer = setInterval(() => {
+    count.value++;
+    console.log(\`⏰ Timer: count = \${count.value}\`);
+  }, 1000);
+
+  // Cleanup timer when effect re-runs or component unmounts
+  onCleanup(() => {
+    console.log('🧹 Cleaning up timer');
+    clearInterval(timer);
+  });
+});
 
 // Track effect runs (not component re-renders)
 effect(() => {

@@ -28,13 +28,94 @@ const doubled = computed(() => count.value * 2);
 
 // Create component
 const app = (
-  <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
+  <div style={{ padding: '20px', fontFamily: 'sans-serif', color: 'var(--text)' }}>
     <h2>Counter: {count}</h2>
     <p>Doubled: {doubled}</p>
     <div style={{ display: 'flex', gap: '10px' }}>
-      <button onClick={() => count.value--}>-</button>
-      <button onClick={() => count.value++}>+</button>
-      <button onClick={() => count.value = 0}>Reset</button>
+      <button
+        onClick={() => count.value--}
+        style={{ padding: '8px 16px', cursor: 'pointer' }}
+      >
+        -
+      </button>
+      <button
+        onClick={() => count.value++}
+        style={{ padding: '8px 16px', cursor: 'pointer' }}
+      >
+        +
+      </button>
+      <button
+        onClick={() => count.value = 0}
+        style={{ padding: '8px 16px', cursor: 'pointer' }}
+      >
+        Reset
+      </button>
+    </div>
+  </div>
+);`,
+    finegrained: `// Fine-grained reactivity - component only renders ONCE
+console.log('🎨 Component created');
+
+const count = signal(0);
+const renderCount = signal(0);
+
+// Auto-increment every second
+setTimeout(() => {
+  console.log('⏰ Timer 1s');
+  count.value++;
+}, 1000);
+
+setTimeout(() => {
+  console.log('⏰ Timer 2s');
+  count.value++;
+}, 2000);
+
+setTimeout(() => {
+  console.log('⏰ Timer 3s');
+  count.value++;
+}, 3000);
+
+// Track effect runs (not component re-renders)
+effect(() => {
+  renderCount.value++;
+  console.log(\`✨ Effect ran: count = \${count.value}\`);
+});
+
+const app = (
+  <div style={{
+    padding: '20px',
+    fontFamily: 'sans-serif',
+    color: 'var(--text)',
+    backgroundColor: 'var(--bg)',
+    borderRadius: '8px'
+  }}>
+    <h2 style={{ marginBottom: '16px' }}>⚡ Fine-grained Reactivity</h2>
+    <div style={{
+      padding: '16px',
+      backgroundColor: 'var(--bg-light)',
+      borderRadius: '8px',
+      marginBottom: '16px'
+    }}>
+      <p style={{ fontSize: '24px', margin: '8px 0' }}>
+        Count: <strong>{count}</strong>
+      </p>
+      <p style={{ fontSize: '16px', margin: '8px 0', opacity: 0.7 }}>
+        Effect runs: {renderCount}
+      </p>
+    </div>
+    <div style={{
+      padding: '12px',
+      backgroundColor: 'var(--bg-lighter)',
+      borderRadius: '8px',
+      fontSize: '14px',
+      fontFamily: 'monospace'
+    }}>
+      <p style={{ margin: '4px 0' }}>✅ Component created ONCE</p>
+      <p style={{ margin: '4px 0' }}>✅ Only text nodes update</p>
+      <p style={{ margin: '4px 0' }}>✅ No re-renders, no VDOM diff</p>
+      <p style={{ margin: '4px 0', marginTop: '12px', opacity: 0.7 }}>
+        Open console to see logs 👉
+      </p>
     </div>
   </div>
 );`,
@@ -56,27 +137,61 @@ const toggleTodo = (id) => {
 };
 
 const app = (
-  <div style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '500px' }}>
-    <h2>Todo List</h2>
+  <div style={{
+    padding: '20px',
+    fontFamily: 'sans-serif',
+    maxWidth: '500px',
+    color: 'var(--text)'
+  }}>
+    <h2 style={{ marginBottom: '16px' }}>Todo List</h2>
     <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
       <input
         type="text"
         value={input}
         onInput={(e) => input.value = e.target.value}
         placeholder="Add a todo..."
-        style={{ flex: 1, padding: '8px' }}
+        style={{
+          flex: 1,
+          padding: '8px 12px',
+          border: '1px solid var(--border)',
+          borderRadius: '4px',
+          backgroundColor: 'var(--bg)',
+          color: 'var(--text)'
+        }}
       />
-      <button onClick={addTodo}>Add</button>
+      <button
+        onClick={addTodo}
+        style={{
+          padding: '8px 16px',
+          cursor: 'pointer',
+          backgroundColor: 'var(--primary)',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px'
+        }}
+      >
+        Add
+      </button>
     </div>
     <div>
       {todos.value.map(todo => (
-        <div key={todo.id} style={{ display: 'flex', gap: '10px', marginBottom: '8px' }}>
+        <div key={todo.id} style={{
+          display: 'flex',
+          gap: '10px',
+          marginBottom: '8px',
+          padding: '8px',
+          backgroundColor: 'var(--bg-light)',
+          borderRadius: '4px'
+        }}>
           <input
             type="checkbox"
             checked={todo.done}
             onChange={() => toggleTodo(todo.id)}
           />
-          <span style={{ textDecoration: todo.done ? 'line-through' : 'none' }}>
+          <span style={{
+            textDecoration: todo.done ? 'line-through' : 'none',
+            opacity: todo.done ? 0.5 : 1
+          }}>
             {todo.text}
           </span>
         </div>
@@ -100,35 +215,60 @@ const handleSubmit = () => {
 };
 
 const app = (
-  <div style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '400px' }}>
-    <h2>Contact Form</h2>
+  <div style={{
+    padding: '20px',
+    fontFamily: 'sans-serif',
+    maxWidth: '400px',
+    color: 'var(--text)'
+  }}>
+    <h2 style={{ marginBottom: '16px' }}>Contact Form</h2>
     <Show when={!submitted.value}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
         <div>
-          <label>Name:</label>
+          <label style={{ display: 'block', marginBottom: '4px' }}>Name:</label>
           <input
             type="text"
             value={name}
             onInput={(e) => name.value = e.target.value}
-            style={{ display: 'block', width: '100%', padding: '8px', marginTop: '5px' }}
+            style={{
+              display: 'block',
+              width: '100%',
+              padding: '8px 12px',
+              border: '1px solid var(--border)',
+              borderRadius: '4px',
+              backgroundColor: 'var(--bg)',
+              color: 'var(--text)'
+            }}
           />
         </div>
         <div>
-          <label>Email:</label>
+          <label style={{ display: 'block', marginBottom: '4px' }}>Email:</label>
           <input
             type="email"
             value={email}
             onInput={(e) => email.value = e.target.value}
-            style={{ display: 'block', width: '100%', padding: '8px', marginTop: '5px' }}
+            style={{
+              display: 'block',
+              width: '100%',
+              padding: '8px 12px',
+              border: '1px solid var(--border)',
+              borderRadius: '4px',
+              backgroundColor: 'var(--bg)',
+              color: 'var(--text)'
+            }}
           />
         </div>
         <button
           onClick={handleSubmit}
           disabled={!isValid.value}
           style={{
-            padding: '10px',
+            padding: '10px 16px',
             opacity: isValid.value ? 1 : 0.5,
-            cursor: isValid.value ? 'pointer' : 'not-allowed'
+            cursor: isValid.value ? 'pointer' : 'not-allowed',
+            backgroundColor: 'var(--primary)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px'
           }}
         >
           Submit
@@ -136,10 +276,16 @@ const app = (
       </div>
     </Show>
     <Show when={submitted.value}>
-      <div style={{ color: 'green', padding: '20px', textAlign: 'center' }}>
-        <h3>✓ Form submitted!</h3>
-        <p>Name: {name}</p>
-        <p>Email: {email}</p>
+      <div style={{
+        color: 'var(--success)',
+        padding: '20px',
+        textAlign: 'center',
+        backgroundColor: 'var(--bg-light)',
+        borderRadius: '8px'
+      }}>
+        <h3 style={{ marginBottom: '8px' }}>✓ Form submitted!</h3>
+        <p style={{ margin: '4px 0' }}>Name: {name}</p>
+        <p style={{ margin: '4px 0' }}>Email: {email}</p>
       </div>
     </Show>
   </div>
@@ -164,32 +310,59 @@ const fetchData = async () => {
 };
 
 const app = (
-  <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
-    <h2>GitHub Repo Info</h2>
-    <button onClick={fetchData} disabled={loading.value}>
+  <div style={{
+    padding: '20px',
+    fontFamily: 'sans-serif',
+    color: 'var(--text)'
+  }}>
+    <h2 style={{ marginBottom: '16px' }}>GitHub Repo Info</h2>
+    <button
+      onClick={fetchData}
+      disabled={loading.value}
+      style={{
+        padding: '10px 16px',
+        cursor: loading.value ? 'not-allowed' : 'pointer',
+        backgroundColor: 'var(--primary)',
+        color: 'white',
+        border: 'none',
+        borderRadius: '4px',
+        opacity: loading.value ? 0.6 : 1
+      }}
+    >
       {loading.value ? 'Loading...' : 'Fetch Data'}
     </button>
 
     <Show when={error.value}>
-      <div style={{ color: 'red', marginTop: '20px' }}>
+      <div style={{
+        color: 'var(--danger)',
+        marginTop: '20px',
+        padding: '12px',
+        backgroundColor: 'var(--bg-light)',
+        borderRadius: '4px'
+      }}>
         Error: {error}
       </div>
     </Show>
 
     <Show when={data.value}>
-      <div style={{ marginTop: '20px' }}>
-        <h3>{data.value.name}</h3>
-        <p>{data.value.description}</p>
-        <p>⭐ Stars: {data.value.stargazers_count}</p>
-        <p>🍴 Forks: {data.value.forks_count}</p>
+      <div style={{
+        marginTop: '20px',
+        padding: '16px',
+        backgroundColor: 'var(--bg-light)',
+        borderRadius: '8px'
+      }}>
+        <h3 style={{ marginBottom: '8px' }}>{data.value.name}</h3>
+        <p style={{ marginBottom: '12px', opacity: 0.8 }}>{data.value.description}</p>
+        <p style={{ margin: '4px 0' }}>⭐ Stars: {data.value.stargazers_count}</p>
+        <p style={{ margin: '4px 0' }}>🍴 Forks: {data.value.forks_count}</p>
       </div>
     </Show>
   </div>
 );`,
   };
 
-  const code = signal(templates.counter);
-  const selectedTemplate = signal('counter');
+  const code = signal(templates.finegrained);
+  const selectedTemplate = signal('finegrained');
   const error = signal('');
   const executeTime = signal(0);
   const renderTime = signal(0);
@@ -381,6 +554,7 @@ const app = (
                 value={selectedTemplate}
                 onChange={(e) => changeTemplate((e.target as HTMLSelectElement).value)}
               >
+                <option value="finegrained">⚡ Fine-grained</option>
                 <option value="counter">Counter</option>
                 <option value="todo">Todo App</option>
                 <option value="form">Form</option>
@@ -422,7 +596,9 @@ const app = (
           <ul class="space-y-2 mb-4 text-text-muted">
             <li class="flex items-start gap-2">
               <span class="text-primary">•</span>
-              Create a variable called <code class="px-1 bg-bg border border-border rounded text-primary">app</code> with your component
+              Create a variable called{' '}
+              <code class="px-1 bg-bg border border-border rounded text-primary">app</code> with
+              your component
             </li>
             <li class="flex items-start gap-2">
               <span class="text-primary">•</span>
@@ -438,7 +614,11 @@ const app = (
             </li>
           </ul>
           <p class="text-sm text-text-muted bg-bg border border-border rounded p-3">
-            <strong class="text-text">Note:</strong> Just create your component and assign it to <code class="px-1 bg-bg-lighter border border-border rounded text-primary">const app = (...)</code> - the playground handles rendering automatically.
+            <strong class="text-text">Note:</strong> Just create your component and assign it to{' '}
+            <code class="px-1 bg-bg-lighter border border-border rounded text-primary">
+              const app = (...)
+            </code>{' '}
+            - the playground handles rendering automatically.
           </p>
         </div>
       </div>

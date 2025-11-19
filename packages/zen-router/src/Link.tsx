@@ -1,9 +1,9 @@
 /**
  * Link component for Zen framework
- * Powered by @zen/router
+ * Powered by @zen/router-core
  */
 
-import { open } from '@zen/router';
+import { open } from '@zen/router-core';
 
 export interface LinkProps {
   href: string;

@@ -1,5 +1,5 @@
 // Combined imports
-import { type Signal, signal, subscribe } from '@zen/signal';
+import { type Signal, signal, subscribe } from '@zen/signal-core';
 import { type MapStore, map } from '../patterns/map';
 
 // --- Types ---

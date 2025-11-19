@@ -6,7 +6,7 @@
  *
  * Usage:
  * ```tsx
- * import { signal } from '@zen/signal';
+ * import { signal } from '@zen/signal-core';
  *
  * const count = signal(0);
  * <div>{count}</div>  // Automatically reactive!

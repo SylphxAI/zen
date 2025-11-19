@@ -7,7 +7,7 @@
  * Usage:
  * ```svelte
  * <script>
- * import { signal } from '@zen/signal';
+ * import { signal } from '@zen/signal-core';
  *
  * const count = signal(0);
  * </script>

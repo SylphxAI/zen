@@ -1,7 +1,7 @@
 {
-  "name": "@zen/router",
+  "name": "@zen/router-core",
   "version": "0.0.0",
-  "description": "Zen framework router with Router and Link components",
+  "description": "Pure routing logic built on Zen Signal reactive primitives (framework-agnostic)",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -16,30 +16,28 @@
   "files": ["dist"],
   "scripts": {
     "build": "bunup --format esm,cjs --dts --target node --minify",
-    "clean": "bun rimraf dist .turbo"
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
-  "keywords": ["zen", "router", "routing", "framework", "component"],
+  "keywords": ["zen", "router", "routing", "signal", "reactive", "minimal", "tiny"],
   "author": "Sylphx <hi@sylphx.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/SylphxAI/zen.git",
-    "directory": "packages/zen-router"
+    "directory": "packages/zen-router-core"
   },
-  "homepage": "https://github.com/SylphxAI/zen/tree/main/packages/zen-router#readme",
+  "homepage": "https://github.com/SylphxAI/zen/tree/main/packages/zen-router-core#readme",
   "bugs": {
     "url": "https://github.com/SylphxAI/zen/issues"
   },
   "dependencies": {
-    "@zen/router-core": "workspace:*",
-    "@zen/signal": "workspace:*"
-  },
-  "peerDependencies": {
-    "@zen/zen": ">=0.0.0"
+    "@zen/signal-core": "workspace:*",
+    "@zen/signal-extensions": "workspace:*"
   },
   "devDependencies": {
     "bunup": "^0.15.13",
-    "typescript": "^5.8.3"
+    "vite-tsconfig-paths": "^5.1.4"
   },
   "publishConfig": {
     "access": "public"

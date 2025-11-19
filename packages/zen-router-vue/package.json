@@ -31,13 +31,13 @@
     "url": "https://github.com/SylphxAI/zen/issues"
   },
   "peerDependencies": {
-    "@zen/router": "^0.0.0",
-    "@zen/signal": "^0.0.0",
+    "@zen/router-core": "^0.0.0",
+    "@zen/signal-core": "^0.0.0",
     "vue": ">=3.0.0"
   },
   "devDependencies": {
-    "@zen/router": "workspace:*",
-    "@zen/signal": "workspace:*",
+    "@zen/router-core": "workspace:*",
+    "@zen/signal-core": "workspace:*",
     "bunup": "^0.15.13",
     "typescript": "^5.8.3",
     "vue": "^3.5.13"

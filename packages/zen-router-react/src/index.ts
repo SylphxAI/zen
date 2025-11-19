@@ -29,4 +29,4 @@ export const useSearchParams: () => import('@zen/router').Search = createUseSear
 export const useNavigate: () => typeof import('@zen/router').open = createUseNavigate();
 
 // Re-export types
-export type { RouterState, Params, Search } from '@zen/router';
+export type { RouterState, Params, Search } from '@zen/router-core';

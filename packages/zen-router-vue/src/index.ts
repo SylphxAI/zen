@@ -14,8 +14,8 @@
  * ```
  */
 
-import { $router, type Params, type RouterState, type Search, open } from '@zen/router';
-import { subscribe } from '@zen/signal';
+import { $router, type Params, type RouterState, type Search, open } from '@zen/router-core';
+import { subscribe } from '@zen/signal-core';
 import { onUnmounted, ref } from 'vue';
 
 /**
@@ -58,4 +58,4 @@ export function useNavigate() {
 }
 
 // Re-export types
-export type { RouterState, Params, Search } from '@zen/router';
+export type { RouterState, Params, Search } from '@zen/router-core';

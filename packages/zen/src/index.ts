@@ -8,58 +8,23 @@
 // Import JSX types (global augmentation)
 import './jsx-types.js';
 
-// Import raw primitives from @zen/signal
-import {
+// Re-export everything from @zen/signal (includes signals + lifecycle)
+export {
+  signal,
+  computed,
+  effect,
+  rawEffect,
   batch,
-  peek,
-  computed as rawComputed,
-  effect as rawEffect,
-  signal as rawSignal,
-  subscribe,
   untrack,
+  peek,
+  subscribe,
+  onMount,
+  onCleanup,
+  createRoot,
+  disposeNode,
+  getOwner,
 } from '@zen/signal';
-import type { Computed, Signal } from '@zen/signal';
-import { getOwner, onCleanup } from './lifecycle.js';
-
-// ============================================================================
-// LIFECYCLE-AWARE EFFECT
-// ============================================================================
-
-/**
- * Lifecycle-aware effect that automatically registers cleanup with owner system.
- *
- * When used inside a Zen component, cleanup is automatic.
- * When used outside components, behaves like raw effect.
- *
- * @example
- * ```tsx
- * function Component() {
- *   effect(() => {
- *     console.log('Effect running');
- *     return () => console.log('Cleanup automatically registered');
- *   });
- * }
- * ```
- */
-export function effect(callback: () => undefined | (() => void)): () => void {
-  const dispose = rawEffect(callback);
-
-  // If we have an owner context, register cleanup automatically
-  const owner = getOwner();
-  if (owner) {
-    onCleanup(dispose);
-  }
-
-  return dispose;
-}
-
-// Re-export primitives (signal and computed don't need lifecycle awareness)
-export const signal = rawSignal;
-export const computed = rawComputed;
-export { batch, untrack, peek, subscribe };
-
-// Export raw effect for advanced users who want manual control
-export { rawEffect };
+export type { Signal, Computed, Owner } from '@zen/signal';
 
 // Components
 export { For } from './components/For.js';
@@ -70,10 +35,6 @@ export { ErrorBoundary } from './components/ErrorBoundary.js';
 export { Suspense } from './components/Suspense.js';
 export { Dynamic } from './components/Dynamic.js';
 
-// Router Components (requires @zen/router)
-export { Router } from './components/Router.js';
-export { Link } from './components/Link.js';
-
 // Context API
 export { createContext, useContext } from './components/Context.js';
 export type { Context } from './components/Context.js';
@@ -81,17 +42,7 @@ export type { Context } from './components/Context.js';
 // JSX
 export { render, Fragment } from './jsx-runtime.js';
 
-// Lifecycle
-export {
-  onMount,
-  onCleanup,
-  createRoot,
-  disposeNode,
-  getOwner,
-} from './lifecycle.js';
-export type { Owner } from './lifecycle.js';
-
-// createEffect removed - use effect() instead which auto-registers cleanup
+// Lifecycle already exported from @zen/signal above
 
 // Utilities
 export { lazy } from './lazy.js';
@@ -106,5 +57,4 @@ export { runWithOwner } from './utils/runWithOwner.js';
 // Server utilities
 export { isServer, createUniqueId, setServerIdPrefix, resetIdCounter } from './server-utils.js';
 
-// Types
-export type { Signal, Computed } from '@zen/signal';
+// Types already exported from @zen/signal above

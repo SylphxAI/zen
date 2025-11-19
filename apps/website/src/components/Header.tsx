@@ -1,5 +1,5 @@
-import { Link } from '@zen/zen';
 import { signal } from '@zen/signal';
+import { Link } from '@zen/zen';
 import { Show } from '@zen/zen';
 import { Icon } from './Icon.tsx';
 import { SearchModal } from './SearchModal.tsx';

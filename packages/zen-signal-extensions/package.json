@@ -60,13 +60,13 @@
     "url": "https://github.com/SylphxAI/zen/issues"
   },
   "peerDependencies": {
-    "@zen/signal": "^0.0.0"
+    "@zen/signal-core": "^0.0.0"
   },
   "dependencies": {
     "@sylphx/craft": "^1.0.0"
   },
   "devDependencies": {
-    "@zen/signal": "workspace:*",
+    "@zen/signal-core": "workspace:*",
     "bunup": "^0.15.13",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"

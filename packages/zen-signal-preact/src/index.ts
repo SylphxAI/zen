@@ -14,7 +14,7 @@ export {
   untrack,
   peek,
   subscribe,
-} from '@zen/signal';
+} from '@zen/signal-core';
 
 // Re-export types
-export type { Signal, Computed } from '@zen/signal';
+export type { Signal, Computed } from '@zen/signal-core';

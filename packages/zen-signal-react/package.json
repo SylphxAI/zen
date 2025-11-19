@@ -51,7 +51,7 @@
     "url": "https://github.com/SylphxAI/zen/issues"
   },
   "dependencies": {
-    "@zen/signal": "workspace:*",
+    "@zen/signal-core": "workspace:*",
     "unplugin-zen-signal": "workspace:*"
   },
   "peerDependencies": {

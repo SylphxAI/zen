@@ -5,7 +5,7 @@
  * by abstracting the common subscription pattern.
  */
 
-import { $router, type RouterState } from '@zen/router';
+import { $router, type RouterState } from '@zen/router-core';
 import { subscribe } from '@zen/signal';
 
 /**
@@ -84,7 +84,7 @@ export function createUseSearchParams(hooks: ReactiveHooks) {
 export function createUseNavigate() {
   // Import dynamically to avoid bundling router when not used
   return function useNavigate() {
-    const { open } = require('@zen/router');
+    const { open } = require('@zen/router-core');
     return open;
   };
 }

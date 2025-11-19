@@ -1,13 +1,11 @@
 /**
  * Router component for Zen framework
- * Powered by @zen/router
+ * Powered by @zen/router-core
  */
 
-import { $router, defineRoutes, startHistoryListener, stopHistoryListener } from '@zen/router';
-import type { RouteConfig } from '@zen/router';
-import { effect, untrack } from '@zen/signal';
-import { disposeNode } from '../lifecycle.js';
-import { onCleanup, onMount } from '../lifecycle.js';
+import { $router, defineRoutes, startHistoryListener, stopHistoryListener } from '@zen/router-core';
+import type { RouteConfig } from '@zen/router-core';
+import { effect, untrack, disposeNode, onCleanup, onMount } from '@zen/signal';
 
 export interface ZenRoute {
   path: string;
@@ -20,7 +18,7 @@ interface RouterProps {
 }
 
 /**
- * Router component - Client-side routing powered by @zen/router
+ * Router component - Client-side routing powered by @zen/router-core
  *
  * @example
  * ```tsx

@@ -81,7 +81,7 @@
         "webpack": "^5.95.0",
       },
       "peerDependencies": {
-        "@zen/signal": "workspace:*",
+        "@zen/signal-core": "workspace:*",
       },
     },
     "packages/zen": {
@@ -104,7 +104,22 @@
       "name": "@zen/router",
       "version": "0.0.0",
       "dependencies": {
+        "@zen/router-core": "workspace:*",
         "@zen/signal": "workspace:*",
+      },
+      "devDependencies": {
+        "bunup": "^0.15.13",
+        "typescript": "^5.8.3",
+      },
+      "peerDependencies": {
+        "@zen/zen": ">=0.0.0",
+      },
+    },
+    "packages/zen-router-core": {
+      "name": "@zen/router-core",
+      "version": "0.0.0",
+      "dependencies": {
+        "@zen/signal-core": "workspace:*",
         "@zen/signal-extensions": "workspace:*",
       },
       "devDependencies": {
@@ -116,15 +131,15 @@
       "name": "@zen/router-preact",
       "version": "0.0.0",
       "devDependencies": {
-        "@zen/router": "workspace:*",
-        "@zen/signal": "workspace:*",
+        "@zen/router-core": "workspace:*",
+        "@zen/signal-core": "workspace:*",
         "bunup": "^0.15.13",
         "preact": "^10.27.2",
         "typescript": "^5.8.3",
       },
       "peerDependencies": {
-        "@zen/router": "^0.0.0",
-        "@zen/signal": "^0.0.0",
+        "@zen/router-core": "^0.0.0",
+        "@zen/signal-core": "^0.0.0",
         "preact": ">=10.0.0",
       },
     },
@@ -133,15 +148,15 @@
       "version": "0.0.0",
       "devDependencies": {
         "@types/react": "^19.0.1",
-        "@zen/router": "workspace:*",
-        "@zen/signal": "workspace:*",
+        "@zen/router-core": "workspace:*",
+        "@zen/signal-core": "workspace:*",
         "bunup": "^0.15.13",
         "react": "^19.2.0",
         "typescript": "^5.8.3",
       },
       "peerDependencies": {
-        "@zen/router": "^0.0.0",
-        "@zen/signal": "^0.0.0",
+        "@zen/router-core": "^0.0.0",
+        "@zen/signal-core": "^0.0.0",
         "react": ">=16.8.0",
       },
     },
@@ -149,20 +164,34 @@
       "name": "@zen/router-vue",
       "version": "0.0.0",
       "devDependencies": {
-        "@zen/router": "workspace:*",
-        "@zen/signal": "workspace:*",
+        "@zen/router-core": "workspace:*",
+        "@zen/signal-core": "workspace:*",
         "bunup": "^0.15.13",
         "typescript": "^5.8.3",
         "vue": "^3.5.13",
       },
       "peerDependencies": {
-        "@zen/router": "^0.0.0",
-        "@zen/signal": "^0.0.0",
+        "@zen/router-core": "^0.0.0",
+        "@zen/signal-core": "^0.0.0",
         "vue": ">=3.0.0",
       },
     },
     "packages/zen-signal": {
       "name": "@zen/signal",
+      "version": "0.0.0",
+      "dependencies": {
+        "@zen/signal-core": "workspace:*",
+      },
+      "devDependencies": {
+        "bunup": "^0.15.13",
+        "typescript": "^5.8.3",
+      },
+      "peerDependencies": {
+        "@zen/zen": ">=0.0.0",
+      },
+    },
+    "packages/zen-signal-core": {
+      "name": "@zen/signal-core",
       "version": "0.0.0",
       "devDependencies": {
         "bunup": "^0.15.13",
@@ -177,20 +206,20 @@
         "@sylphx/craft": "^1.0.0",
       },
       "devDependencies": {
-        "@zen/signal": "workspace:*",
+        "@zen/signal-core": "workspace:*",
         "bunup": "^0.15.13",
         "typescript": "^5.8.3",
         "vitest": "^3.2.4",
       },
       "peerDependencies": {
-        "@zen/signal": "^0.0.0",
+        "@zen/signal-core": "^0.0.0",
       },
     },
     "packages/zen-signal-preact": {
       "name": "@zen/signal-preact",
       "version": "0.0.0",
       "dependencies": {
-        "@zen/signal": "workspace:*",
+        "@zen/signal-core": "workspace:*",
         "unplugin-zen-signal": "workspace:*",
       },
       "devDependencies": {
@@ -208,7 +237,7 @@
       "name": "@zen/signal-react",
       "version": "0.0.0",
       "dependencies": {
-        "@zen/signal": "workspace:*",
+        "@zen/signal-core": "workspace:*",
         "unplugin-zen-signal": "workspace:*",
       },
       "devDependencies": {
@@ -227,7 +256,7 @@
       "name": "@zen/signal-vue",
       "version": "0.0.0",
       "dependencies": {
-        "@zen/signal": "workspace:*",
+        "@zen/signal-core": "workspace:*",
         "unplugin-zen-signal": "workspace:*",
       },
       "devDependencies": {
@@ -841,6 +870,8 @@
 
     "@zen/router": ["@zen/router@workspace:packages/zen-router"],
 
+    "@zen/router-core": ["@zen/router-core@workspace:packages/zen-router-core"],
+
     "@zen/router-preact": ["@zen/router-preact@workspace:packages/zen-router-preact"],
 
     "@zen/router-react": ["@zen/router-react@workspace:packages/zen-router-react"],
@@ -848,6 +879,8 @@
     "@zen/router-vue": ["@zen/router-vue@workspace:packages/zen-router-vue"],
 
     "@zen/signal": ["@zen/signal@workspace:packages/zen-signal"],
+
+    "@zen/signal-core": ["@zen/signal-core@workspace:packages/zen-signal-core"],
 
     "@zen/signal-extensions": ["@zen/signal-extensions@workspace:packages/zen-signal-extensions"],
 

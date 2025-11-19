@@ -76,7 +76,7 @@
     "magic-string": "^0.30.18"
   },
   "peerDependencies": {
-    "@zen/signal": "workspace:*"
+    "@zen/signal-core": "workspace:*"
   },
   "peerDependenciesMeta": {
     "react": {

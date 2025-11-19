@@ -219,6 +219,22 @@ function appendChild(parent: Element, child: any, hydrating: boolean): void {
     return;
   }
 
+  // Function - reactive text (from unplugin transformation)
+  if (typeof child === 'function') {
+    const textNode = document.createTextNode('');
+    if (!hydrating) {
+      parent.appendChild(textNode);
+    }
+
+    // Wrap in effect for reactivity
+    effect(() => {
+      const value = child();
+      textNode.data = String(value ?? '');
+      return undefined;
+    });
+    return;
+  }
+
   // Text - very common
   if (hydrating) {
     const node = getNextHydrateNode();

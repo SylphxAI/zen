@@ -11,13 +11,14 @@ import { createUnplugin } from 'unplugin';
 import { transformReact } from './transforms/react';
 import { transformSvelte } from './transforms/svelte';
 import { transformVue } from './transforms/vue';
+import { transformZen } from './transforms/zen';
 
 export interface Options {
   /**
    * Target framework
    * @default 'react'
    */
-  framework?: 'react' | 'vue' | 'svelte' | 'solid' | 'preact';
+  framework?: 'react' | 'vue' | 'svelte' | 'solid' | 'preact' | 'zen';
 
   /**
    * Include patterns (default: all .tsx, .jsx, .vue, .svelte files)
@@ -84,6 +85,9 @@ export const unplugin = createUnplugin<Options>((options = {}) => {
           break;
         case 'svelte':
           transformSvelte(code, s, id, debug);
+          break;
+        case 'zen':
+          transformZen(code, s, id, debug);
           break;
         case 'solid':
           // Solid.js signals work natively, no transformation needed

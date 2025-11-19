@@ -1,4 +1,5 @@
 import { For } from '@zen/zen';
+import { Icon } from './Icon.tsx';
 
 export function StandalonePackages() {
   const packages = [
@@ -14,11 +15,11 @@ export function StandalonePackages() {
         'Zero dependencies',
       ],
       integrations: [
-        { name: 'React', pkg: '@zen/signal-react', icon: '⚛️' },
-        { name: 'Vue', pkg: '@zen/signal-vue', icon: '💚' },
-        { name: 'Svelte', pkg: '@zen/signal-svelte', icon: '🧡' },
-        { name: 'Solid', pkg: '@zen/signal-solid', icon: '🔷' },
-        { name: 'Preact', pkg: '@zen/signal-preact', icon: '⚡' },
+        { name: 'React', pkg: '@zen/signal-react', icon: 'lucide:atom' },
+        { name: 'Vue', pkg: '@zen/signal-vue', icon: 'lucide:triangle' },
+        { name: 'Svelte', pkg: '@zen/signal-svelte', icon: 'lucide:flame' },
+        { name: 'Solid', pkg: '@zen/signal-solid', icon: 'lucide:box' },
+        { name: 'Preact', pkg: '@zen/signal-preact', icon: 'lucide:zap' },
       ],
       example: `// Vanilla JS
 import { signal, computed, effect } from '@zen/signal'
@@ -44,10 +45,10 @@ count.value++ // Logs: "Count: 1"`,
         'Simple and easy to use',
       ],
       integrations: [
-        { name: 'Zen', pkg: '@zen/zen', icon: '⚡' },
-        { name: 'React', pkg: 'react-router', icon: '⚛️' },
-        { name: 'Vue', pkg: 'vue-router', icon: '💚' },
-        { name: 'Vanilla', pkg: '@zen/router', icon: '📦' },
+        { name: 'Zen', pkg: '@zen/zen', icon: 'lucide:zap' },
+        { name: 'React', pkg: 'react-router', icon: 'lucide:atom' },
+        { name: 'Vue', pkg: 'vue-router', icon: 'lucide:triangle' },
+        { name: 'Vanilla', pkg: '@zen/router', icon: 'lucide:package' },
       ],
       example: `// Works in any project
 import { createRouter } from '@zen/router'
@@ -157,8 +158,8 @@ settings.value.language = 'en'`,
                       <span class="text-sm text-text-muted mr-2">Works with:</span>
                       <For each={pkg.integrations}>
                         {(integration) => (
-                          <span class="px-3 py-1 bg-bg border border-border rounded-full text-sm text-text">
-                            <span class="mr-1">{integration.icon}</span>
+                          <span class="px-3 py-1 bg-bg border border-border rounded-full text-sm text-text flex items-center gap-2">
+                            <Icon icon={integration.icon} width="16" height="16" class="text-primary" />
                             {integration.name}
                           </span>
                         )}

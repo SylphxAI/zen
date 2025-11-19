@@ -1,20 +1,21 @@
 import { For, signal } from '@zen/zen';
+import { Icon } from './Icon.tsx';
 
 export function EcosystemIntegrations() {
   const activeCategory = signal('css');
 
   const categories = [
-    { id: 'css', name: 'CSS Frameworks', icon: '🎨' },
-    { id: 'icons', name: 'Icon Libraries', icon: '🎭' },
-    { id: 'ui', name: 'UI Components', icon: '🧩' },
-    { id: 'tools', name: 'Dev Tools', icon: '🛠️' },
+    { id: 'css', name: 'CSS Frameworks', icon: 'lucide:palette' },
+    { id: 'icons', name: 'Icon Libraries', icon: 'lucide:sparkles' },
+    { id: 'ui', name: 'UI Components', icon: 'lucide:layout' },
+    { id: 'tools', name: 'Dev Tools', icon: 'lucide:wrench' },
   ];
 
   const integrations = {
     css: [
       {
         name: 'Tailwind CSS',
-        logo: '🌊',
+        logo: 'lucide:wind',
         description: 'Most popular utility-first CSS framework',
         setup: `// tailwind.config.js
 export default {
@@ -36,7 +37,7 @@ function Button() {
       },
       {
         name: 'Panda CSS',
-        logo: '🐼',
+        logo: 'lucide:square-code',
         description: 'Zero-runtime CSS-in-JS',
         setup: `// panda.config.ts
 import { defineConfig } from '@pandacss/dev'
@@ -66,7 +67,7 @@ function Button() {
       },
       {
         name: 'UnoCSS',
-        logo: '⚡',
+        logo: 'lucide:zap',
         description: 'Instant on-demand atomic CSS engine',
         setup: `// uno.config.ts
 import { defineConfig } from 'unocss'
@@ -89,7 +90,7 @@ function Card() {
     icons: [
       {
         name: 'Iconify',
-        logo: '🎯',
+        logo: 'lucide:target',
         description: '200,000+ icons, unified access',
         setup: `// Install
 npm install @iconify/react
@@ -110,7 +111,7 @@ function Header() {
       },
       {
         name: 'Lucide',
-        logo: '🌟',
+        logo: 'lucide:star',
         description: 'Beautiful SVG icon library',
         setup: `// Install
 npm install lucide
@@ -131,7 +132,7 @@ function Nav() {
       },
       {
         name: 'Phosphor Icons',
-        logo: '💎',
+        logo: 'lucide:gem',
         description: 'Flexible icon family',
         setup: `// Install
 npm install phosphor-icons
@@ -154,7 +155,7 @@ function Icons() {
     ui: [
       {
         name: 'Build Your Own',
-        logo: '🎨',
+        logo: 'lucide:palette',
         description: 'Build your own UI components with Zen',
         setup: `// Button.tsx
 import { signal } from '@zen/zen'
@@ -179,7 +180,7 @@ export function Button({ variant = 'primary', children, onClick }) {
       },
       {
         name: 'Headless UI',
-        logo: '🎭',
+        logo: 'lucide:component',
         description: 'Unstyled accessible UI components',
         setup: `// Integrate Headless UI concepts
 import { signal, Show } from '@zen/zen'
@@ -208,7 +209,7 @@ export function Dropdown({ items }) {
     tools: [
       {
         name: 'Vite',
-        logo: '⚡',
+        logo: 'lucide:zap',
         description: 'Lightning-fast dev server',
         setup: `// vite.config.ts
 import { defineConfig } from 'vite'
@@ -223,7 +224,7 @@ export default defineConfig({
       },
       {
         name: 'Biome',
-        logo: '🌿',
+        logo: 'lucide:leaf',
         description: 'All-in-one toolchain',
         setup: `// biome.json
 {
@@ -241,7 +242,7 @@ biome check --apply .`,
       },
       {
         name: 'TypeScript',
-        logo: '💙',
+        logo: 'lucide:code',
         description: 'Full type support',
         setup: `// tsconfig.json
 {
@@ -286,7 +287,7 @@ const doubled = computed(() => count.value * 2)  // Computed<number>`,
                   activeCategory.value = cat.id;
                 }}
               >
-                <span class="mr-2">{cat.icon}</span>
+                <Icon icon={cat.icon} width="20" height="20" class="mr-2" />
                 {cat.name}
               </button>
             )}
@@ -300,7 +301,7 @@ const doubled = computed(() => count.value * 2)  // Computed<number>`,
               <div class="bg-bg-light border border-border rounded-zen overflow-hidden hover:border-primary/50 transition-colors">
                 <div class="bg-bg-lighter border-b border-border px-6 py-4">
                   <div class="flex items-center gap-3 mb-2">
-                    <span class="text-4xl">{integration.logo}</span>
+                    <Icon icon={integration.logo} width="40" height="40" class="text-primary flex-shrink-0" />
                     <div>
                       <h3 class="text-xl font-bold text-text">{integration.name}</h3>
                       <p class="text-sm text-text-muted">{integration.description}</p>

@@ -1,7 +1,7 @@
 import { Router } from '@zen/router-zen';
 import { Footer } from './components/Footer.tsx';
 import { Header } from './components/Header.tsx';
-import { Docs } from './pages/Docs.tsx';
+import { NewDocs } from './pages/NewDocs.tsx';
 import { NewHome } from './pages/NewHome.tsx';
 import { Playground } from './pages/Playground.tsx';
 
@@ -13,7 +13,7 @@ export function App() {
         <Router
           routes={[
             { path: '/', component: () => <NewHome /> },
-            { path: '/docs', component: () => <Docs /> },
+            { path: '/docs', component: () => <NewDocs /> },
             { path: '/playground', component: () => <Playground /> },
           ]}
           fallback={() => (

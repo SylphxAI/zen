@@ -46,8 +46,12 @@ export function Features() {
                 <div class="mb-4 group-hover:scale-110 transition-transform duration-300">
                   <Icon icon={feature.icon} width="48" height="48" class="text-primary" />
                 </div>
-                <h3 class="text-xl font-semibold mb-3 text-text dark:text-text-dark">{feature.title}</h3>
-                <p class="text-text-muted dark:text-text-dark-muted leading-relaxed">{feature.description}</p>
+                <h3 class="text-xl font-semibold mb-3 text-text dark:text-text-dark">
+                  {feature.title}
+                </h3>
+                <p class="text-text-muted dark:text-text-dark-muted leading-relaxed">
+                  {feature.description}
+                </p>
               </div>
             )}
           </For>

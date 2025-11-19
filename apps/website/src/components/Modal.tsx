@@ -1,8 +1,7 @@
-import { effect, signal } from '@zen/signal';
-import { Show, type ZenNode } from '@zen/zen';
+import { effect } from '@zen/signal';
+import type { ZenNode } from '@zen/zen';
 
 export interface ModalProps {
-  isOpen: boolean;
   onClose: () => void;
   title?: string;
   children: ZenNode;
@@ -11,26 +10,23 @@ export interface ModalProps {
 export function Modal(props: ModalProps) {
   // Handle ESC key to close modal
   effect(() => {
-    if (props.isOpen) {
-      const handleEscape = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') {
-          props.onClose();
-        }
-      };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        props.onClose();
+      }
+    };
 
-      document.addEventListener('keydown', handleEscape);
-      // Prevent body scroll when modal is open
-      document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', handleEscape);
+    // Prevent body scroll when modal is open
+    document.body.style.overflow = 'hidden';
 
-      return () => {
-        document.removeEventListener('keydown', handleEscape);
-        document.body.style.overflow = '';
-      };
-    }
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = '';
+    };
   });
 
   return (
-    <Show when={props.isOpen}>
       <div
         class="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
         onClick={props.onClose}
@@ -83,6 +79,5 @@ export function Modal(props: ModalProps) {
           <div class="p-6 overflow-y-auto max-h-[calc(80vh-120px)]">{props.children}</div>
         </div>
       </div>
-    </Show>
   );
 }

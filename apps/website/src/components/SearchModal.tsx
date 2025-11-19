@@ -74,7 +74,6 @@ const MOCK_DOCS = [
 ];
 
 export interface SearchModalProps {
-  isOpen: boolean;
   onClose: () => void;
 }
 
@@ -101,7 +100,7 @@ export function SearchModal(props: SearchModalProps) {
   };
 
   return (
-    <Modal isOpen={props.isOpen} onClose={props.onClose} title="Search Documentation">
+    <Modal onClose={props.onClose} title="Search Documentation">
       {/* Search input */}
       <div class="mb-6">
         <div class="relative">

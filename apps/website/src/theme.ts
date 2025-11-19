@@ -14,28 +14,31 @@ function getInitialTheme(): Theme {
 
 export const theme = signal<Theme>(getInitialTheme());
 
-// Apply theme to document
-effect(() => {
-  const currentTheme = theme.value;
-
-  if (currentTheme === 'dark') {
-    document.documentElement.classList.add('dark');
-  } else {
-    document.documentElement.classList.remove('dark');
-  }
-
-  localStorage.setItem('theme', currentTheme);
-});
-
-// Listen to system preference changes
-if (typeof window !== 'undefined') {
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-    if (!localStorage.getItem('theme')) {
-      theme.value = e.matches ? 'dark' : 'light';
-    }
-  });
-}
-
 export function toggleTheme() {
   theme.value = theme.value === 'dark' ? 'light' : 'dark';
+}
+
+// Initialize theme system - call this from a component
+export function initTheme() {
+  // Apply theme to document
+  effect(() => {
+    const currentTheme = theme.value;
+
+    if (currentTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+
+    localStorage.setItem('theme', currentTheme);
+  });
+
+  // Listen to system preference changes
+  if (typeof window !== 'undefined') {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+      if (!localStorage.getItem('theme')) {
+        theme.value = e.matches ? 'dark' : 'light';
+      }
+    });
+  }
 }

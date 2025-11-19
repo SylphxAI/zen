@@ -1,593 +1,214 @@
 import { For, Show, computed, signal } from '@zen/zen';
+import { Icon } from '../components/Icon.tsx';
+import { categories, examples } from '../data/examples.ts';
 
 export function Examples() {
-  const activeExample = signal('counter');
+  const selectedCategory = signal<string>('basic');
+  const selectedExampleId = signal<string>('counter');
+  const showCode = signal(false);
 
-  const showCounter = computed(() => activeExample.value === 'counter');
-  const showTodo = computed(() => activeExample.value === 'todo');
-  const showForm = computed(() => activeExample.value === 'form');
-  const showAsync = computed(() => activeExample.value === 'async');
-  const showRouter = computed(() => activeExample.value === 'router');
-  const showPortal = computed(() => activeExample.value === 'portal');
+  const filteredExamples = computed(() =>
+    examples.filter((ex) => ex.category === selectedCategory.value),
+  );
 
-  const examples = [
-    { id: 'counter', title: 'Counter', icon: '🔢' },
-    { id: 'todo', title: 'Todo List', icon: '✓' },
-    { id: 'form', title: 'Form Validation', icon: '📝' },
-    { id: 'async', title: 'Async Data', icon: '🔄' },
-    { id: 'router', title: 'Routing', icon: '🧭' },
-    { id: 'portal', title: 'Portal/Modal', icon: '🚪' },
-  ];
+  const selectedExample = computed(
+    () => examples.find((ex) => ex.id === selectedExampleId.value) || examples[0],
+  );
+
+  // Auto-select first example when category changes
+  const handleCategoryChange = (categoryId: string) => {
+    selectedCategory.value = categoryId;
+    const firstExample = examples.find((ex) => ex.category === categoryId);
+    if (firstExample) {
+      selectedExampleId.value = firstExample.id;
+    }
+  };
 
   return (
-    <div class="page-examples">
-      <div class="container">
-        <header class="page-header">
-          <h1>Examples</h1>
-          <p>Real-world examples showcasing Zen's powerful features</p>
+    <div class="min-h-screen bg-bg py-8">
+      <div class="max-w-screen-2xl mx-auto px-6">
+        <header class="mb-8">
+          <h1 class="text-4xl font-bold text-text mb-2">Examples</h1>
+          <p class="text-xl text-text-muted">
+            Real-world examples showcasing Zen's powerful features
+          </p>
         </header>
 
-        <div class="examples-layout">
-          <aside class="examples-sidebar">
-            <For each={examples}>
-              {(example) => (
-                <button
-                  type="button"
-                  class={
-                    activeExample.value === example.id
-                      ? 'example-nav-item active'
-                      : 'example-nav-item'
-                  }
-                  onClick={() => {
-                    activeExample.value = example.id;
-                  }}
-                >
-                  <span class="example-icon">{example.icon}</span>
-                  {example.title}
-                </button>
-              )}
-            </For>
+        <div class="grid grid-cols-12 gap-6">
+          {/* Category Sidebar */}
+          <aside class="col-span-12 lg:col-span-2">
+            <div class="bg-bg-light border border-border rounded-zen p-4">
+              <h3 class="text-sm font-semibold text-text-muted mb-3 uppercase tracking-wide">
+                Categories
+              </h3>
+              <nav class="space-y-1">
+                <For each={categories}>
+                  {(category) => (
+                    <button
+                      type="button"
+                      class={
+                        selectedCategory.value === category.id
+                          ? 'w-full flex items-center gap-2 px-3 py-2 bg-primary text-white rounded transition-colors'
+                          : 'w-full flex items-center gap-2 px-3 py-2 text-text-muted hover:text-text hover:bg-bg-lighter rounded transition-colors'
+                      }
+                      onClick={() => handleCategoryChange(category.id)}
+                    >
+                      <Icon icon={category.icon} width="18" height="18" />
+                      <span class="text-sm font-medium">{category.name}</span>
+                    </button>
+                  )}
+                </For>
+              </nav>
+            </div>
           </aside>
 
-          <main class="examples-content">
-            <Show when={showCounter}>
-              <CounterExample />
-            </Show>
-            <Show when={showTodo}>
-              <TodoExample />
-            </Show>
-            <Show when={showForm}>
-              <FormExample />
-            </Show>
-            <Show when={showAsync}>
-              <AsyncExample />
-            </Show>
-            <Show when={showRouter}>
-              <RouterExample />
-            </Show>
-            <Show when={showPortal}>
-              <PortalExample />
-            </Show>
+          {/* Examples List */}
+          <div class="col-span-12 lg:col-span-3">
+            <div class="bg-bg-light border border-border rounded-zen p-4">
+              <h3 class="text-sm font-semibold text-text-muted mb-3 uppercase tracking-wide">
+                Examples
+              </h3>
+              <div class="space-y-2">
+                <For each={filteredExamples.value}>
+                  {(example) => (
+                    <button
+                      type="button"
+                      class={
+                        selectedExampleId.value === example.id
+                          ? 'w-full text-left p-3 bg-bg-lighter border-2 border-primary rounded-zen transition-all'
+                          : 'w-full text-left p-3 bg-bg hover:bg-bg-lighter border-2 border-transparent rounded-zen transition-all'
+                      }
+                      onClick={() => {
+                        selectedExampleId.value = example.id;
+                      }}
+                    >
+                      <div class="flex items-start gap-3">
+                        <div
+                          class={
+                            selectedExampleId.value === example.id
+                              ? 'flex-shrink-0 w-8 h-8 flex items-center justify-center bg-primary text-white rounded'
+                              : 'flex-shrink-0 w-8 h-8 flex items-center justify-center bg-bg-lighter text-primary rounded'
+                          }
+                        >
+                          <Icon icon={example.icon} width="18" height="18" />
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <h4 class="text-sm font-semibold text-text truncate">{example.title}</h4>
+                          <p class="text-xs text-text-muted line-clamp-2">{example.description}</p>
+                        </div>
+                      </div>
+                    </button>
+                  )}
+                </For>
+              </div>
+            </div>
+          </div>
+
+          {/* Preview & Code */}
+          <main class="col-span-12 lg:col-span-7">
+            <div class="bg-bg-light border border-border rounded-zen overflow-hidden">
+              {/* Header */}
+              <div class="flex items-center justify-between px-6 py-4 border-b border-border bg-bg-lighter">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 flex items-center justify-center bg-primary text-white rounded">
+                    <Icon icon={selectedExample.value.icon} width="20" height="20" />
+                  </div>
+                  <div>
+                    <h2 class="text-lg font-semibold text-text">{selectedExample.value.title}</h2>
+                    <p class="text-sm text-text-muted">{selectedExample.value.description}</p>
+                  </div>
+                </div>
+                <div class="flex gap-2">
+                  <button
+                    type="button"
+                    class={
+                      !showCode.value
+                        ? 'px-4 py-2 bg-primary text-white rounded transition-colors'
+                        : 'px-4 py-2 bg-bg hover:bg-bg-lighter text-text border border-border rounded transition-colors'
+                    }
+                    onClick={() => {
+                      showCode.value = false;
+                    }}
+                  >
+                    <div class="flex items-center gap-2">
+                      <Icon icon="lucide:play" width="16" height="16" />
+                      <span class="text-sm font-medium">Preview</span>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    class={
+                      showCode.value
+                        ? 'px-4 py-2 bg-primary text-white rounded transition-colors'
+                        : 'px-4 py-2 bg-bg hover:bg-bg-lighter text-text border border-border rounded transition-colors'
+                    }
+                    onClick={() => {
+                      showCode.value = true;
+                    }}
+                  >
+                    <div class="flex items-center gap-2">
+                      <Icon icon="lucide:code" width="16" height="16" />
+                      <span class="text-sm font-medium">Code</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div class="p-6">
+                <Show when={computed(() => !showCode.value)}>
+                  <div class="min-h-[400px] bg-bg border border-border rounded-zen p-6">
+                    <p class="text-text-muted text-center py-12">
+                      <Icon
+                        icon="lucide:play-circle"
+                        width="48"
+                        height="48"
+                        class="mx-auto mb-4 opacity-50"
+                      />
+                      Interactive preview coming soon. Use the Playground to run this example.
+                    </p>
+                  </div>
+                </Show>
+
+                <Show when={showCode}>
+                  <div class="bg-[#282c34] rounded-zen overflow-hidden">
+                    <div class="flex items-center justify-between px-4 py-2 bg-[#21252b] border-b border-[#181a1f]">
+                      <span class="text-xs text-[#abb2bf] font-mono">
+                        {selectedExample.value.id}.tsx
+                      </span>
+                      <button
+                        type="button"
+                        class="text-xs text-[#abb2bf] hover:text-white transition-colors"
+                        onClick={() => {
+                          navigator.clipboard.writeText(selectedExample.value.code);
+                        }}
+                      >
+                        <Icon icon="lucide:copy" width="14" height="14" />
+                      </button>
+                    </div>
+                    <pre class="p-4 overflow-x-auto">
+                      <code class="text-sm text-[#abb2bf] font-mono">
+                        {selectedExample.value.code}
+                      </code>
+                    </pre>
+                  </div>
+                </Show>
+              </div>
+
+              {/* Footer */}
+              <div class="px-6 py-4 border-t border-border bg-bg-lighter">
+                <a
+                  href="/playground"
+                  class="inline-flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded transition-colors"
+                >
+                  <Icon icon="lucide:external-link" width="16" height="16" />
+                  <span class="text-sm font-medium">Open in Playground</span>
+                </a>
+              </div>
+            </div>
           </main>
         </div>
       </div>
-    </div>
-  );
-}
-
-function CounterExample() {
-  const count = signal(0);
-  const step = signal(1);
-  const doubled = computed(() => count.value * 2);
-
-  return (
-    <div class="example">
-      <h2>Counter with Step</h2>
-      <p>Demonstrates signal() and computed() with dynamic step control</p>
-
-      <div class="example-demo">
-        <div class="counter-display">
-          <div class="value-large">{count}</div>
-          <div class="value-computed">Doubled: {doubled}</div>
-        </div>
-        <div class="counter-controls">
-          <label>
-            Step:
-            <input
-              type="number"
-              value={step.value}
-              onInput={(e) => {
-                step.value = Number.parseInt((e.target as HTMLInputElement).value) || 1;
-              }}
-              class="input input-small"
-            />
-          </label>
-          <div class="button-group">
-            <button
-              type="button"
-              class="btn"
-              onClick={() => {
-                count.value -= step.value;
-              }}
-            >
-              - {step.value}
-            </button>
-            <button
-              type="button"
-              class="btn btn-primary"
-              onClick={() => {
-                count.value += step.value;
-              }}
-            >
-              + {step.value}
-            </button>
-            <button
-              type="button"
-              class="btn btn-secondary"
-              onClick={() => {
-                count.value = 0;
-              }}
-            >
-              Reset
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <pre class="code-block">{`const count = signal(0);
-const step = signal(1);
-const doubled = computed(() => count.value * 2);
-
-<button onClick={() => count.value += step.value}>
-  + {step.value}
-</button>`}</pre>
-    </div>
-  );
-}
-
-function TodoExample() {
-  const todos = signal([
-    { id: 1, text: 'Learn Zen', done: false },
-    { id: 2, text: 'Build app', done: true },
-  ]);
-  const newTodo = signal('');
-  const filter = signal('all');
-
-  const filteredTodos = computed(() => {
-    const f = filter.value;
-    const t = todos.value;
-    if (f === 'active') return t.filter((t) => !t.done);
-    if (f === 'completed') return t.filter((t) => t.done);
-    return t;
-  });
-
-  const activeCount = computed(() => todos.value.filter((t) => !t.done).length);
-
-  const addTodo = () => {
-    if (newTodo.value.trim()) {
-      todos.value = [
-        ...todos.value,
-        {
-          id: Date.now(),
-          text: newTodo.value,
-          done: false,
-        },
-      ];
-      newTodo.value = '';
-    }
-  };
-
-  const toggleTodo = (id: number) => {
-    todos.value = todos.value.map((t) => (t.id === id ? { ...t, done: !t.done } : t));
-  };
-
-  const removeTodo = (id: number) => {
-    todos.value = todos.value.filter((t) => t.id !== id);
-  };
-
-  return (
-    <div class="example">
-      <h2>Todo List with Filters</h2>
-      <p>Shows For component, computed filtering, and state management</p>
-
-      <div class="example-demo">
-        <div class="todo-app">
-          <div class="todo-input-row">
-            <input
-              type="text"
-              value={newTodo.value}
-              onInput={(e) => {
-                newTodo.value = (e.target as HTMLInputElement).value;
-              }}
-              onKeyPress={(e) => (e as KeyboardEvent).key === 'Enter' && addTodo()}
-              placeholder="What needs to be done?"
-              class="input"
-            />
-            <button type="button" onClick={addTodo} class="btn btn-primary">
-              Add
-            </button>
-          </div>
-
-          <div class="todo-filters">
-            <button
-              type="button"
-              class={filter.value === 'all' ? 'filter-btn active' : 'filter-btn'}
-              onClick={() => {
-                filter.value = 'all';
-              }}
-            >
-              All
-            </button>
-            <button
-              type="button"
-              class={filter.value === 'active' ? 'filter-btn active' : 'filter-btn'}
-              onClick={() => {
-                filter.value = 'active';
-              }}
-            >
-              Active ({activeCount.value})
-            </button>
-            <button
-              type="button"
-              class={filter.value === 'completed' ? 'filter-btn active' : 'filter-btn'}
-              onClick={() => {
-                filter.value = 'completed';
-              }}
-            >
-              Completed
-            </button>
-          </div>
-
-          <ul class="todo-list">
-            <For each={filteredTodos.value}>
-              {(todo) => (
-                <li class={todo.done ? 'todo-item done' : 'todo-item'}>
-                  <input type="checkbox" checked={todo.done} onChange={() => toggleTodo(todo.id)} />
-                  <span class="todo-text">{todo.text}</span>
-                  <button type="button" onClick={() => removeTodo(todo.id)} class="btn-icon">
-                    ×
-                  </button>
-                </li>
-              )}
-            </For>
-          </ul>
-
-          <Show when={computed(() => filteredTodos.value.length === 0)}>
-            <div class="todo-empty">No todos in this filter</div>
-          </Show>
-        </div>
-      </div>
-
-      <pre class="code-block">{`const todos = signal([...]);
-const filter = signal('all');
-
-const filteredTodos = computed(() => {
-  const f = filter.value;
-  if (f === 'active') return todos.value.filter(t => !t.done);
-  if (f === 'completed') return todos.value.filter(t => t.done);
-  return todos.value;
-});
-
-<For each={filteredTodos.value}>
-  {(todo) => <li>{todo.text}</li>}
-</For>`}</pre>
-    </div>
-  );
-}
-
-function FormExample() {
-  const email = signal('');
-  const password = signal('');
-  const confirmPassword = signal('');
-  const submitted = signal(false);
-
-  const emailValid = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value));
-
-  const passwordValid = computed(() => password.value.length >= 8);
-
-  const passwordsMatch = computed(
-    () => password.value === confirmPassword.value && password.value.length > 0,
-  );
-
-  const formValid = computed(() => emailValid.value && passwordValid.value && passwordsMatch.value);
-
-  const handleSubmit = (e: Event) => {
-    e.preventDefault();
-    if (formValid.value) {
-      submitted.value = true;
-      setTimeout(() => {
-        submitted.value = false;
-      }, 3000);
-    }
-  };
-
-  return (
-    <div class="example">
-      <h2>Form Validation</h2>
-      <p>Real-time validation with computed values</p>
-
-      <div class="example-demo">
-        <form onSubmit={handleSubmit} class="demo-form">
-          <div class="form-field">
-            <label>
-              Email
-              <input
-                type="email"
-                value={email.value}
-                onInput={(e) => {
-                  email.value = (e.target as HTMLInputElement).value;
-                }}
-                class="input"
-              />
-            </label>
-            <Show when={computed(() => email.value && !emailValid.value)}>
-              <div class="form-error">Invalid email format</div>
-            </Show>
-            <Show when={emailValid}>
-              <div class="form-success">✓ Valid email</div>
-            </Show>
-          </div>
-
-          <div class="form-field">
-            <label>
-              Password (min 8 characters)
-              <input
-                type="password"
-                value={password.value}
-                onInput={(e) => {
-                  password.value = (e.target as HTMLInputElement).value;
-                }}
-                class="input"
-              />
-            </label>
-            <Show when={computed(() => password.value && !passwordValid.value)}>
-              <div class="form-error">Password must be at least 8 characters</div>
-            </Show>
-            <Show when={passwordValid}>
-              <div class="form-success">✓ Strong password</div>
-            </Show>
-          </div>
-
-          <div class="form-field">
-            <label>
-              Confirm Password
-              <input
-                type="password"
-                value={confirmPassword.value}
-                onInput={(e) => {
-                  confirmPassword.value = (e.target as HTMLInputElement).value;
-                }}
-                class="input"
-              />
-            </label>
-            <Show when={computed(() => confirmPassword.value && !passwordsMatch.value)}>
-              <div class="form-error">Passwords don't match</div>
-            </Show>
-            <Show when={passwordsMatch}>
-              <div class="form-success">✓ Passwords match</div>
-            </Show>
-          </div>
-
-          <button type="submit" disabled={!formValid.value} class="btn btn-primary btn-large">
-            Submit
-          </button>
-
-          <Show when={submitted}>
-            <div class="form-success-message">✓ Form submitted successfully!</div>
-          </Show>
-        </form>
-      </div>
-
-      <pre class="code-block">{`const email = signal('');
-const emailValid = computed(() =>
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)
-);
-
-<Show when={email.value && !emailValid.value}>
-  <div class="error">Invalid email</div>
-</Show>`}</pre>
-    </div>
-  );
-}
-
-function AsyncExample() {
-  const userId = signal(1);
-  const user = signal(null);
-  const loading = signal(false);
-  const error = signal(null);
-
-  const fetchUser = async () => {
-    loading.value = true;
-    error.value = null;
-    try {
-      const res = await fetch(`https://jsonplaceholder.typicode.com/users/${userId.value}`);
-      user.value = await res.json();
-    } catch (e) {
-      error.value = e.message;
-    } finally {
-      loading.value = false;
-    }
-  };
-
-  return (
-    <div class="example">
-      <h2>Async Data Fetching</h2>
-      <p>Loading states with Show component</p>
-
-      <div class="example-demo">
-        <div class="async-controls">
-          <label>
-            User ID:
-            <input
-              type="number"
-              value={userId.value}
-              onInput={(e) => {
-                userId.value = Number.parseInt((e.target as HTMLInputElement).value) || 1;
-              }}
-              min="1"
-              max="10"
-              class="input input-small"
-            />
-          </label>
-          <button type="button" onClick={fetchUser} class="btn btn-primary">
-            Fetch User
-          </button>
-        </div>
-
-        <div class="async-result">
-          <Show when={loading}>
-            <div class="loading-spinner">Loading...</div>
-          </Show>
-
-          <Show when={error}>
-            <div class="error-message">Error: {error.value}</div>
-          </Show>
-
-          <Show when={computed(() => !loading.value && !error.value && user.value)}>
-            {(u) => (
-              <div class="user-card">
-                <h3>{u.name}</h3>
-                <p>
-                  <strong>Email:</strong> {u.email}
-                </p>
-                <p>
-                  <strong>Phone:</strong> {u.phone}
-                </p>
-                <p>
-                  <strong>Website:</strong> {u.website}
-                </p>
-                <p>
-                  <strong>Company:</strong> {u.company?.name}
-                </p>
-              </div>
-            )}
-          </Show>
-        </div>
-      </div>
-
-      <pre class="code-block">{`const loading = signal(false);
-const user = signal(null);
-
-const fetchUser = async () => {
-  loading.value = true;
-  const res = await fetch('/api/user');
-  user.value = await res.json();
-  loading.value = false;
-};
-
-<Show when={loading.value}>
-  <Spinner />
-</Show>
-<Show when={!loading.value && user.value}>
-  {(u) => <div>{u.name}</div>}
-</Show>`}</pre>
-    </div>
-  );
-}
-
-function RouterExample() {
-  return (
-    <div class="example">
-      <h2>Client-side Routing</h2>
-      <p>Router component with Link navigation</p>
-
-      <pre class="code-block">{`import { Router, Link } from '@zen/zen';
-
-function App() {
-  return (
-    <div>
-      <nav>
-        <Link href="/">Home</Link>
-        <Link href="/about">About</Link>
-        <Link href="/users/123">User</Link>
-      </nav>
-
-      <Router
-        routes={[
-          { path: '/', component: () => <Home /> },
-          { path: '/about', component: () => <About /> },
-          { path: '/users/:id', component: (props) => (
-            <User id={props.params.id} />
-          )},
-        ]}
-        fallback={() => <NotFound />}
-      />
-    </div>
-  );
-}`}</pre>
-
-      <p>The router is already in use on this website! Try navigating between pages.</p>
-    </div>
-  );
-}
-
-function PortalExample() {
-  const showModal = signal(false);
-
-  return (
-    <div class="example">
-      <h2>Portal & Modal</h2>
-      <p>Render content outside parent DOM hierarchy</p>
-
-      <div class="example-demo">
-        <button
-          type="button"
-          onClick={() => {
-            showModal.value = true;
-          }}
-          class="btn btn-primary"
-        >
-          Open Modal
-        </button>
-
-        <Show when={showModal}>
-          <div
-            class="modal-overlay"
-            onClick={() => {
-              showModal.value = false;
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') {
-                showModal.value = false;
-              }
-            }}
-          >
-            <div
-              class="modal-content"
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.stopPropagation()}
-            >
-              <h3>Modal Title</h3>
-              <p>This modal is rendered using a Portal component!</p>
-              <p>It's rendered outside the normal DOM hierarchy.</p>
-              <button
-                type="button"
-                onClick={() => {
-                  showModal.value = false;
-                }}
-                class="btn btn-secondary"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </Show>
-      </div>
-
-      <pre class="code-block">{`import { Portal, Show, signal } from '@zen/zen';
-
-const showModal = signal(false);
-
-<Portal mount={document.body}>
-  <Show when={showModal.value}>
-    <div class="modal">
-      <h3>Modal</h3>
-      <button onClick={() => showModal.value = false}>
-        Close
-      </button>
-    </div>
-  </Show>
-</Portal>`}</pre>
     </div>
   );
 }

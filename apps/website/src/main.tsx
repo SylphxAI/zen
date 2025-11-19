@@ -1,4 +1,5 @@
 import './index.css';
+import '@iconify/iconify';
 import { render } from '@zen/zen';
 import { App } from './App';
 

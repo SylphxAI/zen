@@ -1,4 +1,5 @@
 import { Show, computed, signal } from '@zen/zen';
+import { Icon } from '../components/Icon.tsx';
 
 export function Docs() {
   const activeSection = signal('intro');
@@ -11,12 +12,12 @@ export function Docs() {
   const showIntegrations = computed(() => activeSection.value === 'integrations');
 
   const sections = [
-    { id: 'intro', title: 'Introduction', icon: '📖' },
-    { id: 'signal', title: '@zen/signal', icon: '⚡' },
-    { id: 'framework', title: '@zen/zen', icon: '🎯' },
-    { id: 'components', title: 'Components', icon: '🧩' },
-    { id: 'patterns', title: 'Patterns', icon: '💡' },
-    { id: 'integrations', title: 'Integrations', icon: '🔌' },
+    { id: 'intro', title: 'Introduction', icon: 'lucide:book-open' },
+    { id: 'signal', title: '@zen/signal', icon: 'lucide:zap' },
+    { id: 'framework', title: '@zen/zen', icon: 'lucide:target' },
+    { id: 'components', title: 'Components', icon: 'lucide:layout' },
+    { id: 'patterns', title: 'Patterns', icon: 'lucide:lightbulb' },
+    { id: 'integrations', title: 'Integrations', icon: 'lucide:plug' },
   ];
 
   return (
@@ -34,7 +35,7 @@ export function Docs() {
                   activeSection.value = section.id;
                 }}
               >
-                <span class="text-xl">{section.icon}</span>
+                <Icon icon={section.icon} width="20" height="20" />
                 {section.title}
               </button>
             ))}

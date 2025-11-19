@@ -1,4 +1,5 @@
 import { Link } from '@zen/router-zen';
+import { Icon } from './Icon.tsx';
 
 export function Header() {
   return (
@@ -9,7 +10,7 @@ export function Header() {
             href="/"
             class="flex items-center gap-2 text-xl font-bold text-text hover:text-primary transition-colors"
           >
-            <span class="text-2xl">⚡</span>
+            <Icon icon="lucide:zap" width="24" height="24" class="text-primary" />
             <span>Zen</span>
           </Link>
           <div class="flex items-center gap-8">

@@ -19,10 +19,17 @@ import { effect } from '@zen/signal';
 import { Show, signal } from '@zen/zen';
 import * as Zen from '@zen/zen';
 import { Fragment, jsx } from '@zen/zen/jsx-runtime';
+import { examples } from '../data/examples.ts';
+import { Icon } from '../components/Icon.tsx';
 
 export function Playground() {
-  const templates = {
-    counter: `// Create reactive state
+  // Convert examples array to templates object for compatibility
+  const templates = examples.reduce((acc, ex) => {
+    acc[ex.id] = ex.code;
+    return acc;
+  }, {} as Record<string, string>);
+
+  const code = signal(templates.counter || `// Create reactive state
 const count = signal(0);
 const doubled = computed(() => count.value * 2);
 

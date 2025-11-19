@@ -22,11 +22,7 @@ export function Docs() {
               <button
                 key={section.id}
                 type="button"
-                class={
-                  activeSection.value === section.id
-                    ? 'w-full flex items-center gap-3 px-4 py-2 bg-primary text-white rounded-zen font-medium transition-colors'
-                    : 'w-full flex items-center gap-3 px-4 py-2 bg-bg-light hover:bg-bg-lighter text-text-muted hover:text-text rounded-zen transition-colors'
-                }
+                class="w-full flex items-center gap-3 px-4 py-2 bg-bg-light hover:bg-bg-lighter text-text-muted hover:text-text rounded-zen transition-colors"
                 onClick={() => {
                   activeSection.value = section.id;
                 }}
@@ -39,7 +35,7 @@ export function Docs() {
         </aside>
 
         <main class="flex-1 prose prose-invert max-w-none">
-          <Show when={activeSection.value === 'intro'}>
+          <Show when={() => activeSection.value === 'intro'}>
             <article class="bg-bg-light border border-border rounded-zen p-8">
               <h1 class="text-4xl font-bold text-text mb-4">Introduction to Zen Ecosystem</h1>
               <p class="text-xl text-text-muted mb-8 leading-relaxed">
@@ -110,7 +106,7 @@ export function Docs() {
             </article>
           </Show>
 
-          <Show when={activeSection.value === 'signal'}>
+          <Show when={() => activeSection.value === 'signal'}>
             <article class="bg-bg-light border border-border rounded-zen p-8">
               <h1 class="text-4xl font-bold text-text mb-4">@zen/signal</h1>
               <p class="text-xl text-text-muted mb-8 leading-relaxed">
@@ -182,7 +178,7 @@ count.value++; // Effect won't run`}</pre>
           </Show>
 
           {/* Continuing with remaining sections - I'll add the rest in a similar pattern */}
-          <Show when={activeSection.value === 'framework'}>
+          <Show when={() => activeSection.value === 'framework'}>
             <article class="bg-bg-light border border-border rounded-zen p-8">
               <h1 class="text-4xl font-bold text-text mb-4">@zen/zen Framework</h1>
               <p class="text-xl text-text-muted mb-8 leading-relaxed">
@@ -196,7 +192,7 @@ count.value++; // Effect won't run`}</pre>
             </article>
           </Show>
 
-          <Show when={activeSection.value === 'components'}>
+          <Show when={() => activeSection.value === 'components'}>
             <article class="bg-bg-light border border-border rounded-zen p-8">
               <h1 class="text-4xl font-bold text-text mb-4">Built-in Components</h1>
               <p class="text-xl text-text-muted mb-8 leading-relaxed">
@@ -206,7 +202,7 @@ count.value++; // Effect won't run`}</pre>
             </article>
           </Show>
 
-          <Show when={activeSection.value === 'patterns'}>
+          <Show when={() => activeSection.value === 'patterns'}>
             <article class="bg-bg-light border border-border rounded-zen p-8">
               <h1 class="text-4xl font-bold text-text mb-4">Common Patterns</h1>
               <p class="text-xl text-text-muted mb-8 leading-relaxed">
@@ -216,7 +212,7 @@ count.value++; // Effect won't run`}</pre>
             </article>
           </Show>
 
-          <Show when={activeSection.value === 'integrations'}>
+          <Show when={() => activeSection.value === 'integrations'}>
             <article class="bg-bg-light border border-border rounded-zen p-8">
               <h1 class="text-4xl font-bold text-text mb-4">Framework Integrations</h1>
               <p class="text-xl text-text-muted mb-8 leading-relaxed">

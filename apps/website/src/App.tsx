@@ -22,7 +22,7 @@ export function App() {
             <div class="container" style={{ paddingTop: '120px', textAlign: 'center' }}>
               <h1 style={{ fontSize: '72px', marginBottom: '16px' }}>404</h1>
               <p style={{ fontSize: '24px', color: 'var(--text-muted)' }}>Page not found</p>
-              <a href="#/" class="btn btn-primary" style={{ marginTop: '32px' }}>
+              <a href="/" class="btn btn-primary" style={{ marginTop: '32px' }}>
                 Go home
               </a>
             </div>

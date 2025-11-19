@@ -267,7 +267,7 @@ $: value = $countStore`,
         {/* CTA */}
         <div class="mt-12 text-center">
           <a
-            href="#/docs/migration"
+            href="/docs/migration"
             class="inline-block px-8 py-4 bg-primary hover:bg-primary-dark text-white font-semibold rounded-zen shadow-zen transition-all hover:scale-105"
           >
             View Full Migration Guide →

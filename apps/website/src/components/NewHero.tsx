@@ -42,19 +42,19 @@ export function NewHero() {
         {/* CTA Buttons */}
         <div class="flex flex-wrap gap-4 justify-center mb-16">
           <a
-            href="#/docs"
+            href="/docs"
             class="px-8 py-4 bg-primary hover:bg-primary-dark text-white font-semibold rounded-zen shadow-zen transition-all hover:scale-105 text-lg"
           >
             Get Started
           </a>
           <a
-            href="#/playground"
+            href="/playground"
             class="px-8 py-4 bg-bg-lighter hover:bg-bg border border-border text-text font-semibold rounded-zen transition-all hover:scale-105 text-lg"
           >
             5-Min Tutorial
           </a>
           <a
-            href="#/migration"
+            href="/migration"
             class="px-8 py-4 bg-bg-lighter hover:bg-bg border border-primary/50 text-primary font-semibold rounded-zen transition-all hover:scale-105 text-lg"
           >
             Migrate from React

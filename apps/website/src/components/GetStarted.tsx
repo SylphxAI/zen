@@ -48,13 +48,13 @@ render(() => (
         </div>
         <div class="flex gap-4 justify-center">
           <a
-            href="#/docs"
+            href="/docs"
             class="px-10 py-4 bg-primary hover:bg-primary-dark text-white font-medium rounded-zen shadow-zen transition-colors text-lg"
           >
             Read the Docs
           </a>
           <a
-            href="#/examples"
+            href="/examples"
             class="px-10 py-4 bg-secondary hover:bg-secondary/80 text-white font-medium rounded-zen shadow-zen transition-colors text-lg"
           >
             View Examples

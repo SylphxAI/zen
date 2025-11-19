@@ -40,9 +40,11 @@ export function Show<T>(props: ShowProps<T>): Node {
 
   // Track current node
   let currentNode: Node | null = null;
+  let dispose: (() => void) | undefined;
 
-  // Effect to update conditional
-  const dispose = effect(() => {
+  // Defer effect until marker is in DOM (same fix as Router component)
+  queueMicrotask(() => {
+    dispose = effect(() => {
     // Evaluate condition
     const condition = typeof when === 'function' ? (when as Function)() : when;
 
@@ -81,11 +83,14 @@ export function Show<T>(props: ShowProps<T>): Node {
     }
 
     return undefined;
+    });
   });
 
   // Register cleanup via owner system
   onCleanup(() => {
-    dispose();
+    if (dispose) {
+      dispose();
+    }
     if (currentNode) {
       if (currentNode.parentNode) {
         currentNode.parentNode.removeChild(currentNode);

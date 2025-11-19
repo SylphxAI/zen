@@ -24,22 +24,22 @@ export function Footer() {
             <h4 class="text-lg font-semibold text-text mb-4">Packages</h4>
             <ul class="space-y-2">
               <li>
-                <a href="#/docs" class="text-text-muted hover:text-primary transition-colors">
+                <a href="/docs" class="text-text-muted hover:text-primary transition-colors">
                   @zen/signal
                 </a>
               </li>
               <li>
-                <a href="#/docs" class="text-text-muted hover:text-primary transition-colors">
+                <a href="/docs" class="text-text-muted hover:text-primary transition-colors">
                   @zen/zen
                 </a>
               </li>
               <li>
-                <a href="#/docs" class="text-text-muted hover:text-primary transition-colors">
+                <a href="/docs" class="text-text-muted hover:text-primary transition-colors">
                   Integrations
                 </a>
               </li>
               <li>
-                <a href="#/docs" class="text-text-muted hover:text-primary transition-colors">
+                <a href="/docs" class="text-text-muted hover:text-primary transition-colors">
                   Utilities
                 </a>
               </li>
@@ -49,17 +49,17 @@ export function Footer() {
             <h4 class="text-lg font-semibold text-text mb-4">Resources</h4>
             <ul class="space-y-2">
               <li>
-                <a href="#/docs" class="text-text-muted hover:text-primary transition-colors">
+                <a href="/docs" class="text-text-muted hover:text-primary transition-colors">
                   Documentation
                 </a>
               </li>
               <li>
-                <a href="#/examples" class="text-text-muted hover:text-primary transition-colors">
+                <a href="/examples" class="text-text-muted hover:text-primary transition-colors">
                   Examples
                 </a>
               </li>
               <li>
-                <a href="#/playground" class="text-text-muted hover:text-primary transition-colors">
+                <a href="/playground" class="text-text-muted hover:text-primary transition-colors">
                   Playground
                 </a>
               </li>

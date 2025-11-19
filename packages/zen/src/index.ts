@@ -48,10 +48,7 @@ export {
 } from './lifecycle.js';
 export type { Owner } from './lifecycle.js';
 
-// createEffect is deprecated - use effect() from @zen/signal-zen instead
-// which automatically registers cleanup
-/** @deprecated Use effect() instead - it now auto-registers cleanup */
-export { createEffect } from './lifecycle.js';
+// createEffect removed - use effect() instead which auto-registers cleanup
 
 // Utilities
 export { lazy } from './lazy.js';

@@ -6,15 +6,15 @@
  */
 
 import {
-  signal as rawSignal,
+  batch,
+  peek,
   computed as rawComputed,
   effect as rawEffect,
-  batch,
-  untrack,
-  peek,
+  signal as rawSignal,
   subscribe,
+  untrack,
 } from '@zen/signal';
-import type { Signal, Computed } from '@zen/signal';
+import type { Computed, Signal } from '@zen/signal';
 import { getOwner, onCleanup } from '@zen/zen';
 
 // ============================================================================
@@ -27,8 +27,14 @@ import { getOwner, onCleanup } from '@zen/zen';
  * When used inside a Zen component, cleanup is automatic.
  * When used outside components, behaves like raw effect.
  *
+ * IMPORTANT: Always import from @zen/zen, NOT @zen/signal in Zen components:
+ * - ✅ import { effect } from '@zen/zen';      (lifecycle-aware)
+ * - ❌ import { effect } from '@zen/signal';   (raw, no cleanup!)
+ *
  * @example
  * ```tsx
+ * import { effect } from '@zen/zen';  // ✅ Correct!
+ *
  * function Component() {
  *   // Automatic cleanup when component unmounts - no manual onCleanup needed!
  *   effect(() => {
@@ -38,9 +44,7 @@ import { getOwner, onCleanup } from '@zen/zen';
  * }
  * ```
  */
-export function effect(
-  callback: () => undefined | (() => void)
-): () => void {
+export function effect(callback: () => undefined | (() => void)): () => void {
   const dispose = rawEffect(callback);
 
   // If we have an owner context, register cleanup automatically

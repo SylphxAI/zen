@@ -151,4 +151,28 @@ export function redirect(path: string): void {
   }
 }
 
+/**
+ * Alias for redirect - replaces current history entry
+ * @param path The new path to navigate to
+ */
+export const replace = redirect;
+
+/**
+ * Navigate back in browser history
+ */
+export function back(): void {
+  if (typeof window !== 'undefined') {
+    history.back();
+  }
+}
+
+/**
+ * Navigate forward in browser history
+ */
+export function forward(): void {
+  if (typeof window !== 'undefined') {
+    history.forward();
+  }
+}
+
 // Note: updateStateFromLocation is internal and not exported.

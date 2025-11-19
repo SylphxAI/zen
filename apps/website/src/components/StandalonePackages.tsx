@@ -159,7 +159,12 @@ settings.value.language = 'en'`,
                       <For each={pkg.integrations}>
                         {(integration) => (
                           <span class="px-3 py-1 bg-bg border border-border rounded-full text-sm text-text flex items-center gap-2">
-                            <Icon icon={integration.icon} width="16" height="16" class="text-primary" />
+                            <Icon
+                              icon={integration.icon}
+                              width="16"
+                              height="16"
+                              class="text-primary"
+                            />
                             {integration.name}
                           </span>
                         )}

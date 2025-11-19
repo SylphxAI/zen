@@ -2,7 +2,7 @@
  * Auto-detect framework from package.json
  */
 
-import { readFileSync, existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 export type Framework = 'react' | 'vue' | 'svelte' | 'zen';

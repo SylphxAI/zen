@@ -17,7 +17,7 @@
 import { createFilter } from '@rollup/pluginutils';
 import MagicString from 'magic-string';
 import { createUnplugin } from 'unplugin';
-import { detectFramework, type Framework } from './auto-detect';
+import { type Framework, detectFramework } from './auto-detect';
 import { getRuntimeConfig } from './runtime-config';
 import { transformReact } from './transforms/react';
 import { transformSvelte } from './transforms/svelte';
@@ -83,11 +83,9 @@ export const unplugin = createUnplugin<Options>((options = {}) => {
     if (detected) {
       framework = detected;
       if (debug) {
-        console.log(`[zen-signal] Auto-detected framework: ${framework}`);
       }
     } else {
       if (debug) {
-        console.warn('[zen-signal] Could not auto-detect framework, defaulting to react');
       }
       framework = 'react';
     }
@@ -101,7 +99,6 @@ export const unplugin = createUnplugin<Options>((options = {}) => {
   if (mode === 'hybrid') {
     mode = isDev ? 'runtime' : 'compiler';
     if (debug) {
-      console.log(`[zen-signal] Hybrid mode: using '${mode}' (${isDev ? 'development' : 'production'})`);
     }
   }
 
@@ -177,7 +174,6 @@ export const unplugin = createUnplugin<Options>((options = {}) => {
       }
 
       if (debug) {
-        console.log(`[zen-signal] Transforming ${id}`);
       }
 
       const s = new MagicString(code);

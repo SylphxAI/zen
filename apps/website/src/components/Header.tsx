@@ -1,5 +1,5 @@
 import { signal } from '@zen/signal';
-import { Link } from '@zen/zen';
+import { Link } from '@zen/router';
 import { Show } from '@zen/zen';
 import { Icon } from './Icon.tsx';
 import { SearchModal } from './SearchModal.tsx';

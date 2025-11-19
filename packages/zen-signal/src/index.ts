@@ -6,13 +6,7 @@
  */
 
 // Import raw primitives from @zen/signal-core
-import {
-  batch,
-  peek,
-  effect as rawEffect,
-  subscribe,
-  untrack,
-} from '@zen/signal-core';
+import { batch, peek, effect as rawEffect, subscribe, untrack } from '@zen/signal-core';
 import type { Computed, Signal } from '@zen/signal-core';
 import { getOwner, onCleanup } from './lifecycle.js';
 

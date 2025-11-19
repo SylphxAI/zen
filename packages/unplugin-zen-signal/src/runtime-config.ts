@@ -22,17 +22,14 @@ type BundlerName = 'Vite' | 'Webpack' | 'Rollup' | 'esbuild';
  */
 function logRuntime(
   debug: boolean,
-  framework: string,
-  bundler: BundlerName,
+  _framework: string,
+  _bundler: BundlerName,
   extraMessages?: string[],
 ): void {
   if (!debug) return;
 
-  console.log(`[zen-signal] Configuring ${framework} runtime mode (${bundler})`);
-
   if (extraMessages) {
-    for (const msg of extraMessages) {
-      console.log(`[zen-signal] ${msg}`);
+    for (const _msg of extraMessages) {
     }
   }
 }

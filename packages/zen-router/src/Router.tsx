@@ -5,7 +5,7 @@
 
 import { $router, defineRoutes, startHistoryListener, stopHistoryListener } from '@zen/router-core';
 import type { RouteConfig } from '@zen/router-core';
-import { effect, untrack, disposeNode, onCleanup, onMount } from '@zen/signal';
+import { disposeNode, effect, onCleanup, onMount, untrack } from '@zen/signal';
 
 export interface ZenRoute {
   path: string;

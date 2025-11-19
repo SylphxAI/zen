@@ -68,6 +68,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@zen/signal": "workspace:*",
+        "@zen/signal-zen": "workspace:*",
       },
       "devDependencies": {
         "@biomejs/biome": "^1.9.4",
@@ -271,6 +272,21 @@
       },
       "peerDependencies": {
         "vue": "^3.0.0",
+      },
+    },
+    "packages/zen-signal-zen": {
+      "name": "@zen/signal-zen",
+      "version": "0.0.0",
+      "dependencies": {
+        "@zen/signal": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/node": "^22.14.1",
+        "bunup": "^0.15.13",
+        "typescript": "^5.4.5",
+      },
+      "peerDependencies": {
+        "@zen/zen": "workspace:*",
       },
     },
   },
@@ -904,6 +920,8 @@
     "@zen/signal-svelte": ["@zen/signal-svelte@workspace:packages/zen-signal-svelte"],
 
     "@zen/signal-vue": ["@zen/signal-vue@workspace:packages/zen-signal-vue"],
+
+    "@zen/signal-zen": ["@zen/signal-zen@workspace:packages/zen-signal-zen"],
 
     "@zen/zen": ["@zen/zen@workspace:packages/zen"],
 

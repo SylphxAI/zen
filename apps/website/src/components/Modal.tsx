@@ -1,6 +1,5 @@
-import { effect } from '@zen/signal';
+import { effect } from '@zen/zen';
 import type { ZenNode } from '@zen/zen';
-import { onCleanup } from '@zen/zen';
 
 export interface ModalProps {
   onClose: () => void;
@@ -10,8 +9,8 @@ export interface ModalProps {
 
 export function Modal(props: ModalProps) {
   // Handle ESC key to close modal
-  // CRITICAL: Store dispose function to properly cleanup when component unmounts
-  const dispose = effect(() => {
+  // Cleanup is automatically registered by lifecycle-aware effect()
+  effect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         props.onClose();
@@ -26,12 +25,6 @@ export function Modal(props: ModalProps) {
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = '';
     };
-  });
-
-  // Register effect cleanup with owner system
-  // This ensures cleanup runs when Show unmounts this component
-  onCleanup(() => {
-    if (dispose) dispose();
   });
 
   return (

@@ -8,7 +8,7 @@
 // Import JSX types (global augmentation)
 import './jsx-types.js';
 
-// Re-export core primitives from @zen/signal
+// Re-export lifecycle-aware primitives from @zen/signal-zen
 export {
   signal,
   computed,
@@ -17,7 +17,10 @@ export {
   untrack,
   peek,
   subscribe,
-} from '@zen/signal';
+} from '@zen/signal-zen';
+
+// Re-export raw effect for advanced users who need manual control
+export { rawEffect } from '@zen/signal-zen';
 
 // Components
 export { For } from './components/For.js';
@@ -39,12 +42,16 @@ export { render, Fragment } from './jsx-runtime.js';
 export {
   onMount,
   onCleanup,
-  createEffect,
   createRoot,
   disposeNode,
   getOwner,
 } from './lifecycle.js';
 export type { Owner } from './lifecycle.js';
+
+// createEffect is deprecated - use effect() from @zen/signal-zen instead
+// which automatically registers cleanup
+/** @deprecated Use effect() instead - it now auto-registers cleanup */
+export { createEffect } from './lifecycle.js';
 
 // Utilities
 export { lazy } from './lazy.js';

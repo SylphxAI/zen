@@ -266,5 +266,6 @@ export async function renderToTerminal(node: TUINode): Promise<void> {
   await Promise.resolve();
   await Promise.resolve();
 
-  const _output = render(node);
+  const output = render(node);
+  console.log(output);
 }

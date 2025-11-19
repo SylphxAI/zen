@@ -3,6 +3,13 @@ import { For, Show, computed, signal } from '@zen/zen';
 export function Examples() {
   const activeExample = signal('counter');
 
+  const showCounter = computed(() => activeExample.value === 'counter');
+  const showTodo = computed(() => activeExample.value === 'todo');
+  const showForm = computed(() => activeExample.value === 'form');
+  const showAsync = computed(() => activeExample.value === 'async');
+  const showRouter = computed(() => activeExample.value === 'router');
+  const showPortal = computed(() => activeExample.value === 'portal');
+
   const examples = [
     { id: 'counter', title: 'Counter', icon: '🔢' },
     { id: 'todo', title: 'Todo List', icon: '✓' },
@@ -43,22 +50,22 @@ export function Examples() {
           </aside>
 
           <main class="examples-content">
-            <Show when={() => activeExample.value === 'counter'}>
+            <Show when={showCounter}>
               <CounterExample />
             </Show>
-            <Show when={() => activeExample.value === 'todo'}>
+            <Show when={showTodo}>
               <TodoExample />
             </Show>
-            <Show when={() => activeExample.value === 'form'}>
+            <Show when={showForm}>
               <FormExample />
             </Show>
-            <Show when={() => activeExample.value === 'async'}>
+            <Show when={showAsync}>
               <AsyncExample />
             </Show>
-            <Show when={() => activeExample.value === 'router'}>
+            <Show when={showRouter}>
               <RouterExample />
             </Show>
-            <Show when={() => activeExample.value === 'portal'}>
+            <Show when={showPortal}>
               <PortalExample />
             </Show>
           </main>
@@ -245,7 +252,7 @@ function TodoExample() {
             </For>
           </ul>
 
-          <Show when={filteredTodos.value.length === 0}>
+          <Show when={computed(() => filteredTodos.value.length === 0)}>
             <div class="todo-empty">No todos in this filter</div>
           </Show>
         </div>
@@ -313,10 +320,10 @@ function FormExample() {
                 class="input"
               />
             </label>
-            <Show when={email.value && !emailValid.value}>
+            <Show when={computed(() => email.value && !emailValid.value)}>
               <div class="form-error">Invalid email format</div>
             </Show>
-            <Show when={emailValid.value}>
+            <Show when={emailValid}>
               <div class="form-success">✓ Valid email</div>
             </Show>
           </div>
@@ -333,10 +340,10 @@ function FormExample() {
                 class="input"
               />
             </label>
-            <Show when={password.value && !passwordValid.value}>
+            <Show when={computed(() => password.value && !passwordValid.value)}>
               <div class="form-error">Password must be at least 8 characters</div>
             </Show>
-            <Show when={passwordValid.value}>
+            <Show when={passwordValid}>
               <div class="form-success">✓ Strong password</div>
             </Show>
           </div>
@@ -353,10 +360,10 @@ function FormExample() {
                 class="input"
               />
             </label>
-            <Show when={confirmPassword.value && !passwordsMatch.value}>
+            <Show when={computed(() => confirmPassword.value && !passwordsMatch.value)}>
               <div class="form-error">Passwords don't match</div>
             </Show>
-            <Show when={passwordsMatch.value}>
+            <Show when={passwordsMatch}>
               <div class="form-success">✓ Passwords match</div>
             </Show>
           </div>
@@ -365,7 +372,7 @@ function FormExample() {
             Submit
           </button>
 
-          <Show when={submitted.value}>
+          <Show when={submitted}>
             <div class="form-success-message">✓ Form submitted successfully!</div>
           </Show>
         </form>
@@ -428,15 +435,15 @@ function AsyncExample() {
         </div>
 
         <div class="async-result">
-          <Show when={loading.value}>
+          <Show when={loading}>
             <div class="loading-spinner">Loading...</div>
           </Show>
 
-          <Show when={error.value}>
+          <Show when={error}>
             <div class="error-message">Error: {error.value}</div>
           </Show>
 
-          <Show when={!loading.value && !error.value && user.value}>
+          <Show when={computed(() => !loading.value && !error.value && user.value)}>
             {(u) => (
               <div class="user-card">
                 <h3>{u.name}</h3>
@@ -533,7 +540,7 @@ function PortalExample() {
           Open Modal
         </button>
 
-        <Show when={showModal.value}>
+        <Show when={showModal}>
           <div
             class="modal-overlay"
             onClick={() => {

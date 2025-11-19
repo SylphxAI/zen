@@ -1,7 +1,14 @@
-import { Show, signal } from '@zen/zen';
+import { Show, signal, computed } from '@zen/zen';
 
 export function Docs() {
   const activeSection = signal('intro');
+
+  const showIntro = computed(() => activeSection.value === 'intro');
+  const showSignal = computed(() => activeSection.value === 'signal');
+  const showFramework = computed(() => activeSection.value === 'framework');
+  const showComponents = computed(() => activeSection.value === 'components');
+  const showPatterns = computed(() => activeSection.value === 'patterns');
+  const showIntegrations = computed(() => activeSection.value === 'integrations');
 
   const sections = [
     { id: 'intro', title: 'Introduction', icon: '📖' },
@@ -35,7 +42,7 @@ export function Docs() {
         </aside>
 
         <main class="flex-1 prose prose-invert max-w-none">
-          <Show when={() => activeSection.value === 'intro'}>
+          <Show when={showIntro}>
             <article class="bg-bg-light border border-border rounded-zen p-8">
               <h1 class="text-4xl font-bold text-text mb-4">Introduction to Zen Ecosystem</h1>
               <p class="text-xl text-text-muted mb-8 leading-relaxed">
@@ -106,7 +113,7 @@ export function Docs() {
             </article>
           </Show>
 
-          <Show when={() => activeSection.value === 'signal'}>
+          <Show when={showSignal}>
             <article class="bg-bg-light border border-border rounded-zen p-8">
               <h1 class="text-4xl font-bold text-text mb-4">@zen/signal</h1>
               <p class="text-xl text-text-muted mb-8 leading-relaxed">
@@ -178,7 +185,7 @@ count.value++; // Effect won't run`}</pre>
           </Show>
 
           {/* Continuing with remaining sections - I'll add the rest in a similar pattern */}
-          <Show when={() => activeSection.value === 'framework'}>
+          <Show when={showFramework}>
             <article class="bg-bg-light border border-border rounded-zen p-8">
               <h1 class="text-4xl font-bold text-text mb-4">@zen/zen Framework</h1>
               <p class="text-xl text-text-muted mb-8 leading-relaxed">
@@ -192,7 +199,7 @@ count.value++; // Effect won't run`}</pre>
             </article>
           </Show>
 
-          <Show when={() => activeSection.value === 'components'}>
+          <Show when={showComponents}>
             <article class="bg-bg-light border border-border rounded-zen p-8">
               <h1 class="text-4xl font-bold text-text mb-4">Built-in Components</h1>
               <p class="text-xl text-text-muted mb-8 leading-relaxed">
@@ -202,7 +209,7 @@ count.value++; // Effect won't run`}</pre>
             </article>
           </Show>
 
-          <Show when={() => activeSection.value === 'patterns'}>
+          <Show when={showPatterns}>
             <article class="bg-bg-light border border-border rounded-zen p-8">
               <h1 class="text-4xl font-bold text-text mb-4">Common Patterns</h1>
               <p class="text-xl text-text-muted mb-8 leading-relaxed">
@@ -212,7 +219,7 @@ count.value++; // Effect won't run`}</pre>
             </article>
           </Show>
 
-          <Show when={() => activeSection.value === 'integrations'}>
+          <Show when={showIntegrations}>
             <article class="bg-bg-light border border-border rounded-zen p-8">
               <h1 class="text-4xl font-bold text-text mb-4">Framework Integrations</h1>
               <p class="text-xl text-text-muted mb-8 leading-relaxed">

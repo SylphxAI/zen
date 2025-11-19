@@ -10,11 +10,11 @@
  */
 
 import { effect, untrack } from '@zen/signal';
-import type { AnyZen } from '@zen/signal';
 import { disposeNode, onCleanup } from '../lifecycle.js';
+import { resolve, type Reactive } from '../reactive-utils.js';
 
 interface ShowProps<T> {
-  when: T | AnyZen | (() => T);
+  when: Reactive<T>;
   fallback?: Node | (() => Node);
   children: Node | ((value: T) => Node);
 }
@@ -23,12 +23,13 @@ interface ShowProps<T> {
  * Show component - Conditional rendering
  *
  * @example
- * <Show when={isLoggedIn} fallback={<Login />}>
+ * // With function
+ * <Show when={() => isLoggedIn.value} fallback={<Login />}>
  *   <Dashboard />
  * </Show>
  *
- * // With function children (gets the truthy value)
- * <Show when={user}>
+ * // With signal directly
+ * <Show when={computed(() => user.value !== null)}>
  *   {(u) => <div>Hello {u.name}</div>}
  * </Show>
  */
@@ -45,8 +46,8 @@ export function Show<T>(props: ShowProps<T>): Node {
   // Defer effect until marker is in DOM (same fix as Router component)
   queueMicrotask(() => {
     dispose = effect(() => {
-      // Evaluate condition
-      const condition = typeof when === 'function' ? (when as Function)() : when;
+      // Resolve condition - automatically tracks reactive dependencies
+      const condition = resolve(when);
 
       // Cleanup previous node
       if (currentNode) {

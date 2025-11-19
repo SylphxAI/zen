@@ -48,6 +48,10 @@ export type { Owner } from './lifecycle.js';
 
 // Utilities
 export { lazy } from './lazy.js';
+
+// Reactive utilities
+export { resolve, isSignal } from './reactive-utils.js';
+export type { Reactive, MaybeReactive } from './reactive-utils.js';
 export { mergeProps, splitProps } from './utils/props.js';
 export { selector } from './utils/selector.js';
 export { runWithOwner } from './utils/runWithOwner.js';

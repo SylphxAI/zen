@@ -1,5 +1,6 @@
 import './index.css';
 import '@iconify/iconify';
+import './theme'; // Initialize theme system
 import { render } from '@zen/zen';
 import { App } from './App';
 

@@ -1,9 +1,10 @@
 import { Link } from '@zen/router-zen';
 import { Icon } from './Icon.tsx';
+import { ThemeToggle } from './ThemeToggle.tsx';
 
 export function Header() {
   return (
-    <header class="sticky top-0 z-50 bg-bg/80 backdrop-blur-md border-b border-border">
+    <header class="sticky top-0 z-50 bg-bg/80 backdrop-blur-md border-b border-border dark:bg-bg/80 dark:border-border">
       <div class="max-w-screen-xl mx-auto px-6">
         <nav class="flex items-center justify-between h-16">
           <Link
@@ -13,7 +14,7 @@ export function Header() {
             <Icon icon="lucide:zap" width="24" height="24" class="text-primary" />
             <span>Zen</span>
           </Link>
-          <div class="flex items-center gap-8">
+          <div class="flex items-center gap-6">
             <Link href="/" class="text-text-muted hover:text-text transition-colors">
               Home
             </Link>
@@ -31,6 +32,7 @@ export function Header() {
             >
               GitHub
             </a>
+            <ThemeToggle />
           </div>
         </nav>
       </div>

@@ -18,14 +18,7 @@
     "build": "bunup --format esm,cjs --dts --target node --minify",
     "clean": "bun rimraf dist .turbo"
   },
-  "keywords": [
-    "zen",
-    "router",
-    "routing",
-    "react",
-    "hooks",
-    "navigation"
-  ],
+  "keywords": ["zen", "router", "routing", "react", "hooks", "navigation"],
   "author": "Sylphx <hi@sylphx.com>",
   "license": "MIT",
   "repository": {

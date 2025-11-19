@@ -10,15 +10,15 @@ import './jsx-types.js';
 
 // Import raw primitives from @zen/signal
 import {
-  signal as rawSignal,
+  batch,
+  peek,
   computed as rawComputed,
   effect as rawEffect,
-  batch,
-  untrack,
-  peek,
+  signal as rawSignal,
   subscribe,
+  untrack,
 } from '@zen/signal';
-import type { Signal, Computed } from '@zen/signal';
+import type { Computed, Signal } from '@zen/signal';
 import { getOwner, onCleanup } from './lifecycle.js';
 
 // ============================================================================

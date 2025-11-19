@@ -14,9 +14,9 @@
  * ```
  */
 
-import { onUnmounted, ref } from 'vue';
-import { $router, type RouterState, type Params, type Search, open } from '@zen/router';
+import { $router, type Params, type RouterState, type Search, open } from '@zen/router';
 import { subscribe } from '@zen/signal';
+import { onUnmounted, ref } from 'vue';
 
 /**
  * Vue composable for router state

@@ -2,8 +2,8 @@
  * Vite plugin for Zen compiler
  */
 import type { Plugin } from 'vite';
-import type { CompilerOptions } from '../core/types.js';
 import { transformZenJSX } from '../core/transform.js';
+import type { CompilerOptions } from '../core/types.js';
 
 export default function zenCompiler(options: CompilerOptions = {}): Plugin {
   return {
@@ -33,9 +33,7 @@ export default function zenCompiler(options: CompilerOptions = {}): Plugin {
           code: result.code,
           map: result.map,
         };
-      } catch (error) {
-        // Log error but don't fail the build
-        console.error(`[zen-compiler] Error transforming ${id}:`, error);
+      } catch (_error) {
         return null;
       }
     },

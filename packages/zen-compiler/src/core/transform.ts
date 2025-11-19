@@ -11,25 +11,14 @@ import type { NodePath } from '@babel/traverse';
 import * as t from '@babel/types';
 import type { CompilerOptions } from './types.js';
 
-const DEFAULT_LAZY_COMPONENTS = [
-  'Show',
-  'For',
-  'Switch',
-  'Match',
-  'Suspense',
-  'ErrorBoundary',
-];
+const DEFAULT_LAZY_COMPONENTS = ['Show', 'For', 'Switch', 'Match', 'Suspense', 'ErrorBoundary'];
 
 export function transformZenJSX(
   code: string,
   filename: string,
   options: CompilerOptions = {},
 ): { code: string; map: any } | null {
-  const {
-    autoLazy = true,
-    autoUnwrap = true,
-    lazyComponents = DEFAULT_LAZY_COMPONENTS,
-  } = options;
+  const { autoLazy = true, autoUnwrap = true, lazyComponents = DEFAULT_LAZY_COMPONENTS } = options;
 
   const result = babel.transformSync(code, {
     filename,
@@ -62,11 +51,7 @@ export function transformZenJSX(
               t.jsxExpressionContainer(
                 t.arrowFunctionExpression(
                   [],
-                  t.jsxFragment(
-                    t.jsxOpeningFragment(),
-                    t.jsxClosingFragment(),
-                    children,
-                  ),
+                  t.jsxFragment(t.jsxOpeningFragment(), t.jsxClosingFragment(), children),
                 ),
               ),
             ];

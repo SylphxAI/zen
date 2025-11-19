@@ -54,11 +54,17 @@ export interface TUIStyle {
   dim?: boolean;
 }
 
+export interface TUIMarker {
+  _type: 'marker';
+  _name: string;
+  parentNode?: TUINode;
+}
+
 export interface TUINode {
   type: TUINodeType;
   tagName?: string;
   props: Record<string, any>;
-  children: Array<TUINode | string>;
+  children: Array<TUINode | TUIMarker | string>;
   parentNode?: TUINode;
   style?: TUIStyle;
 }

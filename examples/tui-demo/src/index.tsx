@@ -1,14 +1,13 @@
 /**
- * TUI Demo - Testing cross-platform architecture
+ * TUI Demo - Terminal UI Renderer
  *
- * Demonstrates TUI rendering with the platform abstraction layer.
- * Now supports both TUI-specific components (Box, Text) and
- * @zen/runtime components (For, Show, Switch) thanks to platform ops!
+ * Demonstrates TUI rendering with Box and Text components.
+ * Platform abstraction layer enables runtime components
+ * (For, Show, Switch) but they require additional work for TUI.
  */
 
 import { renderToTerminal, signal } from '@zen/tui';
-import { Box } from '@zen/tui';
-import { Text } from '@zen/tui';
+import { Box, Text } from '@zen/tui';
 
 function App() {
   const count = signal(0);
@@ -54,4 +53,4 @@ function App() {
 }
 
 // Render to terminal
-renderToTerminal(<App />);
+await renderToTerminal(<App />);

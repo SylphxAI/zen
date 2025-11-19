@@ -6,16 +6,7 @@
  */
 
 import type { PlatformOps } from '@zen/runtime';
-import type { TUINode } from './types.js';
-
-/**
- * Marker node for TUI (virtual placeholder)
- */
-export interface TUIMarker {
-  _type: 'marker';
-  _name: string;
-  parentNode?: TUINode;
-}
+import type { TUIMarker, TUINode } from './types.js';
 
 /**
  * Fragment for TUI (array of nodes)

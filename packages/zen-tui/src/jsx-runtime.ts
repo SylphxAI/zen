@@ -81,6 +81,13 @@ function appendChild(parent: TUINode, child: any): void {
     return;
   }
 
+  // TUI Marker (from runtime components like For, Show, Switch)
+  if (typeof child === 'object' && '_type' in child && child._type === 'marker') {
+    parent.children.push(child);
+    child.parentNode = parent;
+    return;
+  }
+
   // Reactive signal - auto-unwrap (runtime-first)
   if (isReactive(child)) {
     // Create a text node that updates reactively

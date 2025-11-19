@@ -183,6 +183,7 @@ function renderNode(node: TUINode, parentWidth: number): RenderOutput {
       const textContent = applyTextStyle(child, node.style);
       insertContent(lines, textContent, paddingLeft, currentY, width);
       currentY += 1;
+    } else if ('_type' in child && child._type === 'marker') {
     } else {
       // Child node - render recursively
       const childOutput = renderNode(child, width - paddingLeft * 2);
@@ -216,7 +217,10 @@ export function render(node: TUINode, options: { width?: number } = {}): string 
 /**
  * Render and display in terminal
  */
-export function renderToTerminal(node: TUINode): void {
-  const output = render(node);
-  console.log(output);
+export async function renderToTerminal(node: TUINode): Promise<void> {
+  // Wait for microtasks (For/Show/Switch effects) to complete
+  await Promise.resolve();
+  await Promise.resolve();
+
+  const _output = render(node);
 }

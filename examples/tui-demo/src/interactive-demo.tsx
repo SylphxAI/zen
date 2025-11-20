@@ -63,6 +63,7 @@ function App() {
           id="start"
           label="Start Task"
           variant="primary"
+          width={18}
           onClick={() => {
             isLoading.value = true;
             message.value = 'Task started! Watch the progress...';
@@ -73,6 +74,7 @@ function App() {
           id="stop"
           label="Stop"
           variant="secondary"
+          width={12}
           onClick={() => {
             isLoading.value = false;
             message.value = 'Task stopped.';
@@ -82,6 +84,7 @@ function App() {
           id="reset"
           label="Reset"
           variant="danger"
+          width={13}
           onClick={() => {
             isLoading.value = false;
             progress.value = 0;

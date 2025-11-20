@@ -462,7 +462,7 @@ export function render(node: TUINode | TUINode[], options: { width?: number } = 
       tagName: 'fragment',
       props: {},
       children: node,
-      style: {}
+      style: {},
     };
     const output = renderNode(fragmentNode, terminalWidth);
     return output.text;

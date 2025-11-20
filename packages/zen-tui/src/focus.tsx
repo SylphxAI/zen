@@ -92,9 +92,9 @@ export function FocusProvider(props: { children: any }): any {
     focusPrev,
   };
 
-  // Use JSX to render the Provider
-  const Provider = FocusContext.Provider;
-  return <Provider value={contextValue}>{props.children}</Provider>;
+  // Call Provider directly instead of using JSX
+  // JSX creates a descriptor object instead of calling the function
+  return FocusContext.Provider({ value: contextValue, children: props.children });
 }
 
 /**

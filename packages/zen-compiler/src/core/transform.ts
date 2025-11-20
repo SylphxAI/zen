@@ -2,7 +2,8 @@
  * Core JSX transformer for Zen
  *
  * Transforms:
- * 1. Auto-lazy children: <Show><Child /></Show> → <Show>{() => <Child />}</Show>
+ * 1. Universal lazy children: jsx(Parent, { children: jsx(Child, {}) })
+ *    → jsx(Parent, { get children() { return jsx(Child, {}) } })
  * 2. Signal.value auto-unwrap: {signal.value} → {() => signal.value}
  *
  * Note: {signal} is NOT transformed - runtime handles it via isSignal()
@@ -13,14 +14,13 @@ import type { NodePath } from '@babel/traverse';
 import * as t from '@babel/types';
 import type { CompilerOptions } from './types.js';
 
-const DEFAULT_LAZY_COMPONENTS = ['Show', 'For', 'Switch', 'Match', 'Suspense', 'ErrorBoundary'];
-
 export function transformZenJSX(
   code: string,
   filename: string,
   options: CompilerOptions = {},
+  // biome-ignore lint/suspicious/noExplicitAny: Babel's source map type
 ): { code: string; map: any } | null {
-  const { autoLazy = true, autoUnwrap = true, lazyComponents = DEFAULT_LAZY_COMPONENTS } = options;
+  const { autoUnwrap = true, universalLazyChildren = true } = options;
 
   const result = babel.transformSync(code, {
     filename,
@@ -28,37 +28,77 @@ export function transformZenJSX(
     plugins: [
       '@babel/plugin-syntax-jsx',
       ['@babel/plugin-syntax-typescript', { isTSX: true }],
-      // Custom transform plugin
+
+      // Phase 1: Transform JSX to jsx() calls if not already done
+      // (This might already be done by the bundler, but we include it for safety)
+      [
+        '@babel/plugin-transform-react-jsx',
+        {
+          runtime: 'automatic',
+          importSource: '@zen/runtime',
+        },
+      ],
+
+      // Phase 2: Universal lazy children transform (on jsx() calls)
+      ...(universalLazyChildren
+        ? [
+            (): babel.PluginObj => ({
+              name: 'zen-lazy-children',
+              visitor: {
+                // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Babel transform requires checking multiple conditions
+                CallExpression(path: NodePath<t.CallExpression>) {
+                  const callee = path.node.callee;
+
+                  // Check if this is a jsx/jsxs/jsxDEV/_jsx/_jsxs call
+                  if (!t.isIdentifier(callee)) return;
+                  if (!['jsx', 'jsxs', 'jsxDEV', '_jsx', '_jsxs'].includes(callee.name)) return;
+
+                  // jsx(type, props)
+                  const [_type, propsArg] = path.node.arguments;
+                  if (!propsArg || !t.isObjectExpression(propsArg)) return;
+
+                  // Find the children property
+                  const childrenPropIndex = propsArg.properties.findIndex(
+                    (prop) =>
+                      t.isObjectProperty(prop) &&
+                      t.isIdentifier(prop.key) &&
+                      prop.key.name === 'children',
+                  );
+
+                  if (childrenPropIndex === -1) return;
+
+                  const childrenProp = propsArg.properties[childrenPropIndex];
+                  if (!t.isObjectProperty(childrenProp)) return;
+
+                  // Skip if children is already a function
+                  if (
+                    t.isArrowFunctionExpression(childrenProp.value) ||
+                    t.isFunctionExpression(childrenProp.value)
+                  ) {
+                    return;
+                  }
+
+                  // Transform: children: value
+                  // Into: get children() { return value }
+                  const getter = t.objectMethod(
+                    'get',
+                    t.identifier('children'),
+                    [],
+                    t.blockStatement([t.returnStatement(childrenProp.value as t.Expression)]),
+                  );
+
+                  // Replace the property with the getter
+                  propsArg.properties[childrenPropIndex] = getter;
+                },
+              },
+            }),
+          ]
+        : []),
+
+      // Phase 3: Custom transforms (signal.value auto-unwrap)
       (): babel.PluginObj => ({
         name: 'zen-jsx-transform',
         visitor: {
-          // Transform JSX elements with lazy children
-          JSXElement(path: NodePath<t.JSXElement>) {
-            if (!autoLazy) return;
-
-            const openingElement = path.node.openingElement;
-            const elementName = getJSXElementName(openingElement.name);
-
-            // Check if this component needs lazy children
-            if (!elementName || !lazyComponents.includes(elementName)) {
-              return;
-            }
-
-            // Transform children to be lazy
-            const children = path.node.children;
-            if (children.length === 0) return;
-
-            // Wrap children in arrow function
-            path.node.children = [
-              t.jsxExpressionContainer(
-                t.arrowFunctionExpression(
-                  [],
-                  t.jsxFragment(t.jsxOpeningFragment(), t.jsxClosingFragment(), children),
-                ),
-              ),
-            ];
-          },
-
           // Transform signal.value expressions to auto-unwrap
           JSXExpressionContainer(path: NodePath<t.JSXExpressionContainer>) {
             if (!autoUnwrap) return;
@@ -157,15 +197,4 @@ function hasValueAccess(node: t.Node): boolean {
   }
 
   return false;
-}
-
-function getJSXElementName(name: t.JSXElement['openingElement']['name']): string | null {
-  if (t.isJSXIdentifier(name)) {
-    return name.name;
-  }
-  if (t.isJSXMemberExpression(name)) {
-    // Handle namespaced components like <Foo.Bar>
-    return null; // Skip for now
-  }
-  return null;
 }

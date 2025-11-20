@@ -42,6 +42,7 @@ export type { Reactive, MaybeReactive } from './reactive-utils.js';
 export { mergeProps, splitProps } from './utils/props.js';
 export { selector } from './utils/selector.js';
 export { runWithOwner } from './utils/runWithOwner.js';
+export { children } from './utils/children.js';
 
 // Server utilities
 export { isServer, createUniqueId, setServerIdPrefix, resetIdCounter } from './server-utils.js';

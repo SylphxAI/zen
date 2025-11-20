@@ -16,6 +16,7 @@ import { getPlatformOps } from '../platform-ops.js';
 export interface Context<T> {
   id: symbol;
   defaultValue: T;
+  // biome-ignore lint/suspicious/noExplicitAny: Provider children can be any JSX element type
   Provider: (props: { value: T; children: any | any[] }) => any;
 }
 
@@ -23,6 +24,7 @@ export interface Context<T> {
  * Internal storage for context values
  * Maps context ID to value, stored per owner
  */
+// biome-ignore lint/suspicious/noExplicitAny: Owner type is internal to @zen/signal, context values can be any type
 const contextMap = new WeakMap<any, Map<symbol, any>>();
 
 /**
@@ -50,6 +52,7 @@ export function createContext<T>(defaultValue: T): Context<T> {
   const context: Context<T> = {
     id: Symbol('context'),
     defaultValue,
+    // biome-ignore lint/suspicious/noExplicitAny: Provider children can be any JSX element type
     Provider: (props: { value: T; children: any | any[] }) => {
       return Provider(context, props);
     },
@@ -90,6 +93,29 @@ export function useContext<T>(context: Context<T>): T {
 /**
  * Provider component that makes a context value available to descendants
  *
+ * **Usage with lazy children (recommended):**
+ *
+ * With @zen/compiler (automatic):
+ * ```tsx
+ * <ThemeContext.Provider value={{ color: 'red' }}>
+ *   <Child />
+ * </ThemeContext.Provider>
+ * ```
+ *
+ * Without compiler (manual children() helper):
+ * ```tsx
+ * import { children } from '@zen/runtime';
+ *
+ * function CustomProvider(props) {
+ *   const c = children(() => props.children);
+ *   setupContext(props.value);  // Set context first
+ *   return c();                  // Then resolve children
+ * }
+ * ```
+ *
+ * **Note:** Without lazy children (no compiler, no manual helper), nested/sibling
+ * Providers may not work correctly due to JSX eager evaluation.
+ *
  * @example
  * ```tsx
  * const ThemeContext = createContext({ color: 'blue' });
@@ -103,6 +129,7 @@ export function useContext<T>(context: Context<T>): T {
  * }
  * ```
  */
+// biome-ignore lint/suspicious/noExplicitAny: Provider children can be any JSX element type
 export function Provider<T>(context: Context<T>, props: { value: T; children: any | any[] }): any {
   const owner = getOwner();
 
@@ -110,15 +137,22 @@ export function Provider<T>(context: Context<T>, props: { value: T; children: an
     throw new Error('Provider must be used within a component');
   }
 
-  // Store context in Provider's own owner FIRST, before accessing children.
-  // With lazy children (via Babel transform getter), children evaluate ONLY
-  // when accessed. We must store the context before accessing props.children
-  // so that when children evaluate, they can find the context value.
+  // Store context in Provider's own owner.
   //
-  // Owner tree (with lazy children):
-  //   App (owner)
-  //   └─ Provider (owner, parent: App) <- stores context HERE
-  //      └─ Children (owner, parent: Provider) <- searches up to Provider, finds context!
+  // With lazy children (via @zen/compiler or manual children() helper):
+  //   Owner tree:
+  //     App (owner)
+  //     └─ Provider (owner, parent: App) <- stores context HERE
+  //        └─ Children (owner, parent: Provider) <- lazy evaluation, finds context!
+  //
+  // Without lazy children (eager JSX):
+  //   Owner tree:
+  //     App (owner)
+  //     ├─ Provider (owner, parent: App) <- stores context here
+  //     └─ Children (owner, parent: App) <- sibling, won't find context ❌
+  //
+  // Solution: Use @zen/compiler for automatic lazy children, or manually use
+  // children() helper in custom provider components.
   let values = contextMap.get(owner);
   if (!values) {
     values = new Map();

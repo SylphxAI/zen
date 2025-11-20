@@ -10,6 +10,7 @@ import cliBoxes from 'cli-boxes';
 import sliceAnsi from 'slice-ansi';
 import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
+import { createRoot } from '@zen/signal';
 import type { RenderOutput, TUINode, TUIStyle } from './types.js';
 
 /**
@@ -517,7 +518,7 @@ export async function renderToTerminalReactive(
     if (!needsRender || !isRunning) return;
     needsRender = false;
 
-    const node = createNode();
+    const node = createRoot(() => createNode());
     await Promise.resolve();
     await Promise.resolve();
 

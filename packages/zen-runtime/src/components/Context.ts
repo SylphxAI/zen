@@ -132,10 +132,12 @@ export function useContext<T>(context: Context<T>): T {
  */
 // biome-ignore lint/suspicious/noExplicitAny: Provider children can be any JSX element type
 export function Provider<T>(context: Context<T>, props: { value: T; children: any | any[] }): any {
-  const owner = getOwner();
+  let owner = getOwner();
 
+  // If no owner exists, create a root owner for top-level providers
   if (!owner) {
-    throw new Error('Provider must be used within a component');
+    const { createOwner } = require('@zen/signal');
+    owner = createOwner();
   }
 
   // Store context in Provider's own owner.

@@ -6,6 +6,7 @@
 
 import { type Signal, signal } from '@zen/runtime';
 import { useFocus } from '../focus';
+import { useInput } from '../useInput';
 import type { TUINode } from '../types';
 import { Box } from './Box';
 import { Text } from './Text';
@@ -53,6 +54,13 @@ export function SelectInput<T = string>(props: SelectInputProps<T>): TUINode {
     onBlur: () => {
       isOpen.value = false;
     },
+  });
+
+  // Handle keyboard input
+  useInput((input, key) => {
+    if (!isFocused) return;
+
+    handleSelectInput(isOpen, highlightedIndex, valueSignal, props.options, input, props.onChange);
   });
 
   const width = props.width || 40;

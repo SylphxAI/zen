@@ -6,6 +6,7 @@
 
 import { type Signal, onCleanup, signal } from '@zen/runtime';
 import { useFocus } from '../focus';
+import { useInput } from '../useInput';
 import type { TUINode } from '../types';
 import { Box } from './Box';
 import { Text } from './Text';
@@ -42,6 +43,15 @@ export function TextInput(props: TextInputProps): TUINode {
     onBlur: () => {
       // Could trigger validation here
     },
+  });
+
+  // Handle keyboard input
+  useInput((input, key) => {
+    if (!isFocused) return;
+
+    if (handleTextInput(valueSignal, cursorPos, input)) {
+      props.onChange?.(valueSignal.value);
+    }
   });
 
   const width = props.width || 40;

@@ -5,7 +5,7 @@
  * across interactive components (inputs, buttons, etc.)
  */
 
-import { type Signal, createContext, signal, useContext } from '@zen/runtime';
+import { createContext, signal, useContext } from '@zen/runtime';
 
 export interface FocusableItem {
   id: string;
@@ -14,15 +14,15 @@ export interface FocusableItem {
 }
 
 export interface FocusContextValue {
-  focusedId: Signal<string | null>;
-  items: Signal<FocusableItem[]>;
+  focusedId: ReturnType<typeof signal<string | null>>;
+  items: ReturnType<typeof signal<FocusableItem[]>>;
   register: (item: FocusableItem) => () => void;
   focus: (id: string) => void;
   focusNext: () => void;
   focusPrev: () => void;
 }
 
-const FocusContext = createContext<FocusContextValue | null>(null);
+const FocusContext = createContext(null as FocusContextValue | null);
 
 /**
  * Focus Provider - manages focus state for child components
@@ -42,7 +42,7 @@ export function FocusProvider(props: { children: any }): any {
 
     // Cleanup function
     return () => {
-      items.value = items.value.filter((i) => i.id !== item.id);
+      items.value = items.value.filter((i: FocusableItem) => i.id !== item.id);
       if (focusedId.value === item.id) {
         focusedId.value = null;
       }
@@ -55,13 +55,13 @@ export function FocusProvider(props: { children: any }): any {
 
     // Blur current
     if (currentId) {
-      const current = items.value.find((i) => i.id === currentId);
+      const current = items.value.find((i: FocusableItem) => i.id === currentId);
       current?.onBlur?.();
     }
 
     // Focus new
     focusedId.value = id;
-    const newItem = items.value.find((i) => i.id === id);
+    const newItem = items.value.find((i: FocusableItem) => i.id === id);
     newItem?.onFocus?.();
   };
 
@@ -69,7 +69,7 @@ export function FocusProvider(props: { children: any }): any {
     const itemList = items.value;
     if (itemList.length === 0) return;
 
-    const currentIndex = itemList.findIndex((i) => i.id === focusedId.value);
+    const currentIndex = itemList.findIndex((i: FocusableItem) => i.id === focusedId.value);
     const nextIndex = (currentIndex + 1) % itemList.length;
     focus(itemList[nextIndex].id);
   };
@@ -78,7 +78,7 @@ export function FocusProvider(props: { children: any }): any {
     const itemList = items.value;
     if (itemList.length === 0) return;
 
-    const currentIndex = itemList.findIndex((i) => i.id === focusedId.value);
+    const currentIndex = itemList.findIndex((i: FocusableItem) => i.id === focusedId.value);
     const prevIndex = currentIndex <= 0 ? itemList.length - 1 : currentIndex - 1;
     focus(itemList[prevIndex].id);
   };

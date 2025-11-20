@@ -6,7 +6,9 @@ export default defineConfig({
     'jsx-runtime': 'src/jsx-runtime.ts',
   },
   format: ['esm'],
-  dts: false, // Disable for now - types inferred from source
+  // DTS disabled: tsconfig's jsxImportSource creates circular resolution during DTS build
+  // Types are still available through workspace TypeScript resolution
+  dts: false,
   clean: true,
   sourcemap: true,
   target: 'es2022',

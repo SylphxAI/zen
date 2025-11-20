@@ -130,7 +130,9 @@ function hasValueAccess(node: t.Node): boolean {
   }
 
   if (t.isConditionalExpression(node)) {
-    return hasValueAccess(node.test) || hasValueAccess(node.consequent) || hasValueAccess(node.alternate);
+    return (
+      hasValueAccess(node.test) || hasValueAccess(node.consequent) || hasValueAccess(node.alternate)
+    );
   }
 
   if (t.isMemberExpression(node)) {

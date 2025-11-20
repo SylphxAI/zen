@@ -199,7 +199,18 @@ function renderNode(node: TUINode, parentWidth: number): RenderOutput {
             const textContent = applyTextStyle(child, node.style);
             rowContent += textContent;
           } else if ('_type' in child && child._type === 'marker') {
-            // Skip markers
+            // Render marker children
+            if ('children' in child && Array.isArray(child.children)) {
+              for (const markerChild of child.children) {
+                if (typeof markerChild === 'string') {
+                  rowContent += applyTextStyle(markerChild, node.style);
+                } else if (markerChild && typeof markerChild === 'object' && 'type' in markerChild) {
+                  const childOutput = renderNode(markerChild, width - paddingLeft * 2);
+                  const firstLine = childOutput.text.split('\n')[0] || '';
+                  rowContent += firstLine.trim();
+                }
+              }
+            }
           } else {
             // For text nodes in row layout, just concat their styled content
             if (child.type === 'text' && child.children) {
@@ -207,7 +218,19 @@ function renderNode(node: TUINode, parentWidth: number): RenderOutput {
               for (const textChild of child.children) {
                 if (typeof textChild === 'string') {
                   textContent += applyTextStyle(textChild, child.style);
-                } else if ('_type' in textChild && textChild._type !== 'marker') {
+                } else if ('_type' in textChild && textChild._type === 'marker') {
+                  // Handle marker children
+                  if ('children' in textChild && Array.isArray(textChild.children)) {
+                    for (const markerChild of textChild.children) {
+                      if (typeof markerChild === 'string') {
+                        textContent += applyTextStyle(markerChild, child.style);
+                      } else if (markerChild && typeof markerChild === 'object' && 'type' in markerChild) {
+                        const nestedOutput = renderNode(markerChild, 0);
+                        textContent += nestedOutput.text.trim();
+                      }
+                    }
+                  }
+                } else if ('_type' in textChild) {
                   // Nested text nodes - recurse
                   const nestedOutput = renderNode(textChild, 0);
                   textContent += nestedOutput.text.trim();
@@ -235,7 +258,25 @@ function renderNode(node: TUINode, parentWidth: number): RenderOutput {
             insertContent(lines, textContent, paddingLeft, currentY, width);
             currentY += 1;
           } else if ('_type' in child && child._type === 'marker') {
-            // Skip markers
+            // Render marker children
+            if ('children' in child && Array.isArray(child.children)) {
+              for (const markerChild of child.children) {
+                if (typeof markerChild === 'string') {
+                  const textContent = applyTextStyle(markerChild, node.style);
+                  insertContent(lines, textContent, paddingLeft, currentY, width);
+                  currentY += 1;
+                } else if (markerChild && typeof markerChild === 'object' && 'type' in markerChild) {
+                  const childOutput = renderNode(markerChild, width - paddingLeft * 2);
+                  const childLines = childOutput.text.split('\n');
+                  for (const childLine of childLines) {
+                    if (currentY < lines.length) {
+                      insertContent(lines, childLine, paddingLeft, currentY, width);
+                    }
+                    currentY += 1;
+                  }
+                }
+              }
+            }
           } else {
             const childOutput = renderNode(child, width - paddingLeft * 2);
             const childLines = childOutput.text.split('\n');
@@ -263,7 +304,18 @@ function renderNode(node: TUINode, parentWidth: number): RenderOutput {
             const textContent = applyTextStyle(child, node.style);
             rowContent += textContent;
           } else if ('_type' in child && child._type === 'marker') {
-            // Skip markers
+            // Render marker children
+            if ('children' in child && Array.isArray(child.children)) {
+              for (const markerChild of child.children) {
+                if (typeof markerChild === 'string') {
+                  rowContent += applyTextStyle(markerChild, node.style);
+                } else if (markerChild && typeof markerChild === 'object' && 'type' in markerChild) {
+                  const childOutput = renderNode(markerChild, width - paddingLeft * 2);
+                  const firstLine = childOutput.text.split('\n')[0] || '';
+                  rowContent += firstLine.trim();
+                }
+              }
+            }
           } else {
             // For text nodes in row layout, just concat their styled content
             if (child.type === 'text' && child.children) {
@@ -271,7 +323,19 @@ function renderNode(node: TUINode, parentWidth: number): RenderOutput {
               for (const textChild of child.children) {
                 if (typeof textChild === 'string') {
                   textContent += applyTextStyle(textChild, child.style);
-                } else if ('_type' in textChild && textChild._type !== 'marker') {
+                } else if ('_type' in textChild && textChild._type === 'marker') {
+                  // Handle marker children
+                  if ('children' in textChild && Array.isArray(textChild.children)) {
+                    for (const markerChild of textChild.children) {
+                      if (typeof markerChild === 'string') {
+                        textContent += applyTextStyle(markerChild, child.style);
+                      } else if (markerChild && typeof markerChild === 'object' && 'type' in markerChild) {
+                        const nestedOutput = renderNode(markerChild, 0);
+                        textContent += nestedOutput.text.trim();
+                      }
+                    }
+                  }
+                } else if ('_type' in textChild) {
                   // Nested text nodes - recurse
                   const nestedOutput = renderNode(textChild, 0);
                   textContent += nestedOutput.text.trim();
@@ -298,7 +362,18 @@ function renderNode(node: TUINode, parentWidth: number): RenderOutput {
             const textContent = applyTextStyle(child, node.style);
             childrenLines.push(textContent);
           } else if ('_type' in child && child._type === 'marker') {
-            // Skip markers
+            // Render marker children
+            if ('children' in child && Array.isArray(child.children)) {
+              for (const markerChild of child.children) {
+                if (typeof markerChild === 'string') {
+                  const textContent = applyTextStyle(markerChild, node.style);
+                  childrenLines.push(textContent);
+                } else if (markerChild && typeof markerChild === 'object' && 'type' in markerChild) {
+                  const childOutput = renderNode(markerChild, width - paddingLeft * 2);
+                  childrenLines.push(...childOutput.text.split('\n'));
+                }
+              }
+            }
           } else {
             const childOutput = renderNode(child, width - paddingLeft * 2);
             childrenLines.push(...childOutput.text.split('\n'));

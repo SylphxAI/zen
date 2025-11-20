@@ -9,9 +9,9 @@
  * 5. Reorder conditions by frequency
  */
 
+import { executeComponent, isSignal } from '@zen/runtime';
 import { effect } from '@zen/signal';
 import { attachNodeToOwner, getOwner } from '@zen/signal';
-import { isSignal, executeComponent } from '@zen/runtime';
 import { enterHydrateParent, getNextHydrateNode, isHydrating } from './hydrate.js';
 
 export { Fragment } from './core/fragment.js';
@@ -25,8 +25,9 @@ type ComponentFunction = (props: Props | null) => Node;
 export function jsx(type: string | ComponentFunction, props: Props | null): Node {
   // Component
   if (typeof type === 'function') {
-    return executeComponent(() => type(props), (node, owner) =>
-      attachNodeToOwner(node, owner),
+    return executeComponent(
+      () => type(props),
+      (node, owner) => attachNodeToOwner(node, owner),
     );
   }
 

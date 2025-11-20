@@ -5,8 +5,8 @@
  * Similar pattern to zen-web but for terminal rendering.
  */
 
+import { executeComponent, isSignal } from '@zen/runtime';
 import { attachNodeToOwner, effect, getOwner } from '@zen/signal';
-import { isSignal, executeComponent } from '@zen/runtime';
 import type { TUINode } from './types.js';
 
 type Props = Record<string, unknown>;
@@ -18,8 +18,9 @@ type ComponentFunction = (props: Props | null) => TUINode;
 export function jsx(type: string | ComponentFunction, props: Props | null): TUINode {
   // Component
   if (typeof type === 'function') {
-    return executeComponent(() => type(props), (node, owner) =>
-      attachNodeToOwner(node as any, owner),
+    return executeComponent(
+      () => type(props),
+      (node, owner) => attachNodeToOwner(node as any, owner),
     );
   }
 

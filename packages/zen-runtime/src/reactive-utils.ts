@@ -74,7 +74,7 @@ export function resolve<T>(value: Reactive<T> | T): T {
  */
 export function executeComponent<T>(
   fn: () => T,
-  attachToOwner?: (node: T, owner: import('@zen/signal').Owner) => void
+  attachToOwner?: (node: T, owner: import('@zen/signal').Owner) => void,
 ): T {
   // Import at runtime to avoid circular dependency
   const { createOwner, setOwner, getOwner } = require('@zen/signal');

@@ -303,6 +303,9 @@ export async function renderToTerminalReactive(
     process.stdin.setEncoding('utf8');
   }
 
+  // Hide cursor during rendering
+  process.stdout.write('\x1b[?25l');
+
   let isRunning = true;
   let needsRender = true;
   let previousLines: string[] = [];
@@ -394,6 +397,8 @@ export async function renderToTerminalReactive(
   const cleanup = () => {
     isRunning = false;
     clearInterval(renderInterval);
+    // Show cursor again
+    process.stdout.write('\x1b[?25h');
     if (process.stdin.isTTY) {
       process.stdin.removeListener('data', keyHandler);
       process.stdin.setRawMode(false);

@@ -21,6 +21,7 @@ export interface TextProps {
 
 export function Text(props: TextProps): TUINode {
   const style: TUIStyle = {
+    flexDirection: 'row', // Text children should be inline by default
     ...props?.style,
     color: props?.color || props?.style?.color,
     backgroundColor: props?.backgroundColor || props?.style?.backgroundColor,

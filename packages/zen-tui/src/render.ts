@@ -187,38 +187,92 @@ function renderNode(node: TUINode, parentWidth: number): RenderOutput {
     }
 
     // Insert children into fixed space
+    const flexDirection = node.style?.flexDirection || 'column';
     let currentY = paddingTop;
-    for (const child of node.children) {
-      if (typeof child === 'string') {
-        const textContent = applyTextStyle(child, node.style);
-        insertContent(lines, textContent, paddingLeft, currentY, width);
-        currentY += 1;
-      } else if ('_type' in child && child._type === 'marker') {
-        // Skip markers
-      } else {
-        const childOutput = renderNode(child, width - paddingLeft * 2);
-        const childLines = childOutput.text.split('\n');
-        for (const childLine of childLines) {
-          if (currentY < lines.length) {
-            insertContent(lines, childLine, paddingLeft, currentY, width);
-            currentY += 1;
+
+    if (flexDirection === 'row') {
+      // Horizontal layout: concatenate children on same line
+      let rowContent = '';
+      if (node.children && node.children.length > 0) {
+        for (const child of node.children) {
+          if (typeof child === 'string') {
+            const textContent = applyTextStyle(child, node.style);
+            rowContent += textContent;
+          } else if ('_type' in child && child._type === 'marker') {
+            // Skip markers
+          } else {
+            const childOutput = renderNode(child, width - paddingLeft * 2);
+            const firstLine = childOutput.text.split('\n')[0] || '';
+            rowContent += firstLine;
           }
         }
+      }
+      if (rowContent && currentY < lines.length) {
+        insertContent(lines, rowContent, paddingLeft, currentY, width);
+      }
+    } else {
+      // Vertical layout (default): stack children
+      if (node.children && node.children.length > 0) {
+        for (const child of node.children) {
+        if (typeof child === 'string') {
+          const textContent = applyTextStyle(child, node.style);
+          insertContent(lines, textContent, paddingLeft, currentY, width);
+          currentY += 1;
+        } else if ('_type' in child && child._type === 'marker') {
+          // Skip markers
+        } else {
+          const childOutput = renderNode(child, width - paddingLeft * 2);
+          const childLines = childOutput.text.split('\n');
+          for (const childLine of childLines) {
+            if (currentY < lines.length) {
+              insertContent(lines, childLine, paddingLeft, currentY, width);
+              currentY += 1;
+            }
+          }
+        }
+      }
       }
     }
   } else {
     // Auto-sizing box: render children first, then create box
     const childrenLines: string[] = [];
+    const flexDirection = node.style?.flexDirection || 'column';
 
-    for (const child of node.children) {
-      if (typeof child === 'string') {
-        const textContent = applyTextStyle(child, node.style);
-        childrenLines.push(textContent);
-      } else if ('_type' in child && child._type === 'marker') {
-        // Skip markers
-      } else {
-        const childOutput = renderNode(child, width - paddingLeft * 2);
-        childrenLines.push(...childOutput.text.split('\n'));
+    if (flexDirection === 'row') {
+      // Horizontal layout: concatenate children on same line
+      let rowContent = '';
+      if (node.children && node.children.length > 0) {
+        for (const child of node.children) {
+        if (typeof child === 'string') {
+          const textContent = applyTextStyle(child, node.style);
+          rowContent += textContent;
+        } else if ('_type' in child && child._type === 'marker') {
+          // Skip markers
+        } else {
+          const childOutput = renderNode(child, width - paddingLeft * 2);
+          // For row layout, take only first line of child output
+          const firstLine = childOutput.text.split('\n')[0] || '';
+          rowContent += firstLine;
+        }
+      }
+      }
+      if (rowContent) {
+        childrenLines.push(rowContent);
+      }
+    } else {
+      // Vertical layout (default): stack children
+      if (node.children && node.children.length > 0) {
+        for (const child of node.children) {
+        if (typeof child === 'string') {
+          const textContent = applyTextStyle(child, node.style);
+          childrenLines.push(textContent);
+        } else if ('_type' in child && child._type === 'marker') {
+          // Skip markers
+        } else {
+          const childOutput = renderNode(child, width - paddingLeft * 2);
+          childrenLines.push(...childOutput.text.split('\n'));
+        }
+      }
       }
     }
 

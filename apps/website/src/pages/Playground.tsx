@@ -16,9 +16,9 @@ import {
 } from '@codemirror/view';
 import * as ZenSignal from '@zen/signal';
 import { effect } from '@zen/signal';
-import { For, Show, computed, signal } from '@zen/zen';
-import * as Zen from '@zen/zen';
-import { Fragment, jsx } from '@zen/zen/jsx-runtime';
+import { For, Show, computed, signal } from '@zen/web';
+import * as Zen from '@zen/web';
+import { Fragment, jsx } from '@zen/web/jsx-runtime';
 import { Icon } from '../components/Icon.tsx';
 import { categories, examples } from '../data/examples.ts';
 

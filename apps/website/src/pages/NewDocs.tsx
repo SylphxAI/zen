@@ -1,5 +1,5 @@
 import { computed, effect, signal } from '@zen/signal';
-import { For } from '@zen/zen';
+import { For } from '@zen/web';
 import { Icon } from '../components/Icon';
 import apiReferenceMd from '../docs/api-reference.md?raw';
 import coreConceptsMd from '../docs/core-concepts.md?raw';

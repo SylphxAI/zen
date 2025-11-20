@@ -6,7 +6,7 @@
  */
 
 import { computed, signal } from '@zen/signal';
-import { Show } from '@zen/zen';
+import { Show } from '@zen/web';
 
 export function InteractiveDemo() {
   return (

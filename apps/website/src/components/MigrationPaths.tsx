@@ -1,4 +1,4 @@
-import { For, signal } from '@zen/zen';
+import { For, signal } from '@zen/web';
 
 export function MigrationPaths() {
   const activeTab = signal('react');
@@ -54,7 +54,7 @@ function Counter() {
           step: 3,
           title: 'Full Migration (Optional)',
           code: `// When ready, go all-in with Zen
-import { render, signal } from '@zen/zen'
+import { render, signal } from '@zen/web'
 
 function App() {
   const count = signal(0)
@@ -113,7 +113,7 @@ export default {
           step: 3,
           title: 'Migrate to Zen Framework',
           code: `// Zen syntax similar to Vue 3
-import { signal, computed } from '@zen/zen'
+import { signal, computed } from '@zen/web'
 
 function Counter() {
   const count = signal(0)

@@ -1,4 +1,4 @@
-import { For } from '@zen/zen';
+import { For } from '@zen/web';
 
 export function Packages() {
   const corePackages = [
@@ -9,7 +9,7 @@ export function Packages() {
       features: ['signal()', 'computed()', 'effect()', 'Auto-tracking', 'Zero deps'],
     },
     {
-      name: '@zen/zen',
+      name: '@zen/web',
       description: 'Fine-grained framework with no virtual DOM',
       size: '<5 KB',
       features: ['JSX', 'Router', 'Components', 'No VDOM', 'Render once'],

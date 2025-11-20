@@ -30,7 +30,7 @@ export function Footer() {
               </li>
               <li>
                 <a href="/docs" class="text-text-muted hover:text-primary transition-colors">
-                  @zen/zen
+                  @zen/web
                 </a>
               </li>
               <li>
@@ -105,7 +105,7 @@ export function Footer() {
         </div>
         <div class="pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-4 text-text-muted text-sm">
           <p>© 2024 Zen. MIT License.</p>
-          <p>Built with @zen/zen framework</p>
+          <p>Built with @zen/web framework</p>
         </div>
       </div>
     </footer>

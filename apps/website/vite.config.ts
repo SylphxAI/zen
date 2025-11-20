@@ -13,6 +13,6 @@ export default defineConfig({
   ],
   esbuild: {
     jsx: 'automatic',
-    jsxImportSource: '@zen/zen',
+    jsxImportSource: '@zen/web',
   },
 });

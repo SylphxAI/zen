@@ -1,4 +1,4 @@
-import { For } from '@zen/zen';
+import { For } from '@zen/web';
 import { Icon } from './Icon.tsx';
 
 export function StandalonePackages() {
@@ -45,7 +45,7 @@ count.value++ // Logs: "Count: 1"`,
         'Simple and easy to use',
       ],
       integrations: [
-        { name: 'Zen', pkg: '@zen/zen', icon: 'lucide:zap' },
+        { name: 'Zen', pkg: '@zen/web', icon: 'lucide:zap' },
         { name: 'React', pkg: 'react-router', icon: 'lucide:atom' },
         { name: 'Vue', pkg: 'vue-router', icon: 'lucide:triangle' },
         { name: 'Vanilla', pkg: '@zen/router', icon: 'lucide:package' },

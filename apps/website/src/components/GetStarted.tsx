@@ -10,7 +10,7 @@ export function GetStarted() {
             </div>
             <h3 class="text-2xl font-semibold mb-4 text-text mt-4">Install</h3>
             <pre class="bg-bg-lighter border border-border rounded-zen p-4 text-sm text-primary font-mono mb-4 overflow-x-auto">
-              npm install @zen/signal @zen/zen
+              npm install @zen/signal @zen/web
             </pre>
             <p class="text-text-muted">Or use your favorite package manager (bun, pnpm, yarn)</p>
           </div>
@@ -23,7 +23,7 @@ export function GetStarted() {
 {
   "compilerOptions": {
     "jsx": "react-jsx",
-    "jsxImportSource": "@zen/zen"
+    "jsxImportSource": "@zen/web"
   }
 }`}</pre>
           </div>
@@ -32,7 +32,7 @@ export function GetStarted() {
               3
             </div>
             <h3 class="text-2xl font-semibold mb-4 text-text mt-4">Build</h3>
-            <pre class="bg-bg-lighter border border-border rounded-zen p-4 text-sm text-text-muted font-mono overflow-x-auto">{`import { signal, render } from '@zen/zen';
+            <pre class="bg-bg-lighter border border-border rounded-zen p-4 text-sm text-text-muted font-mono overflow-x-auto">{`import { signal, render } from '@zen/web';
 
 const count = signal(0);
 

@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@zen/zen": "workspace:*",
+    "@zen/web": "workspace:*",
     "@zen/signal": "workspace:*",
     "@zen/router": "workspace:*"
   },

@@ -1,5 +1,5 @@
 import { computed, signal } from '@zen/signal';
-import { For, Show } from '@zen/zen';
+import { For, Show } from '@zen/web';
 import { Icon } from './Icon';
 import { Modal } from './Modal';
 

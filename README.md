@@ -72,13 +72,32 @@ Zen:
 - Ultra-tiny bundle (1.75 KB)
 - Foundation for Zen ecosystem
 
-**[@zen/zen](packages/zen)**
-- Fine-grained reactive framework
+**[@zen/web](packages/zen-web)**
+- Web renderer with fine-grained reactivity
 - No virtual DOM - direct DOM updates
 - Component render once, signals auto-update
 - JSX with automatic signal unwrapping
+- SSR and hydration support
+
+**[@zen/tui](packages/zen-tui)**
+- Terminal UI renderer for CLI applications
+- Build beautiful terminal dashboards
+- Same reactive primitives as web
+- Box, Text components for layout
+
+**[@zen/native](packages/zen-native)** (Coming Soon)
+- Native renderer for iOS/Android
+- React Native-compatible components
+- Platform-specific optimizations
 
 ```bash
+# For web applications
+npm install @zen/web
+
+# For terminal/CLI applications
+npm install @zen/tui
+
+# For core reactivity only
 npm install @zen/signal
 ```
 
@@ -268,7 +287,10 @@ settings.value.theme = 'light';
 zen/
 ├── packages/
 │   ├── zen-signal/             # @zen/signal - Reactive primitives
-│   ├── zen/                    # @zen/zen - Fine-grained framework
+│   ├── zen-web/                # @zen/web - Web renderer
+│   ├── zen-tui/                # @zen/tui - Terminal UI renderer
+│   ├── zen-native/             # @zen/native - Native renderer (coming soon)
+│   ├── zen-runtime/            # @zen/runtime - Platform-agnostic components
 │   ├── zen-signal-react/       # @zen/signal-react - React integration
 │   ├── zen-signal-vue/         # @zen/signal-vue - Vue integration
 │   ├── zen-signal-svelte/      # @zen/signal-svelte - Svelte integration

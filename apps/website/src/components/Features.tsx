@@ -1,4 +1,4 @@
-import { For } from '@zen/zen';
+import { For } from '@zen/web';
 import { Icon } from './Icon.tsx';
 
 export function Features() {

@@ -38,9 +38,9 @@ Zen uses a **Runtime-First Core + Optional Compiler DX Layer** architecture to e
 - Contains all reactive logic and control flow
 
 ### Layer 3: Platform Renderers
-- `@zen/web`: DOM operations, SSR, hydration
-- `@zen/native`: Native elements (iOS/Android)
-- `@zen/tui`: Terminal rendering
+- `@zen/web`: DOM operations, SSR, hydration (for browser applications)
+- `@zen/tui`: Terminal rendering (for CLI tools, dashboards)
+- `@zen/native`: Native elements (iOS/Android) - Coming soon
 - Each implements platform-specific `jsx()` runtime
 
 ### Layer 4: Optional Compiler (DX Enhancement)

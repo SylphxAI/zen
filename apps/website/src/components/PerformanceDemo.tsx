@@ -1,5 +1,5 @@
 import { computed, effect, signal } from '@zen/signal';
-import { For, Show } from '@zen/zen';
+import { For, Show } from '@zen/web';
 import { Icon } from './Icon';
 
 export function PerformanceDemo() {

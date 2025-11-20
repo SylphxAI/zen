@@ -1,6 +1,6 @@
 import { Link } from '@zen/router';
 import { signal } from '@zen/signal';
-import { Show } from '@zen/zen';
+import { Show } from '@zen/web';
 import { Icon } from './Icon.tsx';
 import { SearchModal } from './SearchModal.tsx';
 import { ThemeToggle } from './ThemeToggle.tsx';

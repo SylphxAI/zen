@@ -4,6 +4,7 @@
 
 - [ADR-001: Runtime-First Architecture](#001-runtime-first-architecture) ✅
 - [ADR-009: Cross-Platform Architecture](#009-cross-platform-architecture) ✅
+- [ADR-010: Remove @zen/zen Package](#010-remove-zen-package) ✅
 - [ADR-002: Reject Duplicate Subscription Checking](#002-reject-duplicate-subscription-checking)
 - [ADR-003: Keep Auto-Batching](#003-keep-auto-batching)
 - [ADR-004: Bitflag Pending State](#004-bitflag-pending-state) ❌ Superseded
@@ -19,6 +20,7 @@
 ### Active
 - [001-runtime-first-architecture.md](001-runtime-first-architecture.md) - Runtime-first with optional compiler for framework integrations
 - [009-cross-platform-architecture.md](009-cross-platform-architecture.md) - Cross-platform support (web, native, TUI) with layered architecture
+- [010-deprecate-zen-package.md](010-deprecate-zen-package.md) - Remove @zen/zen in favor of platform-specific packages (@zen/web, @zen/tui, @zen/native)
 
 ### Historical (v3.26.0 - superseded by v3.49.0 rewrite)
 - [002-reject-duplicate-checking.md](002-reject-duplicate-checking.md) - Why duplicate check hurts performance

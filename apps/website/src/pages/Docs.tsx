@@ -1,4 +1,4 @@
-import { Show, computed, signal } from '@zen/zen';
+import { Show, computed, signal } from '@zen/web';
 import { Icon } from '../components/Icon.tsx';
 
 export function Docs() {
@@ -14,7 +14,7 @@ export function Docs() {
   const sections = [
     { id: 'intro', title: 'Introduction', icon: 'lucide:book-open' },
     { id: 'signal', title: '@zen/signal', icon: 'lucide:zap' },
-    { id: 'framework', title: '@zen/zen', icon: 'lucide:target' },
+    { id: 'framework', title: '@zen/web', icon: 'lucide:target' },
     { id: 'components', title: 'Components', icon: 'lucide:layout' },
     { id: 'patterns', title: 'Patterns', icon: 'lucide:lightbulb' },
     { id: 'integrations', title: 'Integrations', icon: 'lucide:plug' },
@@ -49,7 +49,7 @@ export function Docs() {
               <p class="text-xl text-text-muted mb-8 leading-relaxed">
                 Zen is a modern reactive ecosystem consisting of two core packages:
                 <strong class="text-text"> @zen/signal</strong> for reactive primitives and{' '}
-                <strong class="text-text">@zen/zen</strong> for the fine-grained framework.
+                <strong class="text-text">@zen/web</strong> for the fine-grained framework.
               </p>
 
               <h2 class="text-2xl font-semibold text-text mb-4 mt-8">Why Zen?</h2>
@@ -98,7 +98,7 @@ export function Docs() {
   ├─ effect()     - Side effects
   └─ batch()      - Batched updates
 
-@zen/zen (<5 KB)
+@zen/web (<5 KB)
   ↓
   ├─ JSX Runtime  - Fine-grained rendering
   ├─ Components   - For, Show, Switch, Portal, ErrorBoundary
@@ -188,7 +188,7 @@ count.value++; // Effect won't run`}</pre>
           {/* Continuing with remaining sections - I'll add the rest in a similar pattern */}
           <Show when={showFramework}>
             <article class="bg-bg-light border border-border rounded-zen p-8">
-              <h1 class="text-4xl font-bold text-text mb-4">@zen/zen Framework</h1>
+              <h1 class="text-4xl font-bold text-text mb-4">@zen/web Framework</h1>
               <p class="text-xl text-text-muted mb-8 leading-relaxed">
                 Fine-grained reactive framework with no virtual DOM. Components render once, signals
                 handle all updates.

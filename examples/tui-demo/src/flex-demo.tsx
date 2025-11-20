@@ -35,5 +35,4 @@ function App() {
   );
 }
 
-const output = render(App());
-console.log(output);
+const _output = render(App());

@@ -8,7 +8,6 @@
  */
 
 import { Box, Newline, Spacer, Static, Text, renderToTerminalReactive, signal } from '@zen/tui';
-import chalk from 'chalk';
 
 // Static log entries (non-reactive)
 const logEntries = [
@@ -18,22 +17,11 @@ const logEntries = [
   { time: '10:00:03', level: 'INFO', message: 'Ready to accept connections' },
 ];
 
-// Format log entry with chalk
-function formatLog(entry: (typeof logEntries)[0]): string {
-  const time = chalk.dim(`[${entry.time}]`);
-  const level = entry.level === 'SUCCESS' ? chalk.green.bold(entry.level) : chalk.cyan(entry.level);
-  return `${time} ${level} - ${entry.message}`;
-}
-
 // Recent activity (reactive)
 const recentActivity = signal('Idle');
 const activeConnections = signal(0);
 
 function App() {
-  // Build footer status string
-  const footerText = () =>
-    `Status: ${chalk.green(recentActivity.value)} | Connections: ${chalk.bold(activeConnections.value)}`;
-
   return (
     <Box style={{ width: 80, borderStyle: 'round', padding: 1 }}>
       {/* Header */}
@@ -51,7 +39,13 @@ function App() {
           Boot Logs:
         </Text>
         <Newline />
-        <Static items={logEntries}>{(entry) => <Text>{formatLog(entry)}</Text>}</Static>
+        <Static items={logEntries}>
+          {(entry) => (
+            <Text>
+              <Text dim>[{entry.time}]</Text> <Text color={entry.level === 'SUCCESS' ? 'green' : 'cyan'} bold={entry.level === 'SUCCESS'}>{entry.level}</Text> - {entry.message}
+            </Text>
+          )}
+        </Static>
       </Box>
 
       <Newline count={2} />
@@ -61,7 +55,9 @@ function App() {
 
       {/* Footer with reactive status */}
       <Box style={{ borderStyle: 'single', padding: 1 }}>
-        <Text>{footerText()}</Text>
+        <Text>
+          Status: <Text color="green">{recentActivity.value}</Text> | Connections: <Text bold>{activeConnections.value}</Text>
+        </Text>
       </Box>
     </Box>
   );

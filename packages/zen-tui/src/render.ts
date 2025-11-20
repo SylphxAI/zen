@@ -164,9 +164,9 @@ function renderNode(node: TUINode, parentWidth: number): RenderOutput {
   const hasBorder = node.style?.borderStyle && node.style.borderStyle !== 'none';
   const hasExplicitHeight = typeof node.style?.height === 'number';
 
-  if (hasBorder || hasExplicitHeight) {
+  if (hasExplicitHeight) {
     // Fixed-height box: pre-allocate lines
-    const height = typeof node.style?.height === 'number' ? node.style.height : 10;
+    const height = node.style.height;
 
     if (hasBorder) {
       const borderLines = renderBorder(
@@ -222,21 +222,32 @@ function renderNode(node: TUINode, parentWidth: number): RenderOutput {
       }
     }
 
-    // Calculate height: padding + content + padding
+    // Calculate height: padding + content + padding (+ borders if applicable)
     const contentHeight = childrenLines.length;
-    const totalHeight = Math.max(1, paddingTop + contentHeight + paddingY);
+    const innerHeight = paddingTop + contentHeight + paddingY;
+    const totalHeight = hasBorder ? innerHeight + 2 : innerHeight; // +2 for top and bottom borders
 
     // Create box with calculated height
-    for (let i = 0; i < totalHeight; i++) {
-      let line = ' '.repeat(width);
-      if (node.style?.backgroundColor) {
-        line = getBgColorFn(node.style.backgroundColor)(line);
+    if (hasBorder) {
+      const borderLines = renderBorder(
+        width,
+        totalHeight,
+        node.style.borderStyle,
+        node.style.borderColor,
+      );
+      lines.push(...borderLines);
+    } else {
+      for (let i = 0; i < totalHeight; i++) {
+        let line = ' '.repeat(width);
+        if (node.style?.backgroundColor) {
+          line = getBgColorFn(node.style.backgroundColor)(line);
+        }
+        lines.push(line);
       }
-      lines.push(line);
     }
 
-    // Insert children
-    let currentY = paddingTop;
+    // Insert children (offset by 1 if border for top border line)
+    let currentY = (hasBorder ? 1 : 0) + paddingTop;
     for (const childLine of childrenLines) {
       if (currentY < lines.length) {
         insertContent(lines, childLine, paddingLeft, currentY, width);

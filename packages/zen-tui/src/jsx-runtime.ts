@@ -69,6 +69,18 @@ export function appendChild(parent: TUINode, child: unknown): void {
     return;
   }
 
+  // React element descriptor (from Bun's React JSX runtime)
+  // Shape: { $$typeof, type, props }
+  if (typeof child === 'object' && 'type' in child && '$$typeof' in child) {
+    const reactEl = child as any;
+    // Call the component function to get the actual TUI node
+    if (typeof reactEl.type === 'function') {
+      const result = reactEl.type(reactEl.props);
+      appendChild(parent, result);
+      return;
+    }
+  }
+
   // TUI Node
   if (typeof child === 'object' && 'type' in child) {
     parent.children.push(child as TUINode);

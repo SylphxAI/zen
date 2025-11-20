@@ -513,12 +513,15 @@ export async function renderToTerminalReactive(
   let needsRender = true;
   let previousLines: string[] = [];
 
+  // Create component tree once (fine-grained reactivity)
+  const node = createRoot(() => createNode());
+
   // Render function with diff-based updates
   const doRender = async () => {
     if (!needsRender || !isRunning) return;
     needsRender = false;
 
-    const node = createRoot(() => createNode());
+    // Wait for reactive updates to settle
     await Promise.resolve();
     await Promise.resolve();
 

@@ -65,6 +65,20 @@ export { Spacer } from './components/Spacer.js';
 export { TextInput, handleTextInput } from './components/TextInput.js';
 export { SelectInput, handleSelectInput, type SelectOption } from './components/SelectInput.js';
 export { Checkbox, handleCheckbox } from './components/Checkbox.js';
+export { Button, handleButton } from './components/Button.js';
+
+// TUI-specific: Display Components
+export {
+  Spinner,
+  updateSpinner,
+  createAnimatedSpinner,
+} from './components/Spinner.js';
+export {
+  ProgressBar,
+  incrementProgress,
+  setProgress,
+  resetProgress,
+} from './components/ProgressBar.js';
 
 // TUI-specific: Focus Management
 export {

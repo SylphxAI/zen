@@ -7,8 +7,9 @@
  * Similar to React's Context API and SolidJS's Context API.
  */
 
-import { getNodeOwner, getOwner } from '@zen/signal';
+import { attachNodeToOwner, getNodeOwner, getOwner } from '@zen/signal';
 import { getPlatformOps } from '../platform-ops.js';
+import { executeComponent } from '../reactive-utils.js';
 import { children } from '../utils/children.js';
 
 /**
@@ -132,15 +133,17 @@ export function useContext<T>(context: Context<T>): T {
  */
 // biome-ignore lint/suspicious/noExplicitAny: Provider children can be any JSX element type
 export function Provider<T>(context: Context<T>, props: { value: T; children: any | any[] }): any {
-  let owner = getOwner();
+  const owner = getOwner();
 
-  // If no owner exists, create a root owner for top-level providers
-  // This handles cases where Provider is called outside createRoot scope
-  // (e.g., when component functions are called directly without jsx-runtime)
+  // Enforce that Provider must be used within a reactive scope
+  // This ensures proper owner tree structure for context lookup
   if (!owner) {
-    const { createOwner, setOwner } = require('@zen/signal');
-    owner = createOwner();
-    setOwner(owner);
+    throw new Error(
+      'Context.Provider must be called within a reactive scope.\n\n' +
+      'Wrap your root component with createRoot():\n' +
+      '  const app = createRoot(() => <App />);\n\n' +
+      'This ensures proper reactivity and context propagation.'
+    );
   }
 
   // Store context in Provider's own owner.
@@ -181,8 +184,6 @@ export function Provider<T>(context: Context<T>, props: { value: T; children: an
   // If children is a function (lazy children pattern), call it with proper owner context
   // This handles the runtime-first pattern: <Provider>{() => <Child />}</Provider>
   if (typeof resolved === 'function') {
-    const { executeComponent } = require('@zen/runtime');
-    const { attachNodeToOwner } = require('@zen/signal');
     resolved = executeComponent(
       resolved,
       // biome-ignore lint/suspicious/noExplicitAny: Generic node from framework

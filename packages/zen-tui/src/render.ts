@@ -201,9 +201,25 @@ function renderNode(node: TUINode, parentWidth: number): RenderOutput {
           } else if ('_type' in child && child._type === 'marker') {
             // Skip markers
           } else {
-            const childOutput = renderNode(child, width - paddingLeft * 2);
-            const firstLine = childOutput.text.split('\n')[0] || '';
-            rowContent += firstLine;
+            // For text nodes in row layout, just concat their styled content
+            if (child.type === 'text' && child.children) {
+              let textContent = '';
+              for (const textChild of child.children) {
+                if (typeof textChild === 'string') {
+                  textContent += applyTextStyle(textChild, child.style);
+                } else if ('_type' in textChild && textChild._type !== 'marker') {
+                  // Nested text nodes - recurse
+                  const nestedOutput = renderNode(textChild, 0);
+                  textContent += nestedOutput.text.trim();
+                }
+              }
+              rowContent += textContent;
+            } else {
+              // Non-text nodes: render normally and take first line
+              const childOutput = renderNode(child, width - paddingLeft * 2);
+              const firstLine = childOutput.text.split('\n')[0] || '';
+              rowContent += firstLine.trim();
+            }
           }
         }
       }
@@ -249,10 +265,25 @@ function renderNode(node: TUINode, parentWidth: number): RenderOutput {
           } else if ('_type' in child && child._type === 'marker') {
             // Skip markers
           } else {
-            const childOutput = renderNode(child, width - paddingLeft * 2);
-            // For row layout, take only first line of child output
-            const firstLine = childOutput.text.split('\n')[0] || '';
-            rowContent += firstLine;
+            // For text nodes in row layout, just concat their styled content
+            if (child.type === 'text' && child.children) {
+              let textContent = '';
+              for (const textChild of child.children) {
+                if (typeof textChild === 'string') {
+                  textContent += applyTextStyle(textChild, child.style);
+                } else if ('_type' in textChild && textChild._type !== 'marker') {
+                  // Nested text nodes - recurse
+                  const nestedOutput = renderNode(textChild, 0);
+                  textContent += nestedOutput.text.trim();
+                }
+              }
+              rowContent += textContent;
+            } else {
+              // Non-text nodes: render normally and take first line
+              const childOutput = renderNode(child, width - paddingLeft * 2);
+              const firstLine = childOutput.text.split('\n')[0] || '';
+              rowContent += firstLine.trim();
+            }
           }
         }
       }

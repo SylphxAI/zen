@@ -12,8 +12,8 @@ import {
   handleButton,
   renderToTerminalReactive,
   signal,
-  useInput,
   useFocusContext,
+  useInput,
 } from '@zen/tui';
 
 // State

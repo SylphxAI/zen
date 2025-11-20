@@ -151,7 +151,7 @@ setInterval(() => {
 }, 100);
 
 // Button onClick handlers (need to be accessible from outside components)
-const buttonHandlers = {
+const _buttonHandlers = {
   start: () => {
     isLoading.value = true;
     message.value = 'Task started! Watch the progress...';
@@ -169,7 +169,7 @@ const buttonHandlers = {
 };
 
 // Global focus context access (will be set during render)
-let focusContext: any = null;
+const _focusContext: any = null;
 
 // Render
 const cleanup = renderToTerminalReactive(

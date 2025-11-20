@@ -22,7 +22,7 @@ export interface FocusContextValue {
   focusPrev: () => void;
 }
 
-const FocusContext = createContext<FocusContextValue>();
+const FocusContext = createContext<FocusContextValue | null>(null);
 
 /**
  * Focus Provider - manages focus state for child components
@@ -92,14 +92,9 @@ export function FocusProvider(props: { children: any }): any {
     focusPrev,
   };
 
-  // Return Provider node manually without JSX
-  return {
-    type: 'component' as const,
-    tagName: 'FocusContext.Provider',
-    props: { value: contextValue, children: props.children },
-    children: [props.children],
-    style: {},
-  };
+  // Use JSX to render the Provider
+  const Provider = FocusContext.Provider;
+  return <Provider value={contextValue}>{props.children}</Provider>;
 }
 
 /**

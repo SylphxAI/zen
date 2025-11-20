@@ -16,7 +16,7 @@ export default defineConfig({
   external: [
     '@zen/runtime',
     '@zen/signal',
-    '@zen/tui/jsx-runtime', // Allow components to use JSX during build
+    '@zen/tui/jsx-runtime',
     'chalk',
     'cli-boxes',
     'string-width',

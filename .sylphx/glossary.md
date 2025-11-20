@@ -30,6 +30,11 @@
 **Usage:** `zenProto.value` getter in `packages/zen-signal/src/zen.ts`
 **Context:** Inline `for` loop checks if source already in `_sources` array. O(n) vs O(n²) `includes()` or Set overhead. Typical arrays small (1-5 items).
 
+## Marker Node
+**Definition:** Internal node wrapping reactive content for effect tracking
+**Usage:** `packages/zen-*/src/jsx-runtime.ts` - Generated when reactive functions/signals used in JSX
+**Context:** When JSX encounters `{signal}` or `{() => ...}`, jsx-runtime wraps content in marker with `_type: 'marker'`. Markers track reactive dependencies and contain `children` array. Renderers must render marker children, not skip them. See commit 5d74318.
+
 ## Changesets
 **Definition:** Version management system for monorepo
 **Usage:** Root `package.json`, `.changeset/` directory

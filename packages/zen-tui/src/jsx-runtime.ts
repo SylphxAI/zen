@@ -9,19 +9,20 @@ import { attachNodeToOwner, createOwner, effect, setOwner } from '@zen/signal';
 import type { AnySignal } from '@zen/signal';
 import type { TUINode } from './types.js';
 
-type Props = Record<string, any>;
+type Props = Record<string, unknown>;
+type ComponentFunction = (props: Props | null) => TUINode;
 
 /**
  * Check if value is reactive signal
  */
-function isReactive(value: any): value is AnySignal {
+function isReactive(value: unknown): value is AnySignal {
   return value !== null && typeof value === 'object' && '_kind' in value;
 }
 
 /**
  * JSX factory for TUI
  */
-export function jsx(type: string | Function, props: Props | null): TUINode {
+export function jsx(type: string | ComponentFunction, props: Props | null): TUINode {
   // Component
   if (typeof type === 'function') {
     const owner = createOwner();
@@ -60,7 +61,7 @@ export const jsxDEV = jsx;
 /**
  * Append child to TUI node
  */
-export function appendChild(parent: TUINode, child: any): void {
+export function appendChild(parent: TUINode, child: unknown): void {
   // Null/undefined/false
   if (child == null || child === false) {
     return;
@@ -107,20 +108,41 @@ export function appendChild(parent: TUINode, child: any): void {
     return;
   }
 
-  // Function - reactive text (from compiler transformation)
+  // Function - reactive content (from compiler transformation)
   if (typeof child === 'function') {
-    const textNode: TUINode = {
-      type: 'text',
-      props: {},
-      children: [''],
+    // Create a marker node that will hold the reactive content
+    const marker: { _type: string; _kind: string; children: (TUINode | string)[] } = {
+      _type: 'marker',
+      _kind: 'reactive',
+      children: [],
     };
 
-    parent.children.push(textNode);
+    parent.children.push(marker);
 
     // Wrap in effect for reactivity
     effect(() => {
       const value = child();
-      textNode.children[0] = String(value ?? '');
+
+      // Clear previous children
+      marker.children = [];
+
+      // Handle TUINode
+      if (value && typeof value === 'object' && 'type' in value) {
+        marker.children.push(value);
+        return undefined;
+      }
+
+      // Handle array of nodes
+      if (Array.isArray(value)) {
+        marker.children.push(...value);
+        return undefined;
+      }
+
+      // Handle primitive values (text)
+      if (value != null && value !== false) {
+        marker.children.push(String(value));
+      }
+
       return undefined;
     });
     return;
@@ -133,7 +155,7 @@ export function appendChild(parent: TUINode, child: any): void {
 /**
  * Fragment component
  */
-export function Fragment(props: { children?: any }): TUINode {
+export function Fragment(props: { children?: unknown }): TUINode {
   const node: TUINode = {
     type: 'box',
     tagName: 'fragment',

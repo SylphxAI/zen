@@ -12,7 +12,7 @@ import {
   handleButton,
   renderToTerminalReactive,
   signal,
-  useFocusContext,
+  useFocusManager,
   useInput,
 } from '@zen/tui';
 
@@ -21,7 +21,7 @@ const count = signal(0);
 const message = signal('Press Tab to navigate, Enter/Space to activate');
 
 function AppContent() {
-  const { focusNext, focusPrev, focusedId } = useFocusContext();
+  const { focusNext, focusPrev, focusedId } = useFocusManager();
 
   // Handle keyboard input
   useInput((input, key) => {

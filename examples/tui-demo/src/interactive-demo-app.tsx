@@ -11,7 +11,7 @@ import {
   Text,
   incrementProgress,
   signal,
-  useFocusContext,
+  useFocusManager,
   useInput,
 } from '@zen/tui';
 
@@ -21,7 +21,7 @@ const isLoading = signal(false);
 const message = signal('Click a button to start!');
 
 function AppContent() {
-  const focusContext = useFocusContext();
+  const focusContext = useFocusManager();
 
   // Handle Tab navigation
   useInput((_input, key) => {

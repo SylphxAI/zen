@@ -5,7 +5,7 @@
  */
 
 import { type Signal, signal } from '@zen/runtime';
-import { useFocusable } from '../focus';
+import { useFocus } from '../focus';
 import type { TUINode } from '../types';
 import { Box } from './Box';
 import { Text } from './Text';
@@ -44,7 +44,7 @@ export function SelectInput<T = string>(props: SelectInputProps<T>): TUINode {
   const highlightedIndex = props.highlightedIndex || signal(0);
 
   // Focus management
-  const { isFocused } = useFocusable(id, {
+  const { isFocused } = useFocus(id, {
     onFocus: () => {
       // Reset highlight to current selection
       const currentIndex = props.options.findIndex((opt) => opt.value === valueSignal.value);

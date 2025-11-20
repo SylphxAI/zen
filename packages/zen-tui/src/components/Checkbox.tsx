@@ -5,7 +5,7 @@
  */
 
 import { type Signal, signal } from '@zen/runtime';
-import { useFocusable } from '../focus';
+import { useFocus } from '../focus';
 import type { TUINode } from '../types';
 import { Box } from './Box';
 import { Text } from './Text';
@@ -29,7 +29,7 @@ export function Checkbox(props: CheckboxProps): TUINode {
       : signal(typeof props.checked === 'boolean' ? props.checked : false);
 
   // Focus management
-  const { isFocused } = useFocusable(id);
+  const { isFocused } = useFocus(id);
 
   const focused = isFocused();
   const checked = checkedSignal.value;

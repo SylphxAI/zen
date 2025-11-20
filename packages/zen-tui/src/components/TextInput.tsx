@@ -5,7 +5,7 @@
  */
 
 import { type Signal, onCleanup, signal } from '@zen/runtime';
-import { useFocusable } from '../focus';
+import { useFocus } from '../focus';
 import type { TUINode } from '../types';
 import { Box } from './Box';
 import { Text } from './Text';
@@ -34,7 +34,7 @@ export function TextInput(props: TextInputProps): TUINode {
   const cursorPos = props.cursor || signal(valueSignal.value.length);
 
   // Focus management
-  const { isFocused } = useFocusable(id, {
+  const { isFocused } = useFocus(id, {
     onFocus: () => {
       // Reset cursor to end on focus
       cursorPos.value = valueSignal.value.length;

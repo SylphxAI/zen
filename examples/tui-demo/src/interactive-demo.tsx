@@ -17,7 +17,7 @@ import {
   renderToTerminalReactive,
   signal,
   updateSpinner,
-  useFocusContext,
+  useFocusManager,
   useInput,
 } from '@zen/tui';
 
@@ -33,7 +33,7 @@ const _spinnerFrame3 = signal(0);
 const _spinnerFrame4 = signal(0);
 
 function AppContent() {
-  const focusContext = useFocusContext();
+  const focusContext = useFocusManager();
 
   // Handle Tab navigation
   useInput((_input, key) => {

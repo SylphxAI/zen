@@ -1,28 +1,32 @@
 /**
  * Focus Management for Interactive TUI Components
  *
- * Provides context and utilities for managing focus state
- * across interactive components (inputs, buttons, etc.)
+ * Ink-compatible API with SolidJS-style fine-grained reactivity.
+ * API matches React Ink, implementation uses signals.
  */
 
 import { createContext, signal, useContext } from '@zen/runtime';
 
 export interface FocusableItem {
   id: string;
+  autoFocus?: boolean;
+  isActive?: boolean;
   onFocus?: () => void;
   onBlur?: () => void;
 }
 
-export interface FocusContextValue {
+export interface FocusManagerValue {
   focusedId: ReturnType<typeof signal<string | null>>;
   items: ReturnType<typeof signal<FocusableItem[]>>;
   register: (item: FocusableItem) => () => void;
   focus: (id: string) => void;
   focusNext: () => void;
-  focusPrev: () => void;
+  focusPrevious: () => void;
+  enableFocus: () => void;
+  disableFocus: () => void;
 }
 
-const FocusContext = createContext(null as FocusContextValue | null);
+const FocusContext = createContext(null as FocusManagerValue | null);
 
 /**
  * Focus Provider - manages focus state for child components
@@ -30,12 +34,13 @@ const FocusContext = createContext(null as FocusContextValue | null);
 export function FocusProvider(props: { children: unknown }): unknown {
   const focusedId = signal<string | null>(null);
   const items = signal<FocusableItem[]>([]);
+  const focusEnabled = signal(true);
 
   const register = (item: FocusableItem) => {
     items.value = [...items.value, item];
 
-    // Auto-focus first item if nothing is focused
-    if (focusedId.value === null) {
+    // Auto-focus if requested or first active item
+    if (item.autoFocus || (focusedId.value === null && item.isActive !== false)) {
       focusedId.value = item.id;
       item.onFocus?.();
     }
@@ -50,6 +55,8 @@ export function FocusProvider(props: { children: unknown }): unknown {
   };
 
   const focus = (id: string) => {
+    if (!focusEnabled.value) return;
+
     const currentId = focusedId.value;
     if (currentId === id) return;
 
@@ -66,30 +73,44 @@ export function FocusProvider(props: { children: unknown }): unknown {
   };
 
   const focusNext = () => {
-    const itemList = items.value;
-    if (itemList.length === 0) return;
+    if (!focusEnabled.value) return;
 
-    const currentIndex = itemList.findIndex((i: FocusableItem) => i.id === focusedId.value);
-    const nextIndex = (currentIndex + 1) % itemList.length;
-    focus(itemList[nextIndex].id);
+    const activeItems = items.value.filter((i) => i.isActive !== false);
+    if (activeItems.length === 0) return;
+
+    const currentIndex = activeItems.findIndex((i: FocusableItem) => i.id === focusedId.value);
+    const nextIndex = (currentIndex + 1) % activeItems.length;
+    focus(activeItems[nextIndex].id);
   };
 
-  const focusPrev = () => {
-    const itemList = items.value;
-    if (itemList.length === 0) return;
+  const focusPrevious = () => {
+    if (!focusEnabled.value) return;
 
-    const currentIndex = itemList.findIndex((i: FocusableItem) => i.id === focusedId.value);
-    const prevIndex = currentIndex <= 0 ? itemList.length - 1 : currentIndex - 1;
-    focus(itemList[prevIndex].id);
+    const activeItems = items.value.filter((i) => i.isActive !== false);
+    if (activeItems.length === 0) return;
+
+    const currentIndex = activeItems.findIndex((i: FocusableItem) => i.id === focusedId.value);
+    const prevIndex = currentIndex <= 0 ? activeItems.length - 1 : currentIndex - 1;
+    focus(activeItems[prevIndex].id);
   };
 
-  const contextValue: FocusContextValue = {
+  const enableFocus = () => {
+    focusEnabled.value = true;
+  };
+
+  const disableFocus = () => {
+    focusEnabled.value = false;
+  };
+
+  const contextValue: FocusManagerValue = {
     focusedId,
     items,
     register,
     focus,
     focusNext,
-    focusPrev,
+    focusPrevious,
+    enableFocus,
+    disableFocus,
   };
 
   // Provider uses children() helper internally for runtime lazy evaluation
@@ -97,51 +118,73 @@ export function FocusProvider(props: { children: unknown }): unknown {
 }
 
 /**
- * Hook to access focus context
+ * Hook to access focus manager (Ink-compatible API)
+ *
+ * Returns methods to control focus programmatically.
  */
-export function useFocusContext(): FocusContextValue {
+export function useFocusManager() {
   const ctx = useContext(FocusContext);
   if (!ctx) {
-    throw new Error('useFocusContext must be used within FocusProvider');
+    throw new Error('useFocusManager must be used within FocusProvider');
   }
-  return ctx;
+
+  return {
+    focus: ctx.focus,
+    focusNext: ctx.focusNext,
+    focusPrevious: ctx.focusPrevious,
+    enableFocus: ctx.enableFocus,
+    disableFocus: ctx.disableFocus,
+  };
 }
 
 /**
- * Hook to make a component focusable
- * Works in standalone mode if no FocusProvider is present
+ * Hook to make a component focusable (Ink-compatible API)
+ *
+ * Options:
+ * - id: Optional unique identifier (auto-generated if not provided)
+ * - autoFocus: Auto-focus this component on mount
+ * - isActive: Whether this component can receive focus
+ * - onFocus: Callback when component receives focus
+ * - onBlur: Callback when component loses focus
+ *
+ * Returns:
+ * - isFocused: Reactive boolean indicating focus state
  */
-export function useFocusable(
-  id: string,
-  callbacks?: { onFocus?: () => void; onBlur?: () => void },
-) {
+export function useFocus(options?: {
+  id?: string;
+  autoFocus?: boolean;
+  isActive?: boolean;
+  onFocus?: () => void;
+  onBlur?: () => void;
+}) {
   const ctx = useContext(FocusContext);
+
+  // Generate ID if not provided
+  const id = options?.id || `focus-${Math.random().toString(36).slice(2, 11)}`;
 
   // Standalone mode (no FocusProvider)
   if (!ctx) {
     return {
-      isFocused: () => false,
-      focus: () => {},
-      unregister: () => {},
+      get isFocused() {
+        return false;
+      },
     };
   }
 
   // Register on mount, unregister on cleanup
-  const unregister = ctx.register({
+  ctx.register({
     id,
-    onFocus: callbacks?.onFocus,
-    onBlur: callbacks?.onBlur,
+    autoFocus: options?.autoFocus,
+    isActive: options?.isActive,
+    onFocus: options?.onFocus,
+    onBlur: options?.onBlur,
   });
 
-  // Clean up on unmount
-  // Note: In a real implementation with Zen runtime, this would use onCleanup()
-  // For now, we return the unregister function for manual cleanup if needed
-
-  const isFocused = () => ctx.focusedId.value === id;
-
+  // Return reactive getter for isFocused (Ink-compatible API)
+  // This works because JSX will call the getter during render
   return {
-    isFocused,
-    focus: () => ctx.focus(id),
-    unregister,
+    get isFocused() {
+      return ctx.focusedId.value === id;
+    },
   };
 }

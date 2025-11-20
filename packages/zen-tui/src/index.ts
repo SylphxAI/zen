@@ -82,12 +82,12 @@ export {
   resetProgress,
 } from './components/ProgressBar.js';
 
-// TUI-specific: Focus Management
+// TUI-specific: Focus Management (Ink-compatible API)
 export {
   FocusProvider,
-  useFocusContext,
-  useFocusable,
-  type FocusContextValue,
+  useFocusManager,
+  useFocus,
+  type FocusManagerValue,
   type FocusableItem,
 } from './focus.js';
 

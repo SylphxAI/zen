@@ -23,7 +23,7 @@ import {
   handleTextInput,
   renderToTerminalReactive,
   signal,
-  useFocusContext,
+  useFocusManager,
 } from '@zen/tui';
 
 // Form state
@@ -48,7 +48,7 @@ const roleOptions: SelectOption<string>[] = [
 ];
 
 function Form() {
-  const _focusCtx = useFocusContext();
+  const _focusCtx = useFocusManager();
 
   return (
     <Box style={{ width: 60, borderStyle: 'round', padding: 1 }}>

@@ -5,7 +5,7 @@
  */
 
 import { type Signal, signal } from '@zen/runtime';
-import { useFocusable } from '../focus';
+import { useFocus } from '../focus';
 import type { TUINode } from '../types';
 import { useInput } from '../useInput';
 import { Box } from './Box';
@@ -29,7 +29,9 @@ export function Button(props: ButtonProps): TUINode {
   // Visual pressed state
   const isPressed = signal(false);
 
-  const { isFocused } = useFocusable(id, {
+  const { isFocused } = useFocus({
+    id,
+    isActive: !disabled,
     onFocus: () => {
       isPressed.value = false;
     },
@@ -38,7 +40,7 @@ export function Button(props: ButtonProps): TUINode {
   // Handle keyboard input for this button
   useInput((input, key) => {
     // Only handle input if this button is focused
-    if (!isFocused() || disabled) return;
+    if (!isFocused || disabled) return;
 
     // Enter or Space to activate
     if (key.return || input === ' ') {
@@ -76,8 +78,8 @@ export function Button(props: ButtonProps): TUINode {
   return (
     <Box
       style={{
-        borderStyle: () => (isFocused() ? 'round' : 'single'),
-        borderColor: () => (disabled ? 'gray' : isFocused() ? colorScheme.border : undefined),
+        borderStyle: () => (isFocused ? 'round' : 'single'),
+        borderColor: () => (disabled ? 'gray' : isFocused ? colorScheme.border : undefined),
         backgroundColor: colorScheme.bg,
         paddingX: 2,
         paddingY: 0,
@@ -86,7 +88,7 @@ export function Button(props: ButtonProps): TUINode {
       }}
       props={{ id, disabled, isPressed }}
     >
-      <Text color={colorScheme.fg} bold={() => !disabled && isFocused()}>
+      <Text color={colorScheme.fg} bold={() => !disabled && isFocused}>
         {disabled ? `[${props.label}]` : props.label}
       </Text>
     </Box>

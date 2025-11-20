@@ -6,7 +6,7 @@
  */
 
 import { attachNodeToOwner, createOwner, effect, setOwner } from '@zen/signal';
-import type { AnyZen } from '@zen/signal';
+import type { AnySignal } from '@zen/signal';
 import type { TUINode } from './types.js';
 
 type Props = Record<string, any>;
@@ -14,7 +14,7 @@ type Props = Record<string, any>;
 /**
  * Check if value is reactive signal
  */
-function isReactive(value: any): value is AnyZen {
+function isReactive(value: any): value is AnySignal {
   return value !== null && typeof value === 'object' && '_kind' in value;
 }
 

@@ -10,7 +10,7 @@
  */
 
 import { effect, untrack } from '@zen/signal';
-import type { AnyZen } from '@zen/signal';
+import type { AnySignal } from '@zen/signal';
 import { disposeNode, onCleanup } from '../lifecycle.js';
 
 interface SwitchProps {
@@ -19,7 +19,7 @@ interface SwitchProps {
 }
 
 interface MatchProps<T> {
-  when: T | AnyZen | (() => T);
+  when: T | AnySignal | (() => T);
   children: Node | ((value: T) => Node);
 }
 

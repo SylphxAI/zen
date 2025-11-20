@@ -3,9 +3,14 @@
  * Simplified - only types needed for current API
  */
 
-import type { AnyZen } from './zen';
+import type { AnySignal, SignalValue } from './signal';
 
 /**
- * Utility type to extract the value type from any zen type.
+ * Utility type to extract the value type from any signal type.
  */
-export type ZenValue<A extends AnyZen> = A extends { _value: infer V } ? V : never;
+export type { SignalValue };
+
+/**
+ * @deprecated Use SignalValue instead
+ */
+export type ZenValue<A extends AnySignal> = SignalValue<A>;

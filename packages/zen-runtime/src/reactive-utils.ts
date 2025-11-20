@@ -7,7 +7,7 @@
  * - Signals containing values (reactive)
  */
 
-import type { AnyZen } from '@zen/signal';
+import type { AnySignal } from '@zen/signal';
 
 /**
  * A reactive value - must be a function or signal
@@ -16,7 +16,7 @@ import type { AnyZen } from '@zen/signal';
  * const isVisible: Reactive<boolean> = () => count.value > 0;
  * const isVisible: Reactive<boolean> = computed(() => count.value > 0);
  */
-export type Reactive<T> = (() => T) | AnyZen;
+export type Reactive<T> = (() => T) | AnySignal;
 
 /**
  * A value that can be reactive or static
@@ -31,7 +31,8 @@ export type MaybeReactive<T> = T | Reactive<T>;
 /**
  * Check if a value is a signal
  */
-export function isSignal(value: any): value is AnyZen {
+// biome-ignore lint/suspicious/noExplicitAny: Need any for type guard parameter
+export function isSignal(value: any): value is AnySignal {
   return value !== null && typeof value === 'object' && '_kind' in value;
 }
 

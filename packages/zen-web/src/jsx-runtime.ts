@@ -10,7 +10,7 @@
  */
 
 import { effect } from '@zen/signal';
-import type { AnyZen } from '@zen/signal';
+import type { AnySignal } from '@zen/signal';
 import { attachNodeToOwner, createOwner, setOwner } from '@zen/signal';
 import { enterHydrateParent, getNextHydrateNode, isHydrating } from './hydrate.js';
 
@@ -18,7 +18,7 @@ export { Fragment } from './core/fragment.js';
 
 type Props = Record<string, any>;
 type Child = Node | string | number | boolean | null | undefined;
-type ReactiveValue = AnyZen;
+type ReactiveValue = AnySignal;
 
 /**
  * Fast reactive check - inline for better performance

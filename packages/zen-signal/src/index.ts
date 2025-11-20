@@ -65,4 +65,4 @@ export {
 export type { Owner } from './lifecycle.js';
 
 // Re-export types
-export type { Signal, Computed, AnyZen } from '@zen/signal-core';
+export type { Signal, Computed, AnySignal } from '@zen/signal-core';

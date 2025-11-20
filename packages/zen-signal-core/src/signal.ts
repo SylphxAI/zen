@@ -19,23 +19,23 @@
 export type Listener<T> = (value: T, oldValue?: T | null) => void;
 export type Unsubscribe = () => void;
 
-type ZenCore<T> = {
+type SignalCore<T> = {
   _kind: 'zen' | 'computed';
   _value: T;
   _listeners?: Listener<T>[];
 };
 
-type ComputedCore<T> = ZenCore<T | null> & {
+type ComputedCore<T> = SignalCore<T | null> & {
   _kind: 'computed';
   _dirty: boolean;
-  _sources: AnyZen[];
+  _sources: AnySignal[];
   _calc: () => T;
   _unsubs?: Unsubscribe[];
 };
 
 // biome-ignore lint/suspicious/noExplicitAny: Union type for any signal or computed value
-export type AnyZen = ZenCore<any> | ComputedCore<any>;
-export type ZenValue<A extends AnyZen> = A extends ZenCore<infer V> ? V : never;
+export type AnySignal = SignalCore<any> | ComputedCore<any>;
+export type SignalValue<A extends AnySignal> = A extends SignalCore<infer V> ? V : never;
 
 // ============================================================================
 // AUTO-TRACKING
@@ -48,10 +48,10 @@ let currentListener: ComputedCore<any> | null = null;
 // ============================================================================
 
 let batchDepth = 0;
-const pendingNotifications = new Map<AnyZen, any>();
+const pendingNotifications = new Map<AnySignal, any>();
 const pendingEffects: Array<() => void> = [];
 
-function notifyListeners<T>(zen: ZenCore<T>, newValue: T, oldValue: T): void {
+function notifyListeners<T>(zen: SignalCore<T>, newValue: T, oldValue: T): void {
   const listeners = zen._listeners;
   if (!listeners) return;
 
@@ -159,7 +159,7 @@ const zenProto = {
 };
 
 export function signal<T>(initialValue: T): Signal<T> {
-  const sig = Object.create(zenProto) as ZenCore<T> & { value: T };
+  const sig = Object.create(zenProto) as SignalCore<T> & { value: T };
   sig._kind = 'zen';
   sig._value = initialValue;
   return sig;
@@ -171,7 +171,10 @@ export type Signal<T> = ReturnType<typeof signal<T>>;
 // SUBSCRIBE
 // ============================================================================
 
-export function subscribe<A extends AnyZen>(zen: A, listener: Listener<ZenValue<A>>): Unsubscribe {
+export function subscribe<A extends AnySignal>(
+  zen: A,
+  listener: Listener<SignalValue<A>>,
+): Unsubscribe {
   const zenData = zen._kind === 'zen' ? zen : zen;
 
   // Add listener
@@ -320,12 +323,12 @@ function cleanUnsubs(unsubs: Unsubscribe[]): void {
 }
 
 // Shared subscription helper for computed & effect
-function attachListener(sources: AnyZen[], callback: any): Unsubscribe[] {
+function attachListener(sources: AnySignal[], callback: any): Unsubscribe[] {
   const unsubs: Unsubscribe[] = [];
   const len = sources.length;
 
   for (let i = 0; i < len; i++) {
-    const source = sources[i] as ZenCore<any>;
+    const source = sources[i] as SignalCore<any>;
     if (!source._listeners) source._listeners = [];
     source._listeners.push(callback);
 
@@ -387,7 +390,7 @@ const computedProto = {
 
 export function computed<T>(
   calculation: () => T,
-  explicitDeps?: AnyZen[],
+  explicitDeps?: AnySignal[],
 ): ComputedCore<T> & { value: T } {
   const c = Object.create(computedProto) as ComputedCore<T> & { value: T };
   c._kind = 'computed';
@@ -407,7 +410,7 @@ export type Computed<T> = ComputedCore<T>;
 // ============================================================================
 
 type EffectCore = {
-  _sources: AnyZen[];
+  _sources: AnySignal[];
   _unsubs?: Unsubscribe[];
   _cleanup?: () => void;
   _callback: () => undefined | (() => void);
@@ -473,7 +476,7 @@ function runEffect(e: EffectCore): void {
 
 export function effect(
   callback: () => undefined | (() => void),
-  explicitDeps?: AnyZen[],
+  explicitDeps?: AnySignal[],
 ): Unsubscribe {
   const e: EffectCore = {
     _sources: explicitDeps || [],

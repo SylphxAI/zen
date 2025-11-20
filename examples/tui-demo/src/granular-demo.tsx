@@ -42,14 +42,10 @@ function App() {
         borderColor: 'cyan',
       }}
     >
-      <Text style={{ bold: true, color: 'green' }}>
-        🎯 細粒度更新 Demo (Granular Updates)
-      </Text>
+      <Text style={{ bold: true, color: 'green' }}>🎯 細粒度更新 Demo (Granular Updates)</Text>
 
       <Box style={{ padding: 1 }}>
-        <Text style={{ dim: true }}>
-          觀察：只有變化的行會重繪，不是整個畫面！
-        </Text>
+        <Text style={{ dim: true }}>觀察：只有變化的行會重繪，不是整個畫面！</Text>
       </Box>
 
       <Box

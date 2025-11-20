@@ -267,6 +267,7 @@ export async function renderToTerminal(node: TUINode): Promise<void> {
   await Promise.resolve();
 
   const output = render(node);
+  // biome-ignore lint/suspicious/noConsoleLog: This is a TUI renderer - console output is intentional
   console.log(output);
 }
 

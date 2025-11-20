@@ -33,6 +33,12 @@ const role = signal<string>('developer');
 const subscribe = signal(false);
 const terms = signal(false);
 
+// Component-specific state for inputs (needed by handlers)
+const nameCursor = signal(0);
+const emailCursor = signal(0);
+const roleIsOpen = signal(false);
+const roleHighlighted = signal(0);
+
 // Select options
 const roleOptions: SelectOption<string>[] = [
   { label: 'Developer', value: 'developer' },
@@ -59,13 +65,25 @@ function Form() {
       <Box>
         <Text bold>Name:</Text>
         <Newline />
-        <TextInput id="name" value={name} placeholder="Enter your name" width={56} />
+        <TextInput
+          id="name"
+          value={name}
+          cursor={nameCursor}
+          placeholder="Enter your name"
+          width={56}
+        />
 
         <Newline count={2} />
 
         <Text bold>Email:</Text>
         <Newline />
-        <TextInput id="email" value={email} placeholder="you@example.com" width={56} />
+        <TextInput
+          id="email"
+          value={email}
+          cursor={emailCursor}
+          placeholder="you@example.com"
+          width={56}
+        />
 
         <Newline count={2} />
 
@@ -75,6 +93,8 @@ function Form() {
           id="role"
           options={roleOptions}
           value={role}
+          isOpen={roleIsOpen}
+          highlightedIndex={roleHighlighted}
           placeholder="Select your role"
           width={56}
         />
@@ -138,32 +158,46 @@ function App() {
   );
 }
 
+// Track current focus index
+let focusIndex = 0;
+const focusableIds = ['name', 'email', 'role', 'subscribe', 'terms'];
+
+// Keyboard event handler registry
+const inputHandlers = {
+  name: (key: string) => handleTextInput(name, nameCursor, key),
+  email: (key: string) => handleTextInput(email, emailCursor, key),
+  role: (key: string) => handleSelectInput(roleIsOpen, roleHighlighted, role, roleOptions, key),
+  subscribe: (key: string) => handleCheckbox(subscribe, key),
+  terms: (key: string) => handleCheckbox(terms, key),
+};
+
 // Render with reactive updates
 const cleanup = renderToTerminalReactive(App, {
   onKeyPress: (key) => {
     // Tab navigation
     if (key === '\t') {
-      // Tab
-      const ctx = useFocusContext();
-      ctx.focusNext();
+      focusIndex = (focusIndex + 1) % focusableIds.length;
       return;
     }
 
     if (key === '\x1b[Z') {
       // Shift+Tab
-      const ctx = useFocusContext();
-      ctx.focusPrev();
+      focusIndex = focusIndex <= 0 ? focusableIds.length - 1 : focusIndex - 1;
       return;
     }
 
-    // TODO: Route key events to focused component
-    // This requires accessing the focus context and routing to the appropriate handler
-    // For now, this is a simplified demo showing the UI structure
+    // Route key events to focused component handler
+    const focusedId = focusableIds[focusIndex];
+    const handler = inputHandlers[focusedId as keyof typeof inputHandlers];
 
-    // Enter to submit (placeholder)
-    if (key === '\r' || key === '\n') {
-      // Could trigger form submission here
-      return;
+    if (handler) {
+      handler(key);
+    }
+
+    // Ctrl+C to exit
+    if (key === '\x03') {
+      cleanup();
+      process.exit(0);
     }
   },
   fps: 30,

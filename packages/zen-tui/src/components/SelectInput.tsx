@@ -23,6 +23,8 @@ export interface SelectInputProps<T = string> {
   width?: number;
   id?: string;
   style?: any;
+  isOpen?: Signal<boolean>; // Optional external dropdown state control
+  highlightedIndex?: Signal<number>; // Optional external highlight control
 }
 
 export function SelectInput<T = string>(props: SelectInputProps<T>): TUINode {
@@ -35,11 +37,11 @@ export function SelectInput<T = string>(props: SelectInputProps<T>): TUINode {
       ? (props.value as Signal<T>)
       : signal(props.value as T);
 
-  // Dropdown open state
-  const isOpen = signal(false);
+  // Dropdown open state (use external if provided, otherwise create internal)
+  const isOpen = props.isOpen || signal(false);
 
-  // Highlighted option index (for keyboard navigation)
-  const highlightedIndex = signal(0);
+  // Highlighted option index (use external if provided, otherwise create internal)
+  const highlightedIndex = props.highlightedIndex || signal(0);
 
   // Focus management
   const { isFocused } = useFocusable(id, {

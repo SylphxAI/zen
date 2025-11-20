@@ -17,6 +17,7 @@ export interface TextInputProps {
   width?: number;
   id?: string;
   style?: any;
+  cursor?: Signal<number>; // Optional external cursor control
 }
 
 export function TextInput(props: TextInputProps): TUINode {
@@ -29,8 +30,8 @@ export function TextInput(props: TextInputProps): TUINode {
       ? props.value
       : signal(typeof props.value === 'string' ? props.value : '');
 
-  // Cursor position
-  const cursorPos = signal(valueSignal.value.length);
+  // Cursor position (use external if provided, otherwise create internal)
+  const cursorPos = props.cursor || signal(valueSignal.value.length);
 
   // Focus management
   const { isFocused } = useFocusable(id, {

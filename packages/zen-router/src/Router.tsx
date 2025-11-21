@@ -5,8 +5,8 @@
 
 import { $router, defineRoutes, startHistoryListener, stopHistoryListener } from '@zen/router-core';
 import type { RouteConfig } from '@zen/router-core';
-import { disposeNode, effect, onCleanup, onMount, untrack } from '@zen/signal';
 import { executeDescriptor, isDescriptor } from '@zen/runtime';
+import { disposeNode, effect, onCleanup, onMount, untrack } from '@zen/signal';
 
 export interface ZenRoute {
   path: string;
@@ -60,7 +60,6 @@ export function Router(props: RouterProps): Node {
 
     // Ensure result is a Node
     if (!(result instanceof Node)) {
-      console.error('Router: component must return a DOM Node, got:', typeof result, result);
       return document.createTextNode('Error: Invalid component');
     }
 

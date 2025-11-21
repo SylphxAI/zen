@@ -1,6 +1,8 @@
 /**
- * Fragment component for grouping children
+ * Fragment component for grouping children - with descriptor support
  */
+
+import { executeDescriptor, isDescriptor } from '@zen/runtime';
 
 export function Fragment(props: { children?: any }): DocumentFragment {
   const fragment = document.createDocumentFragment();
@@ -8,7 +10,12 @@ export function Fragment(props: { children?: any }): DocumentFragment {
   if (props.children) {
     const children = Array.isArray(props.children) ? props.children : [props.children];
 
-    for (const child of children) {
+    for (let child of children) {
+      // Handle descriptor (Phase 2)
+      if (isDescriptor(child)) {
+        child = executeDescriptor(child);
+      }
+
       if (child instanceof Node) {
         fragment.appendChild(child);
       } else if (child) {

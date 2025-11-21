@@ -11,6 +11,7 @@ import { attachNodeToOwner, getNodeOwner, getOwner } from '@zen/signal';
 import { getPlatformOps } from '../platform-ops.js';
 import { executeComponent } from '../reactive-utils.js';
 import { children } from '../utils/children.js';
+import { isDescriptor, executeDescriptor } from '../descriptor.js';
 
 /**
  * Context object that holds the default value
@@ -51,13 +52,23 @@ const contextMap = new WeakMap<any, Map<symbol, any>>();
  * ```
  */
 export function createContext<T>(defaultValue: T): Context<T> {
+  // Create Provider as a proper component function
+  // This allows it to be used with JSX: <Context.Provider value={...}>
+  // The descriptor pattern will automatically handle lazy children
+  const ProviderComponent = (props: { value: T; children?: any | any[] }) => {
+    return Provider(context, props);
+  };
+
+  // Set displayName for better debugging
+  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') {
+    ProviderComponent.displayName = 'Context.Provider';
+  }
+
   const context: Context<T> = {
     id: Symbol('context'),
     defaultValue,
     // biome-ignore lint/suspicious/noExplicitAny: Provider children can be any JSX element type
-    Provider: (props: { value: T; children: any | any[] }) => {
-      return Provider(context, props);
-    },
+    Provider: ProviderComponent,
   };
   return context;
 }
@@ -169,9 +180,16 @@ export function Provider<T>(context: Context<T>, props: { value: T; children: an
   }
   values.set(context.id, props.value);
 
+  // IMPORTANT: Don't access props.children directly yet!
+  // If props has a lazy getter for children (descriptor pattern),
+  // accessing it would trigger execution BEFORE context is set.
+  // Use Object.getOwnPropertyDescriptor to check if children is a getter.
+  const childrenDescriptor = Object.getOwnPropertyDescriptor(props, 'children');
+  const hasChildrenGetter = childrenDescriptor?.get !== undefined;
+
   // Use children() helper for runtime lazy evaluation
-  // This ensures children are evaluated AFTER context is set,
-  // even without compiler transformation
+  // If children is already a getter, wrap it to delay execution
+  // If children is a plain value, wrap it anyway for consistency
   const c = children(() => props.children);
 
   // Get platform operations
@@ -179,7 +197,20 @@ export function Provider<T>(context: Context<T>, props: { value: T; children: an
 
   // Resolve children lazily with new owner context
   // This ensures children can find the context we just set
+  // The c() call will trigger the getter AFTER context is set
   let resolved = c();
+
+  // Handle descriptor pattern (ADR-011)
+  // With descriptors, children are { _jsx: true, type, props }
+  // Execute descriptor to get the actual component
+  if (isDescriptor(resolved)) {
+    resolved = executeDescriptor(resolved);
+  }
+
+  // Handle array of descriptors
+  if (Array.isArray(resolved)) {
+    resolved = resolved.map((child) => (isDescriptor(child) ? executeDescriptor(child) : child));
+  }
 
   // If children is a function (lazy children pattern), call it with proper owner context
   // This handles the runtime-first pattern: <Provider>{() => <Child />}</Provider>

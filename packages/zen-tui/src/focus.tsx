@@ -5,7 +5,7 @@
  * API matches React Ink, implementation uses signals.
  */
 
-import { computed, createContext, signal, useContext } from '@zen/runtime';
+import { computed, createContext, onMount, signal, useContext, ContextProvider } from '@zen/runtime';
 import { useInput } from './useInput.js';
 
 export interface FocusableItem {
@@ -137,8 +137,18 @@ export function FocusProvider(props: { children: unknown }): unknown {
     }
   });
 
-  // Provider uses children() helper internally for runtime lazy evaluation
-  return FocusContext.Provider({ value: contextValue, children: props.children });
+  // IMPORTANT: Framework-level Providers must use manual getter
+  // Cannot use <ContextProvider>{props.children}</ContextProvider>
+  // because {props.children} reads the getter BEFORE ContextProvider sets context
+  //
+  // Regular users CAN use ContextProvider with pure JSX - it works!
+  // But when creating nested Provider wrappers, need manual control.
+  return FocusContext.Provider({
+    value: contextValue,
+    get children() {
+      return props.children;
+    },
+  });
 }
 
 /**
@@ -196,12 +206,15 @@ export function useFocus(options?: {
   }
 
   // Register on mount, unregister on cleanup
-  ctx.register({
-    id,
-    autoFocus: options?.autoFocus,
-    isActive: options?.isActive,
-    onFocus: options?.onFocus,
-    onBlur: options?.onBlur,
+  onMount(() => {
+    const cleanup = ctx.register({
+      id,
+      autoFocus: options?.autoFocus,
+      isActive: options?.isActive,
+      onFocus: options?.onFocus,
+      onBlur: options?.onBlur,
+    });
+    return cleanup;
   });
 
   // Return reactive computed for isFocused
@@ -209,8 +222,6 @@ export function useFocus(options?: {
   const isFocusedSignal = computed(() => ctx.focusedId.value === id);
 
   return {
-    get isFocused() {
-      return isFocusedSignal.value;
-    },
+    isFocused: isFocusedSignal,  // Return signal directly for reactivity
   };
 }

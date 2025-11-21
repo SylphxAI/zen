@@ -53,6 +53,46 @@ function Provider(props) {
 
 **Trade-off:** Small runtime overhead vs zero-config support.
 
+### Pattern: Descriptor Pattern for JSX
+
+**Why:** JSX eager evaluation breaks Context propagation in fine-grained reactive systems. Need to delay component execution until after parent setup.
+
+**Where:** `@zen/runtime/src/descriptor.ts`, all platform jsx-runtimes
+
+**Problem:**
+```tsx
+// Standard JSX transformation
+jsx(Provider, { children: jsx(Child, {}) })
+// Child executes BEFORE Provider → Context not found ❌
+```
+
+**Solution - Two-Phase Execution:**
+
+**Phase 1**: jsx() returns descriptors for components (not executing)
+```typescript
+{ _jsx: true, type: Component, props: {...} }
+```
+
+**Phase 2**: Orchestrator executes descriptors in parent-first order
+```typescript
+executeDescriptor(desc) // Provider → Child (correct order ✅)
+```
+
+**Implementation:**
+- Components return descriptors (lightweight, transient)
+- Elements create real nodes immediately (no descriptor overhead)
+- Lazy props getter: `get children() { return executeDescriptor(desc) }`
+- Descriptors discarded after execution (zero runtime memory)
+
+**Trade-off:**
+- **Cost**: One object allocation per component (~64 bytes, transient)
+- **Benefit**: Context propagation works, zero-config, runtime-first
+- **Impact**: <1% overhead, no VDOM, no diffing, no re-renders
+
+**vs React**: React uses VDOM + reconciliation (heavy). Zen uses transient descriptors (minimal).
+
+See: ADR-011
+
 ### Pattern: Platform Adapters
 
 **Why:** Single codebase, multiple targets (web/native/TUI).

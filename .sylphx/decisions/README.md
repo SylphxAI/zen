@@ -5,6 +5,7 @@
 - [ADR-001: Runtime-First Architecture](#001-runtime-first-architecture) ✅
 - [ADR-009: Cross-Platform Architecture](#009-cross-platform-architecture) ✅
 - [ADR-010: Remove @zen/zen Package](#010-remove-zen-package) ✅
+- [ADR-011: Descriptor Pattern for JSX](#011-descriptor-pattern-jsx) ✅
 - [ADR-002: Reject Duplicate Subscription Checking](#002-reject-duplicate-subscription-checking)
 - [ADR-003: Keep Auto-Batching](#003-keep-auto-batching)
 - [ADR-004: Bitflag Pending State](#004-bitflag-pending-state) ❌ Superseded
@@ -21,6 +22,7 @@
 - [001-runtime-first-architecture.md](001-runtime-first-architecture.md) - Runtime-first with optional compiler for framework integrations
 - [009-cross-platform-architecture.md](009-cross-platform-architecture.md) - Cross-platform support (web, native, TUI) with layered architecture
 - [010-deprecate-zen-package.md](010-deprecate-zen-package.md) - Remove @zen/zen in favor of platform-specific packages (@zen/web, @zen/tui, @zen/native)
+- [011-descriptor-pattern-jsx.md](011-descriptor-pattern-jsx.md) - Two-phase JSX execution with descriptors to fix Context propagation
 
 ### Historical (v3.26.0 - superseded by v3.49.0 rewrite)
 - [002-reject-duplicate-checking.md](002-reject-duplicate-checking.md) - Why duplicate check hurts performance
@@ -62,4 +64,10 @@
 - Platform-specific renderers (@zen/web, @zen/native, @zen/tui)
 - Optional compiler for DX (@zen/compiler)
 
-**Current focus:** Cross-platform architecture (ADR-009) and runtime-first framework integrations (ADR-001)
+**v5.0.0 (current):** Descriptor Pattern for JSX (ADR-011)
+- Two-phase execution: descriptors → orchestrated execution
+- Fixes Context propagation in runtime-first architecture
+- Preserves fine-grained reactivity (no VDOM, no diffing)
+- <1% overhead, zero-config for users
+
+**Current focus:** Descriptor Pattern implementation (ADR-011), cross-platform architecture (ADR-009), and runtime-first framework integrations (ADR-001)

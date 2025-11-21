@@ -1,12 +1,16 @@
 /**
- * TUI JSX Runtime
+ * TUI JSX Runtime - Descriptor Pattern
  *
  * Creates virtual TUI nodes instead of DOM nodes.
- * Similar pattern to zen-web but for terminal rendering.
+ * Uses descriptor pattern (ADR-011) to fix Context propagation.
+ *
+ * Phase 1: jsx() returns descriptors for components
+ * Phase 2: executeDescriptor() executes in correct order
  */
 
-import { executeComponent, isSignal } from '@zen/runtime';
-import { attachNodeToOwner, effect, getOwner } from '@zen/signal';
+import { isSignal, isDescriptor, executeDescriptor } from '@zen/runtime';
+import type { ComponentDescriptor } from '@zen/runtime';
+import { effect } from '@zen/signal';
 import { scheduleNodeUpdate } from './render-context.js';
 import type { TUINode } from './types.js';
 
@@ -32,22 +36,23 @@ interface SignalLike {
 }
 
 /**
- * JSX factory for TUI
+ * JSX factory for TUI - Descriptor Pattern (ADR-011)
+ *
+ * Components: Return descriptor (delay execution)
+ * Elements: Create TUINode immediately
  */
-export function jsx(type: string | ComponentFunction, props: Props | null): TUINode | TUINode[] {
-  // Component
+export function jsx(
+  type: string | ComponentFunction,
+  props: Props | null,
+): TUINode | TUINode[] | ComponentDescriptor {
+  // Component: Return descriptor (Phase 1)
+  // Execution delayed until parent accesses children via lazy getter
   if (typeof type === 'function') {
-    const result = executeComponent(
-      () => type(props),
-      // biome-ignore lint/suspicious/noExplicitAny: Generic node type from framework
-      (node: any, owner: any) => {
-        // Only attach if it's a single node, not an array/fragment
-        if (!Array.isArray(node)) {
-          attachNodeToOwner(node, owner);
-        }
-      },
-    );
-    return result;
+    return {
+      _jsx: true,
+      type,
+      props,
+    } as ComponentDescriptor;
   }
 
   // TUI Element (box, text, etc.)
@@ -88,18 +93,23 @@ function isTUIMarker(child: unknown): child is TUIMarker {
   );
 }
 
+/**
+ * Handle component descriptor - Phase 2 execution
+ */
+function handleDescriptor(parent: TUINode, desc: ComponentDescriptor): void {
+  const result = executeDescriptor(desc);
+  appendChild(parent, result);
+}
+
 function handleReactElement(parent: TUINode, reactEl: ReactElement): void {
   if (typeof reactEl.type === 'function') {
-    const result = executeComponent(
-      () => reactEl.type(reactEl.props),
-      // biome-ignore lint/suspicious/noExplicitAny: Generic node type from framework
-      (node: any, owner: any) => {
-        if (!Array.isArray(node)) {
-          attachNodeToOwner(node, owner);
-        }
-      },
-    );
-    appendChild(parent, result);
+    // Convert React element to descriptor for consistent handling
+    const desc: ComponentDescriptor = {
+      _jsx: true,
+      type: reactEl.type,
+      props: reactEl.props,
+    };
+    handleDescriptor(parent, desc);
   }
 }
 
@@ -178,7 +188,7 @@ function handleReactiveFunction(parent: TUINode, fn: () => unknown): void {
 }
 
 /**
- * Append child to TUI node
+ * Append child to TUI node - with descriptor support
  */
 export function appendChild(parent: TUINode, child: unknown): void {
   if (child == null || child === false) {
@@ -189,6 +199,12 @@ export function appendChild(parent: TUINode, child: unknown): void {
     for (let i = 0; i < child.length; i++) {
       appendChild(parent, child[i]);
     }
+    return;
+  }
+
+  // NEW: Handle descriptors (Phase 2)
+  if (isDescriptor(child)) {
+    handleDescriptor(parent, child);
     return;
   }
 

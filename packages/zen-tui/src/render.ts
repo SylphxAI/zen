@@ -357,11 +357,11 @@ function renderNode(node: TUINode, parentWidth: number): RenderOutput {
           } else {
             const childOutput = renderNode(child, width - paddingLeft * 2);
             const childLines = childOutput.text.split('\n');
-            for (const childLine of childLines) {
+            for (let i = 0; i < childLines.length; i++) {
               if (currentY < lines.length) {
-                insertContent(lines, childLine, paddingLeft, currentY, width);
-                currentY += 1;
+                insertContent(lines, childLines[i], paddingLeft, currentY, width);
               }
+              currentY++;
             }
           }
         }
@@ -471,11 +471,11 @@ function renderNode(node: TUINode, parentWidth: number): RenderOutput {
 
     // Insert children (offset by 1 if border for top border line)
     let currentY = (hasBorder ? 1 : 0) + paddingTop;
-    for (const childLine of childrenLines) {
+    for (let i = 0; i < childrenLines.length; i++) {
       if (currentY < lines.length) {
-        insertContent(lines, childLine, paddingLeft, currentY, width);
-        currentY += 1;
+        insertContent(lines, childrenLines[i], paddingLeft, currentY, width);
       }
+      currentY++;
     }
   }
 
@@ -533,7 +533,7 @@ export async function renderToTerminalReactive(
     fps?: number;
   } = {},
 ): Promise<() => void> {
-  const { onKeyPress } = options;
+  const { onKeyPress} = options;
   try {
     fs.writeFileSync(DEBUG_LOG, `=== TUI Debug Log - ${new Date().toISOString()} ===\n`);
   } catch (_err) {}
@@ -572,7 +572,25 @@ export async function renderToTerminalReactive(
   }
 
   // Create component tree once (fine-grained reactivity - components render only once)
-  const node = createRoot(() => createNode());
+  // Handle descriptor pattern (ADR-011): createNode() may return a descriptor
+  const node = createRoot(() => {
+    const result = createNode();
+
+    // If result is a descriptor, execute it
+    // This happens when root component is a function component
+    if (
+      result &&
+      typeof result === 'object' &&
+      '_jsx' in result &&
+      (result as any)._jsx === true
+    ) {
+      // Import executeDescriptor dynamically to avoid circular dependency
+      const { executeDescriptor } = require('@zen/runtime');
+      return executeDescriptor(result);
+    }
+
+    return result;
+  });
 
   // Compute initial layout
   let layoutMap = await computeLayout(node, terminalWidth, terminalHeight);
@@ -580,6 +598,80 @@ export async function renderToTerminalReactive(
   // Terminal buffers for diff-based updates
   let currentBuffer = new TerminalBuffer(terminalWidth, terminalHeight);
   let previousBuffer = new TerminalBuffer(terminalWidth, terminalHeight);
+
+  // Static content buffer - collects all static content to print above app
+  let staticContentBuffer: string[] = [];
+  let staticItemsCount = 0;
+
+  // Helper: Collect new Static items into buffer
+  function collectNewStaticItems(node: TUINode | TUINode[]): void {
+    const staticNode = findStaticNode(node);
+    if (!staticNode) return;
+
+    const itemsGetter = staticNode.props?.__itemsGetter;
+    const renderChild = staticNode.props?.__renderChild;
+
+    if (itemsGetter && renderChild && typeof itemsGetter === 'function') {
+      const items = itemsGetter();
+      const currentCount = items?.length || 0;
+
+      // Render new items and add to buffer
+      for (let i = staticItemsCount; i < currentCount; i++) {
+        const item = items[i];
+        const child = renderChild(item, i);
+        const itemOutput = render(child);
+        staticContentBuffer.push(itemOutput);
+      }
+
+      staticItemsCount = currentCount;
+    }
+  }
+
+  // Helper: Find Static node in tree
+  function findStaticNode(node: TUINode | TUINode[]): TUINode | null {
+    if (Array.isArray(node)) {
+      for (const n of node) {
+        const found = findStaticNode(n);
+        if (found) return found;
+      }
+      return null;
+    }
+
+    if (node.tagName === 'static') {
+      return node;
+    }
+
+    if (node.children) {
+      return findStaticNode(node.children);
+    }
+
+    return null;
+  }
+
+  // Helper: Remove Static nodes from tree (for rendering dynamic content only)
+  function removeStaticNodes(node: TUINode | TUINode[]): TUINode | TUINode[] | null {
+    if (Array.isArray(node)) {
+      const filtered = node
+        .map(n => removeStaticNodes(n))
+        .filter(n => n !== null) as TUINode[];
+      return filtered.length > 0 ? filtered : null;
+    }
+
+    if (node.tagName === 'static') {
+      return null; // Remove Static nodes
+    }
+
+    if (node.children) {
+      const filteredChildren = removeStaticNodes(node.children);
+      return {
+        ...node,
+        children: Array.isArray(filteredChildren) ? filteredChildren :
+                  filteredChildren ? [filteredChildren] : [],
+      };
+    }
+
+    return node;
+  }
 
   // Batched updates - collect all scheduled updates and apply them together
   let updateScheduled = false;
@@ -597,112 +689,175 @@ export async function renderToTerminalReactive(
     }
   };
 
-  // Track external stdout output to invalidate buffer when it occurs
-  // This ensures fine-grained updates work correctly after console displacement
-  // Intercept process.stdout.write to catch ALL output (console.log, direct writes, third-party libs)
-  let externalOutputDetected = false;
-  let externalOutputLines = 0; // Count lines in external output for cursor adjustment
-  let isOurOutput = false; // Flag to distinguish our output from external output
+  // Intercept console methods - add to static buffer
+  let isOurOutput = false;
+  const originalConsoleLog = console.log.bind(console);
+  const originalConsoleError = console.error.bind(console);
+  const originalConsoleWarn = console.warn.bind(console);
+  const originalConsoleInfo = console.info.bind(console);
 
-  const originalStdoutWrite = process.stdout.write.bind(process.stdout);
+  // Helper: Format console args to string
+  function formatConsoleArgs(...args: any[]): string {
+    return args.map(arg =>
+      typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+    ).join(' ');
+  }
 
-  // Wrap stdout.write to detect external output and count lines
-  process.stdout.write = ((chunk: any, encoding?: any, callback?: any): boolean => {
-    // If this is our own output, don't set the flag
+  // Wrap console methods - collect into static buffer (don't call original to avoid duplication)
+  console.log = (...args: any[]) => {
     if (!isOurOutput) {
-      externalOutputDetected = true;
-      // Count newlines in external output to know how much cursor moved
-      const str = typeof chunk === 'string' ? chunk : chunk.toString();
-      externalOutputLines += (str.match(/\n/g) || []).length;
+      staticContentBuffer.push(formatConsoleArgs(...args));
+      // Don't call originalConsoleLog - content will be printed from buffer
     }
+  };
 
-    // Call original write
-    return originalStdoutWrite(chunk, encoding, callback);
-  }) as typeof process.stdout.write;
+  console.error = (...args: any[]) => {
+    if (!isOurOutput) {
+      staticContentBuffer.push(formatConsoleArgs(...args));
+    }
+  };
+
+  console.warn = (...args: any[]) => {
+    if (!isOurOutput) {
+      staticContentBuffer.push(formatConsoleArgs(...args));
+    }
+  };
+
+  console.info = (...args: any[]) => {
+    if (!isOurOutput) {
+      staticContentBuffer.push(formatConsoleArgs(...args));
+    }
+  };
 
   const flushUpdates = async () => {
     if (!isRunning) return;
 
-    // Recompute layout with updated tree
-    layoutMap = await computeLayout(node, terminalWidth, terminalHeight);
+    // Step 1: Collect all static changes
+    collectNewStaticItems(node);
 
-    // Render using existing render function
-    const output = render(node);
+    // Step 2: If any static content collected, print above app and clear buffer
+    if (staticContentBuffer.length > 0) {
+      isOurOutput = true;
+
+      // Clear current app (cursor is at TOP of app)
+      for (let i = 0; i < lastOutputHeight; i++) {
+        if (i > 0) {
+          process.stdout.write('\x1b[1B'); // Move down
+        }
+        process.stdout.write('\r');
+        process.stdout.write('\x1b[2K'); // Clear line
+      }
+
+      // Move back to top
+      for (let i = 0; i < lastOutputHeight - 1; i++) {
+        process.stdout.write('\x1b[1A'); // Move up
+      }
+      process.stdout.write('\r');
+
+      // Print all static content in order (permanently to scrollback)
+      for (const staticLine of staticContentBuffer) {
+        process.stdout.write(staticLine);
+        process.stdout.write('\n');
+      }
+
+      // Clear buffer (don't manage history)
+      staticContentBuffer = [];
+
+      // Step 3: Re-render entire app below static content
+      layoutMap = await computeLayout(node, terminalWidth, terminalHeight);
+      const dynamicNode = removeStaticNodes(node);
+      const appOutput = dynamicNode ? render(dynamicNode) : '';
+      const appLines = appOutput.split('\n');
+      const appHeight = appLines.length;
+
+      process.stdout.write(appOutput);
+
+      // Move cursor to TOP of app
+      const newlineCount = (appOutput.match(/\n/g) || []).length;
+      for (let i = 0; i < newlineCount; i++) {
+        process.stdout.write('\x1b[1A');
+      }
+      process.stdout.write('\r');
+
+      // Update tracking
+      lastOutputHeight = appHeight;
+
+      // Update buffers
+      previousBuffer.clear();
+      currentBuffer.clear();
+      for (let i = 0; i < appLines.length && i < terminalHeight; i++) {
+        currentBuffer.writeAt(0, i, appLines[i], terminalWidth);
+      }
+      const temp = previousBuffer;
+      previousBuffer = currentBuffer;
+      currentBuffer = temp;
+
+      isOurOutput = false;
+      pendingUpdates.clear();
+      return;
+    }
+
+    // No static content - do fine-grained diff update
+    layoutMap = await computeLayout(node, terminalWidth, terminalHeight);
+    const dynamicNode = removeStaticNodes(node);
+    const output = dynamicNode ? render(dynamicNode) : '';
     const newLines = output.split('\n');
     const newOutputHeight = newLines.length;
 
-    // Update buffer from render output
+    // Update buffer
     currentBuffer.clear();
     for (let i = 0; i < newLines.length && i < terminalHeight; i++) {
       currentBuffer.writeAt(0, i, newLines[i], terminalWidth);
     }
 
-    // If external output occurred (console.log), invalidate buffer for full repaint
-    // External output printed below app (cursor was at bottom), terminal may have scrolled
-    if (externalOutputDetected) {
-      previousBuffer.clear(); // Force full diff on this render
-      externalOutputDetected = false;
-      externalOutputLines = 0;
-    }
-
-    // Move cursor UP to start of app region before updating
-    // Cursor is at bottom of app, need to go to top
-    isOurOutput = true;
-    for (let i = 0; i < lastOutputHeight; i++) {
-      process.stdout.write('\x1b[1A'); // Move up
-    }
-    process.stdout.write('\x1b[G'); // Move to column 0
-    isOurOutput = false;
-
     // Diff and update only changed lines
     const changes = currentBuffer.diff(previousBuffer);
 
-    // React Ink style: Fine-grained update of only changed lines
-    // Console.log is static content, we preserve it by not clearing before writing
     if (changes.length > 0) {
-      let updateSequence = '';
+      isOurOutput = true;
 
       // Update only changed lines
       for (const change of changes) {
-        // Move cursor to the line (from top-left of app region)
+        // Move to line
         if (change.y > 0) {
-          updateSequence += `\x1b[${change.y}B`; // Move down change.y lines
+          for (let i = 0; i < change.y; i++) {
+            process.stdout.write('\x1b[1B');
+          }
         }
-        updateSequence += '\r'; // Return to start of line
-        updateSequence += change.line; // Write new content
-        updateSequence += '\x1b[K'; // Clear to end of line
+        process.stdout.write('\r');
+        process.stdout.write(change.line);
+        process.stdout.write('\x1b[K');
 
-        // Move cursor back to top-left for next change
+        // Move back to top
         if (change.y > 0) {
-          updateSequence += `\x1b[${change.y}A`; // Move back up
+          for (let i = 0; i < change.y; i++) {
+            process.stdout.write('\x1b[1A');
+          }
         }
-        updateSequence += '\r'; // Return to start
+        process.stdout.write('\r');
       }
 
-      // If app got smaller, clear remaining old lines
+      // Clear extra lines if app got smaller
       if (newOutputHeight < lastOutputHeight) {
         for (let i = newOutputHeight; i < lastOutputHeight; i++) {
-          updateSequence += `\x1b[${i}B\r`; // Move to line i
-          updateSequence += '\x1b[2K'; // Clear line
-          updateSequence += `\x1b[${i}A\r`; // Move back to top
+          for (let j = 0; j < i; j++) {
+            process.stdout.write('\x1b[1B');
+          }
+          process.stdout.write('\r');
+          process.stdout.write('\x1b[2K');
+          for (let j = 0; j < i; j++) {
+            process.stdout.write('\x1b[1A');
+          }
+          process.stdout.write('\r');
         }
       }
 
-      // Mark as our output to avoid detecting it as external
-      isOurOutput = true;
-      process.stdout.write(updateSequence);
+      process.stdout.write('\r');
       lastOutputHeight = newOutputHeight;
-
-      // Move cursor to BOTTOM of app (after all content)
-      // This way console.log prints BELOW the app
-      for (let i = 0; i < newOutputHeight; i++) {
-        process.stdout.write('\x1b[1B'); // Move down one line
-      }
-      process.stdout.write('\x1b[G'); // Move to column 0
       isOurOutput = false;
     }
 
-    // Swap buffers for next update
+    // Swap buffers
     const temp = previousBuffer;
     previousBuffer = currentBuffer;
     currentBuffer = temp;
@@ -719,16 +874,22 @@ export async function renderToTerminalReactive(
   // Initial render (React Ink style - don't clear screen, render at current position)
   const initialOutput = render(node);
 
-  // Just write output at current cursor position (don't clear screen)
+  // Strategy: render app at current position, move cursor to TOP of app
+  // Console.log will write at cursor (top of app), overwriting first line
+  // We then re-render below the console.log
   isOurOutput = true;
   process.stdout.write(initialOutput);
-  process.stdout.write('\n'); // Add newline so cursor is on line after app
 
-  // Track how many lines we rendered (updated on each render)
+  // Track how many lines we rendered
   let lastOutputHeight = initialOutput.split('\n').length;
 
-  // Cursor is now at BOTTOM of app (after all content)
-  // This way console.log prints BELOW the app
+  // Move cursor to TOP of app (so console.log writes there)
+  const newlineCount = (initialOutput.match(/\n/g) || []).length;
+  for (let i = 0; i < newlineCount; i++) {
+    process.stdout.write('\x1b[1A'); // Move up
+  }
+  process.stdout.write('\r'); // Column 0
+
   isOurOutput = false;
 
   // Initialize current buffer with initial output
@@ -767,9 +928,17 @@ export async function renderToTerminalReactive(
     isRunning = false;
     // Clear render context
     setRenderContext(null);
-    // Restore stdout.write first (so cursor movement doesn't trigger external output detection)
-    process.stdout.write = originalStdoutWrite;
-    // Cursor is already at bottom of app, just add newline for clean terminal prompt
+    // Restore console methods
+    console.log = originalConsoleLog;
+    console.error = originalConsoleError;
+    console.warn = originalConsoleWarn;
+    console.info = originalConsoleInfo;
+    // Cursor is at TOP of app, move to BOTTOM for clean terminal prompt
+    // Move down by number of newlines in app
+    const finalNewlineCount = (render(node).match(/\n/g) || []).length;
+    for (let i = 0; i < finalNewlineCount; i++) {
+      process.stdout.write('\x1b[1B'); // Move down
+    }
     process.stdout.write('\n');
     // Show cursor again
     process.stdout.write('\x1b[?25h');

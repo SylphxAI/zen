@@ -7,10 +7,9 @@ const lastKey = signal('');
 
 const ConsoleTest = () => {
   // Log on every key press
-  useInput((input, key) => {
+  useInput((input, _key) => {
     counter.value++;
     lastKey.value = input === ' ' ? 'space' : input;
-    console.log(`Key pressed: "${lastKey.value}" (count: ${counter.value})`);
   });
 
   return (

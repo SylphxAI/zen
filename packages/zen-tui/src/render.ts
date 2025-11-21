@@ -637,41 +637,22 @@ export async function renderToTerminalReactive(
       currentBuffer.writeAt(0, i, newLines[i], terminalWidth);
     }
 
-    // If external output occurred, invalidate previous buffer to force full repaint
-    // React Ink style: console.log appears ABOVE the app. The app stays at the bottom.
-    // External output was written at cursor position (top of app), which overwrote
-    // some app content. Now cursor is below that output. We render app at new position
-    // (after console.log) and clear old app lines that are now above.
+    // If external output occurred (console.log), invalidate buffer for full repaint
+    // External output printed below app (cursor was at bottom), terminal may have scrolled
     if (externalOutputDetected) {
       previousBuffer.clear(); // Force full diff on this render
-
-      if (externalOutputLines > 0) {
-        isOurOutput = true;
-        // Cursor is now at position (0, original_top + externalOutputLines)
-        // We need to:
-        // 1. Clear old app lines that are now below console.log but above new app position
-        //    These are at positions: original_top + externalOutputLines to original_top + lastOutputHeight - 1
-        // 2. Render app at current position
-
-        // First, clear the remaining old app lines (those not overwritten by console.log)
-        // Old app: lines 0 to lastOutputHeight-1 relative to original_top
-        // Console.log overwrote: lines 0 to externalOutputLines-1
-        // Need to clear: lines externalOutputLines to lastOutputHeight-1
-        const linesToClear = lastOutputHeight - externalOutputLines;
-        for (let i = 0; i < linesToClear; i++) {
-          process.stdout.write('\x1b[2K'); // Clear current line
-          process.stdout.write('\x1b[1B'); // Move down
-        }
-        // Move cursor back up to where we'll render app
-        for (let i = 0; i < linesToClear; i++) {
-          process.stdout.write('\x1b[1A'); // Move up
-        }
-        process.stdout.write('\x1b[G'); // Move to column 0
-        isOurOutput = false;
-      }
       externalOutputDetected = false;
       externalOutputLines = 0;
     }
+
+    // Move cursor UP to start of app region before updating
+    // Cursor is at bottom of app, need to go to top
+    isOurOutput = true;
+    for (let i = 0; i < lastOutputHeight; i++) {
+      process.stdout.write('\x1b[1A'); // Move up
+    }
+    process.stdout.write('\x1b[G'); // Move to column 0
+    isOurOutput = false;
 
     // Diff and update only changed lines
     const changes = currentBuffer.diff(previousBuffer);
@@ -712,10 +693,10 @@ export async function renderToTerminalReactive(
       process.stdout.write(updateSequence);
       lastOutputHeight = newOutputHeight;
 
-      // Move cursor back to the start of app region (top-left)
-      // This allows console.log to print here and push the app down
+      // Move cursor to BOTTOM of app (after all content)
+      // This way console.log prints BELOW the app
       for (let i = 0; i < newOutputHeight; i++) {
-        process.stdout.write('\x1b[1A'); // Move up one line
+        process.stdout.write('\x1b[1B'); // Move down one line
       }
       process.stdout.write('\x1b[G'); // Move to column 0
       isOurOutput = false;
@@ -741,16 +722,13 @@ export async function renderToTerminalReactive(
   // Just write output at current cursor position (don't clear screen)
   isOurOutput = true;
   process.stdout.write(initialOutput);
+  process.stdout.write('\n'); // Add newline so cursor is on line after app
 
   // Track how many lines we rendered (updated on each render)
   let lastOutputHeight = initialOutput.split('\n').length;
 
-  // Move cursor to the start of app region (top-left of our output)
-  // This allows console.log to print here and push the app down
-  for (let i = 0; i < lastOutputHeight; i++) {
-    process.stdout.write('\x1b[1A'); // Move up one line
-  }
-  process.stdout.write('\x1b[G'); // Move to column 0
+  // Cursor is now at BOTTOM of app (after all content)
+  // This way console.log prints BELOW the app
   isOurOutput = false;
 
   // Initialize current buffer with initial output
@@ -791,12 +769,8 @@ export async function renderToTerminalReactive(
     setRenderContext(null);
     // Restore stdout.write first (so cursor movement doesn't trigger external output detection)
     process.stdout.write = originalStdoutWrite;
-    // Move cursor below the app content so terminal prompt doesn't overwrite it
-    // Cursor is currently at top-left of app region, need to move down past all content
-    for (let i = 0; i < lastOutputHeight; i++) {
-      process.stdout.write('\x1b[1B'); // Move down one line
-    }
-    process.stdout.write('\n'); // Add newline for clean terminal prompt
+    // Cursor is already at bottom of app, just add newline for clean terminal prompt
+    process.stdout.write('\n');
     // Show cursor again
     process.stdout.write('\x1b[?25h');
     if (process.stdin.isTTY) {

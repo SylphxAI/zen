@@ -6,19 +6,22 @@
 import { $router, defineRoutes, startHistoryListener, stopHistoryListener } from '@zen/router-core';
 import type { RouteConfig } from '@zen/router-core';
 import { disposeNode, effect, onCleanup, onMount, untrack } from '@zen/signal';
+import { executeDescriptor, isDescriptor } from '@zen/runtime';
 
 export interface ZenRoute {
   path: string;
-  component: () => Node;
+  component: () => unknown; // May return Node or ComponentDescriptor
 }
 
 interface RouterProps {
   routes: ZenRoute[];
-  fallback?: () => Node;
+  fallback?: () => unknown; // May return Node or ComponentDescriptor
 }
 
 /**
  * Router component - Client-side routing powered by @zen/router-core
+ *
+ * Supports descriptor pattern (ADR-011) for proper Context propagation.
  *
  * @example
  * ```tsx
@@ -41,13 +44,27 @@ export function Router(props: RouterProps): Node {
   function renderRoute(path: string): Node {
     const route = routes.find((r) => r.path === path);
 
+    let result: unknown;
     if (route) {
-      return route.component();
+      result = route.component();
+    } else if (fallback) {
+      result = fallback();
+    } else {
+      return document.createTextNode('404 Not Found');
     }
-    if (fallback) {
-      return fallback();
+
+    // Handle descriptor (Phase 2)
+    if (isDescriptor(result)) {
+      result = executeDescriptor(result);
     }
-    return document.createTextNode('404 Not Found');
+
+    // Ensure result is a Node
+    if (!(result instanceof Node)) {
+      console.error('Router: component must return a DOM Node, got:', typeof result, result);
+      return document.createTextNode('Error: Invalid component');
+    }
+
+    return result;
   }
 
   // Render initial route based on current URL

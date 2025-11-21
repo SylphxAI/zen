@@ -758,8 +758,14 @@ export async function renderToTerminalReactive(
     isRunning = false;
     // Clear render context
     setRenderContext(null);
-    // Restore stdout.write
+    // Restore stdout.write first (so cursor movement doesn't trigger external output detection)
     process.stdout.write = originalStdoutWrite;
+    // Move cursor below the app content so terminal prompt doesn't overwrite it
+    // Cursor is currently at top-left of app region, need to move down past all content
+    for (let i = 0; i < lastOutputHeight; i++) {
+      process.stdout.write('\x1b[1B'); // Move down one line
+    }
+    process.stdout.write('\n'); // Add newline for clean terminal prompt
     // Show cursor again
     process.stdout.write('\x1b[?25h');
     if (process.stdin.isTTY) {

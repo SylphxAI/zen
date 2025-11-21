@@ -13,6 +13,7 @@ import { effect, untrack } from '@zen/signal';
 import { disposeNode, onCleanup } from '@zen/signal';
 import { getPlatformOps } from '../platform-ops.js';
 import { type Reactive, resolve } from '../reactive-utils.js';
+import { children } from '../utils/children.js';
 
 interface ShowProps<T> {
   when: Reactive<T>;
@@ -35,7 +36,11 @@ interface ShowProps<T> {
  * </Show>
  */
 export function Show<T>(props: ShowProps<T>): any {
-  const { when, fallback, children } = props;
+  // IMPORTANT: Don't destructure props.children here!
+  // Descriptor pattern provides lazy getter - only read when needed
+  // Use children() helper to delay reading until condition is true
+  const c = children(() => props.children);
+  const f = children(() => props.fallback);
 
   // Get platform operations
   const ops = getPlatformOps();
@@ -51,7 +56,7 @@ export function Show<T>(props: ShowProps<T>): any {
   queueMicrotask(() => {
     dispose = effect(() => {
       // Resolve condition - automatically tracks reactive dependencies
-      const condition = resolve(when);
+      const condition = resolve(props.when);
 
       // Cleanup previous node
       if (currentNode) {
@@ -67,20 +72,27 @@ export function Show<T>(props: ShowProps<T>): any {
       // Render appropriate branch
       if (condition) {
         // Truthy - render children
+        // Only now do we read props.children (via c())
+        // This triggers the lazy getter from descriptor pattern
         currentNode = untrack(() => {
-          if (typeof children === 'function') {
-            return children(condition as T);
+          const child = c();
+          if (typeof child === 'function') {
+            return child(condition as T);
           }
-          return children;
+          return child;
         });
-      } else if (fallback) {
+      } else {
         // Falsy - render fallback
-        currentNode = untrack(() => {
-          if (typeof fallback === 'function') {
-            return fallback();
-          }
-          return fallback;
-        });
+        // Only read fallback if condition is false
+        const fb = f();
+        if (fb) {
+          currentNode = untrack(() => {
+            if (typeof fb === 'function') {
+              return fb();
+            }
+            return fb;
+          });
+        }
       }
 
       // Insert into tree

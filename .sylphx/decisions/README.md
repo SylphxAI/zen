@@ -6,6 +6,8 @@
 - [ADR-009: Cross-Platform Architecture](#009-cross-platform-architecture) ✅
 - [ADR-010: Remove @zen/zen Package](#010-remove-zen-package) ✅
 - [ADR-011: Descriptor Pattern for JSX](#011-descriptor-pattern-jsx) ✅
+- [ADR-012: Context Provider Lazy Children](#012-context-provider-lazy-children) ✅
+- [ADR-013: Show/Switch Lazy Children Fix](#013-show-switch-lazy-children) ✅
 - [ADR-002: Reject Duplicate Subscription Checking](#002-reject-duplicate-subscription-checking)
 - [ADR-003: Keep Auto-Batching](#003-keep-auto-batching)
 - [ADR-004: Bitflag Pending State](#004-bitflag-pending-state) ❌ Superseded
@@ -23,6 +25,8 @@
 - [009-cross-platform-architecture.md](009-cross-platform-architecture.md) - Cross-platform support (web, native, TUI) with layered architecture
 - [010-deprecate-zen-package.md](010-deprecate-zen-package.md) - Remove @zen/zen in favor of platform-specific packages (@zen/web, @zen/tui, @zen/native)
 - [011-descriptor-pattern-jsx.md](011-descriptor-pattern-jsx.md) - Two-phase JSX execution with descriptors to fix Context propagation
+- [012-context-provider-lazy-children.md](012-context-provider-lazy-children.md) - Manual getter pattern for nested Providers with ContextProvider helper
+- [013-show-switch-lazy-children.md](013-show-switch-lazy-children.md) - Fix Show/Switch to use children() helper for true lazy execution
 
 ### Historical (v3.26.0 - superseded by v3.49.0 rewrite)
 - [002-reject-duplicate-checking.md](002-reject-duplicate-checking.md) - Why duplicate check hurts performance

@@ -13,6 +13,7 @@ import { effect, untrack } from '@zen/signal';
 import type { AnySignal } from '@zen/signal';
 import { disposeNode, onCleanup } from '@zen/signal';
 import { getPlatformOps } from '../platform-ops.js';
+import { children } from '../utils/children.js';
 
 interface SwitchProps {
   fallback?: any | (() => any);
@@ -80,14 +81,19 @@ export function Switch(props: SwitchProps): any {
       const matchProps = (child as any)._matchProps;
 
       if (matchProps) {
-        const { when, children: matchChildren } = matchProps;
+        // IMPORTANT: Don't destructure matchProps.children here!
+        // Use children() helper to delay reading until condition matches
+        const { when } = matchProps;
+        const c = children(() => matchProps.children);
 
         // Evaluate condition
         const condition = typeof when === 'function' ? when() : when;
 
         if (condition) {
           // Found match - render
+          // Only now read the matched branch's children
           currentNode = untrack(() => {
+            const matchChildren = c();
             if (typeof matchChildren === 'function') {
               return matchChildren(condition);
             }

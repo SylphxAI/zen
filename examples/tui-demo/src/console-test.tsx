@@ -1,16 +1,18 @@
 import { signal } from '@zen/signal';
-import { renderToTerminalReactive } from '@zen/tui';
+import { renderToTerminalReactive, useInput } from '@zen/tui';
 import { Box, FocusProvider, Text } from '@zen/tui';
 
 const counter = signal(0);
-
-// Increment counter every second, with console output
-setInterval(() => {
-  counter.value++;
-  console.log(`Counter updated to: ${counter.value}`);
-}, 1000);
+const lastKey = signal('');
 
 const ConsoleTest = () => {
+  // Log on every key press
+  useInput((input, key) => {
+    counter.value++;
+    lastKey.value = input === ' ' ? 'space' : input;
+    console.log(`Key pressed: "${lastKey.value}" (count: ${counter.value})`);
+  });
+
   return (
     <Box
       style={{
@@ -22,18 +24,23 @@ const ConsoleTest = () => {
       }}
     >
       <Text bold color="cyan">
-        Console.log Test
+        Console.log Test (Key Press)
       </Text>
-      <Text>This tests that console.log appears ABOVE the app (React Ink style)</Text>
+      <Text>Press any key to trigger console.log above the app</Text>
       <Text dim>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</Text>
 
       <Text>
-        Counter:{' '}
+        Key count:{' '}
         <Text bold color="green">
           {counter}
         </Text>
       </Text>
-      <Text dim>(Increments every second with console.log)</Text>
+      <Text>
+        Last key:{' '}
+        <Text bold color="yellow">
+          {lastKey}
+        </Text>
+      </Text>
 
       <Text dim style={{ marginTop: 1 }}>
         Press Ctrl+C to exit

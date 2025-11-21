@@ -601,15 +601,19 @@ export async function renderToTerminalReactive(
   // This ensures fine-grained updates work correctly after console displacement
   // Intercept process.stdout.write to catch ALL output (console.log, direct writes, third-party libs)
   let externalOutputDetected = false;
+  let externalOutputLines = 0; // Count lines in external output for cursor adjustment
   let isOurOutput = false; // Flag to distinguish our output from external output
 
   const originalStdoutWrite = process.stdout.write.bind(process.stdout);
 
-  // Wrap stdout.write to detect external output
+  // Wrap stdout.write to detect external output and count lines
   process.stdout.write = ((chunk: any, encoding?: any, callback?: any): boolean => {
     // If this is our own output, don't set the flag
     if (!isOurOutput) {
       externalOutputDetected = true;
+      // Count newlines in external output to know how much cursor moved
+      const str = typeof chunk === 'string' ? chunk : chunk.toString();
+      externalOutputLines += (str.match(/\n/g) || []).length;
     }
 
     // Call original write
@@ -634,12 +638,39 @@ export async function renderToTerminalReactive(
     }
 
     // If external output occurred, invalidate previous buffer to force full repaint
-    // This handles the displacement issue: external output pushes app content down,
-    // so we need to redraw everything to resync. This is efficient because
-    // external output is rare - most updates are still fine-grained.
+    // React Ink style: console.log appears ABOVE the app. The app stays at the bottom.
+    // External output was written at cursor position (top of app), which overwrote
+    // some app content. Now cursor is below that output. We render app at new position
+    // (after console.log) and clear old app lines that are now above.
     if (externalOutputDetected) {
       previousBuffer.clear(); // Force full diff on this render
+
+      if (externalOutputLines > 0) {
+        isOurOutput = true;
+        // Cursor is now at position (0, original_top + externalOutputLines)
+        // We need to:
+        // 1. Clear old app lines that are now below console.log but above new app position
+        //    These are at positions: original_top + externalOutputLines to original_top + lastOutputHeight - 1
+        // 2. Render app at current position
+
+        // First, clear the remaining old app lines (those not overwritten by console.log)
+        // Old app: lines 0 to lastOutputHeight-1 relative to original_top
+        // Console.log overwrote: lines 0 to externalOutputLines-1
+        // Need to clear: lines externalOutputLines to lastOutputHeight-1
+        const linesToClear = lastOutputHeight - externalOutputLines;
+        for (let i = 0; i < linesToClear; i++) {
+          process.stdout.write('\x1b[2K'); // Clear current line
+          process.stdout.write('\x1b[1B'); // Move down
+        }
+        // Move cursor back up to where we'll render app
+        for (let i = 0; i < linesToClear; i++) {
+          process.stdout.write('\x1b[1A'); // Move up
+        }
+        process.stdout.write('\x1b[G'); // Move to column 0
+        isOurOutput = false;
+      }
       externalOutputDetected = false;
+      externalOutputLines = 0;
     }
 
     // Diff and update only changed lines

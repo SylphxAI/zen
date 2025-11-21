@@ -30,12 +30,13 @@ export function transformZenJSX(
       ['@babel/plugin-syntax-typescript', { isTSX: true }],
 
       // Phase 1: Transform JSX to jsx() calls if not already done
-      // (This might already be done by the bundler, but we include it for safety)
+      // Note: importSource is NOT set here - we rely on the bundler's config
+      // (vite.config.ts sets jsxImportSource to platform-specific package: @zen/web, @zen/tui, etc)
       [
         '@babel/plugin-transform-react-jsx',
         {
           runtime: 'automatic',
-          importSource: '@zen/runtime',
+          // importSource is intentionally omitted - use bundler's default
         },
       ],
 

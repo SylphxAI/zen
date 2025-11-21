@@ -30,9 +30,6 @@ if (!process.stdout.isTTY) {
 
 // Debug logging to file
 const DEBUG_LOG = '/tmp/tui-debug.log';
-function debugLog(msg: string) {
-  fs.appendFileSync(DEBUG_LOG, `${msg}\n`);
-}
 
 /**
  * Get ANSI color code - using raw ANSI instead of chalk for reliability
@@ -541,6 +538,17 @@ export async function renderToTerminalReactive(
     fs.writeFileSync(DEBUG_LOG, `=== TUI Debug Log - ${new Date().toISOString()} ===\n`);
   } catch (_err) {}
 
+  // Keep original console methods (React Ink style - console.log is static)
+  const _originalConsole = {
+    log: console.log,
+    error: console.error,
+    warn: console.warn,
+    info: console.info,
+  };
+
+  // Console.log is treated as static content - just let it print naturally
+  // No interception needed! React Ink doesn't manage console output.
+
   // Enable raw mode for keyboard input
   if (process.stdin.isTTY) {
     process.stdin.setRawMode(true);
@@ -598,6 +606,7 @@ export async function renderToTerminalReactive(
     // Render using existing render function
     const output = render(node);
     const newLines = output.split('\n');
+    const newOutputHeight = newLines.length;
 
     // Update buffer from render output
     currentBuffer.clear();
@@ -608,67 +617,38 @@ export async function renderToTerminalReactive(
     // Diff and update only changed lines
     const changes = currentBuffer.diff(previousBuffer);
 
-    // Fine-grained updates: only update changed lines
+    // React Ink style: Always do full redraw to handle console.log displacement
+    // When console.log pushes the app down, fine-grained updates fail because
+    // they try to update lines at the old positions
     if (changes.length > 0) {
-      const newLines = output.split('\n');
-      const newOutputHeight = newLines.length;
-
-      // If output height changed, we need full redraw
-      if (newOutputHeight !== lastOutputHeight) {
-        // Erase old output
-        let clear = '';
-        if (lastOutputHeight > 0) {
-          for (let i = 0; i < lastOutputHeight; i++) {
-            clear += '\x1b[2K'; // Clear entire line
-            if (i < lastOutputHeight - 1) {
-              clear += '\x1b[1A'; // Move cursor up one line
-            }
-          }
-          clear += '\x1b[G'; // Move cursor to left edge
+      // Erase old output (move down to where it is, then clear upwards)
+      let clear = '';
+      if (lastOutputHeight > 0) {
+        // Move down to the last line of our previous output
+        for (let i = 0; i < lastOutputHeight - 1; i++) {
+          clear += '\x1b[1B'; // Move down one line
         }
-
-        // Write new output
-        const finalOutput = clear + output;
-        process.stdout.write(finalOutput);
-        lastOutputHeight = newOutputHeight;
-      } else {
-        // Fine-grained: update only changed lines
-        let updateSequence = '';
-
-        // Move cursor to beginning of our output region
-        if (lastOutputHeight > 0) {
-          // Move up to first line
-          for (let i = 0; i < lastOutputHeight - 1; i++) {
-            updateSequence += '\x1b[1A';
-          }
-          updateSequence += '\x1b[G';
-        }
-
-        // Update each changed line
-        for (const change of changes) {
-          const lineIndex = change.line;
-          if (lineIndex < newLines.length) {
-            // Move cursor to this line (from top of our region)
-            if (lineIndex > 0) {
-              updateSequence += `\x1b[${lineIndex}B`; // Move down lineIndex lines
-            }
-            updateSequence += '\x1b[G'; // Move to start of line
-            updateSequence += '\x1b[2K'; // Clear line
-            updateSequence += newLines[lineIndex]; // Write new content
-
-            // Move back to top
-            if (lineIndex > 0) {
-              updateSequence += `\x1b[${lineIndex}A`; // Move back up
-            }
+        // Clear each line going upwards
+        for (let i = 0; i < lastOutputHeight; i++) {
+          clear += '\x1b[2K'; // Clear entire line
+          if (i < lastOutputHeight - 1) {
+            clear += '\x1b[1A'; // Move cursor up one line
           }
         }
-
-        // Move cursor to end of output (after last line)
-        updateSequence += `\x1b[${lastOutputHeight - 1}B`;
-        updateSequence += '\x1b[G';
-
-        process.stdout.write(updateSequence);
+        clear += '\x1b[G'; // Move cursor to left edge
       }
+
+      // Write new output
+      const finalOutput = clear + output;
+      process.stdout.write(finalOutput);
+      lastOutputHeight = newOutputHeight;
+
+      // Move cursor back to the start of app region (top-left)
+      // This allows console.log to print here and push the app down
+      for (let i = 0; i < newOutputHeight; i++) {
+        process.stdout.write('\x1b[1A'); // Move up one line
+      }
+      process.stdout.write('\x1b[G'); // Move to column 0
     }
 
     // Swap buffers for next update
@@ -693,6 +673,13 @@ export async function renderToTerminalReactive(
 
   // Track how many lines we rendered (updated on each render)
   let lastOutputHeight = initialOutput.split('\n').length;
+
+  // Move cursor to the start of app region (top-left of our output)
+  // This allows console.log to print here and push the app down
+  for (let i = 0; i < lastOutputHeight; i++) {
+    process.stdout.write('\x1b[1A'); // Move up one line
+  }
+  process.stdout.write('\x1b[G'); // Move to column 0
 
   // Initialize current buffer with initial output
   const initialLines = initialOutput.split('\n');

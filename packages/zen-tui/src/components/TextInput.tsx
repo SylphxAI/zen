@@ -51,6 +51,7 @@ export function TextInput(props: TextInputProps): TUINode {
     if (!isFocused) {
       return;
     }
+
     if (handleTextInput(valueSignal, cursorPos, input)) {
       props.onChange?.(valueSignal.value);
     }

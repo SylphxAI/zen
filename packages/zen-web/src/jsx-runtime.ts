@@ -148,7 +148,7 @@ function setAttribute(element: Element, key: string, value: unknown): void {
     return;
   }
 
-  // Reactive value
+  // Reactive value (signal)
   if (isSignal(value)) {
     // Special case: form control values
     if (
@@ -174,6 +174,40 @@ function setAttribute(element: Element, key: string, value: unknown): void {
       return undefined;
     });
     return;
+  }
+
+  // Reactive function (from auto-unwrap transform: {signal.value} → {() => signal.value})
+  // Only handle functions for commonly reactive attributes to avoid interfering with function props
+  if (typeof value === 'function') {
+    const reactiveAttrs = ['value', 'checked', 'disabled', 'selected', 'innerHTML', 'textContent'];
+
+    if (reactiveAttrs.includes(key)) {
+      // Special case: form control values
+      if (
+        key === 'value' &&
+        (element instanceof HTMLInputElement ||
+          element instanceof HTMLTextAreaElement ||
+          element instanceof HTMLSelectElement)
+      ) {
+        (element as any)[key] = value();
+
+        effect(() => {
+          const newValue = value();
+          if ((element as any)[key] !== newValue) {
+            (element as any)[key] = newValue;
+          }
+          return undefined;
+        });
+        return;
+      }
+
+      effect(() => {
+        setStaticValue(element, key, value());
+        return undefined;
+      });
+      return;
+    }
+    // For non-reactive attributes, fall through to static value (pass function as-is)
   }
 
   // Static value

@@ -11,6 +11,7 @@
 import { executeDescriptor, isDescriptor, isSignal } from '@zen/runtime';
 import type { ComponentDescriptor } from '@zen/runtime';
 import { effect } from '@zen/signal';
+import { withParent } from './parent-context.js';
 import { scheduleNodeUpdate } from './render-context.js';
 import type { TUINode } from './types.js';
 
@@ -97,7 +98,10 @@ function isTUIMarker(child: unknown): child is TUIMarker {
  * Handle component descriptor - Phase 2 execution
  */
 function handleDescriptor(parent: TUINode, desc: ComponentDescriptor): void {
-  const result = executeDescriptor(desc);
+  // Execute descriptor with parent context
+  // This allows runtime components to access parent during construction
+  const result = withParent(parent, () => executeDescriptor(desc));
+
   appendChild(parent, result);
 }
 
@@ -157,6 +161,12 @@ function handleReactiveFunction(parent: TUINode, fn: () => unknown): void {
   };
 
   parent.children.push(marker);
+  // CRITICAL: Set parentNode before effect runs (effects are immediate sync)
+  try {
+    marker.parentNode = parent;
+  } catch {
+    // Object is frozen/sealed, skip parentNode assignment
+  }
 
   effect(() => {
     const value = fn();

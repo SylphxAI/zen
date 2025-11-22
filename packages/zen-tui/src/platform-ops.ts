@@ -6,6 +6,7 @@
  */
 
 import type { PlatformOps } from '@zen/runtime';
+import { getCurrentParent } from './parent-context.js';
 import type { TUIMarker, TUINode } from './types.js';
 
 /**
@@ -18,10 +19,25 @@ export type TUIFragment = (TUINode | string)[];
  */
 export const tuiPlatformOps: PlatformOps<TUINode, TUIMarker, TUIFragment> = {
   createMarker(name: string): TUIMarker {
-    return {
+    // Get current parent from context (set during appendChild/handleDescriptor)
+    // This ensures runtime components can access parent immediately in effects
+    const parent = getCurrentParent();
+
+    const marker: TUIMarker = {
       _type: 'marker',
       _name: name,
     };
+
+    // Set parentNode immediately if parent is available
+    if (parent) {
+      try {
+        marker.parentNode = parent;
+      } catch {
+        // Object is frozen/sealed, skip parentNode assignment
+      }
+    }
+
+    return marker;
   },
 
   createFragment(): TUIFragment {

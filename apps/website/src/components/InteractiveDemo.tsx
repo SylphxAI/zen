@@ -70,9 +70,7 @@ function BasicSignalDemo() {
 
       <div class="demo-visual">
         <div class="demo-output">
-          <span style={{ fontSize: '64px', fontWeight: '700', color: '#667eea' }}>
-            {count}
-          </span>
+          <span style={{ fontSize: '64px', fontWeight: '700', color: '#667eea' }}>{count}</span>
         </div>
 
         <div class="demo-controls">

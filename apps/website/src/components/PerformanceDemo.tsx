@@ -1,4 +1,4 @@
-import { computed, effect, signal } from '@zen/signal';
+import { computed, effect, onCleanup, signal } from '@zen/signal';
 import { For, Show } from '@zen/web';
 import { Icon } from './Icon';
 
@@ -121,6 +121,11 @@ export function PerformanceDemo() {
     if (currentFps >= 55) return 'text-success';
     if (currentFps >= 30) return 'text-yellow-500';
     return 'text-red-500';
+  });
+
+  // Cleanup animations on unmount
+  onCleanup(() => {
+    stop();
   });
 
   return (

@@ -4,7 +4,7 @@
  */
 
 import { signal } from '@zen/signal';
-import { Box, Text, Static, renderToTerminalReactive, useInput } from '@zen/tui';
+import { Box, Static, Text, renderToTerminalReactive, useInput } from '@zen/tui';
 
 interface LogEntry {
   id: number;
@@ -57,19 +57,16 @@ renderToTerminalReactive(() => <App />);
 setTimeout(() => {
   counter.value++;
   logs.value = [...logs.value, { id: counter.value, message: `Static ${counter.value}` }];
-  console.log(`[CONSOLE.LOG] Test 1 (count: ${counter.value})`);
 }, 100);
 
 setTimeout(() => {
   counter.value++;
-  console.log(`[CONSOLE.LOG] Test 2 (count: ${counter.value})`);
   logs.value = [...logs.value, { id: counter.value, message: `Static ${counter.value}` }];
 }, 200);
 
 setTimeout(() => {
   counter.value++;
   logs.value = [...logs.value, { id: counter.value, message: `Static ${counter.value}` }];
-  console.log(`[CONSOLE.LOG] Test 3 (count: ${counter.value})`);
 }, 300);
 
 setTimeout(() => {

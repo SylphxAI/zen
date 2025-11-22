@@ -1,16 +1,14 @@
 /** @jsxImportSource @zen/tui */
 import { signal } from '@zen/signal';
-import { renderToTerminalReactive, useInput, Static } from '@zen/tui';
-import { Box, Text, TextInput, FocusProvider } from '@zen/tui';
+import { Static, renderToTerminalReactive, useInput } from '@zen/tui';
+import { Box, FocusProvider, Text, TextInput } from '@zen/tui';
 
 interface LogItem {
   id: number;
   message: string;
 }
 
-const debugLogs = signal<LogItem[]>([
-  { id: 0, message: '[Started] Focus debug test' }
-]);
+const debugLogs = signal<LogItem[]>([{ id: 0, message: '[Started] Focus debug test' }]);
 let logId = 1;
 
 const username = signal('');
@@ -18,12 +16,12 @@ const inputFocused = signal(false);
 
 const FocusDebug = () => {
   // Log all keyboard input
-  useInput((input, key) => {
+  useInput((input, _key) => {
     logId++;
     const keyInfo = `Key: "${input}" - Input focused: ${inputFocused.value}`;
     debugLogs.value = [
       ...debugLogs.value,
-      { id: logId, message: `[${new Date().toLocaleTimeString()}] ${keyInfo}` }
+      { id: logId, message: `[${new Date().toLocaleTimeString()}] ${keyInfo}` },
     ];
   });
 
@@ -42,11 +40,15 @@ const FocusDebug = () => {
       {/* Dynamic UI */}
       <Box borderStyle="round" borderColor="cyan" padding={1} marginTop={1}>
         <Box flexDirection="column">
-          <Text bold color="cyan">Focus Debug</Text>
+          <Text bold color="cyan">
+            Focus Debug
+          </Text>
 
           <Box marginTop={1}>
             <Text>Input focused: </Text>
-            <Text bold color="yellow">{() => inputFocused.value ? 'YES' : 'NO'}</Text>
+            <Text bold color="yellow">
+              {() => (inputFocused.value ? 'YES' : 'NO')}
+            </Text>
           </Box>
 
           <Box marginTop={1}>
@@ -66,7 +68,10 @@ const FocusDebug = () => {
                 logId++;
                 debugLogs.value = [
                   ...debugLogs.value,
-                  { id: logId, message: `[${new Date().toLocaleTimeString()}] Input changed: "${value}"` }
+                  {
+                    id: logId,
+                    message: `[${new Date().toLocaleTimeString()}] Input changed: "${value}"`,
+                  },
                 ];
               }}
             />

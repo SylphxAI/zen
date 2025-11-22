@@ -1,6 +1,6 @@
 /** @jsxImportSource @zen/tui */
 import { signal } from '@zen/signal';
-import { renderToTerminalReactive, useInput, Static } from '@zen/tui';
+import { Static, renderToTerminalReactive, useInput } from '@zen/tui';
 import { Box, Text } from '@zen/tui';
 
 interface LogItem {
@@ -9,7 +9,7 @@ interface LogItem {
 }
 
 const keyLogs = signal<LogItem[]>([
-  { id: 0, message: '[Started] Press any key to test keyboard input' }
+  { id: 0, message: '[Started] Press any key to test keyboard input' },
 ]);
 let logId = 1;
 
@@ -20,7 +20,7 @@ const InputDebug = () => {
     const keyInfo = `Key: "${input}" (code: ${input.charCodeAt(0)}) - Tab:${key.tab} Enter:${key.return} Backspace:${key.backspace}`;
     keyLogs.value = [
       ...keyLogs.value,
-      { id: logId, message: `[${new Date().toLocaleTimeString()}] ${keyInfo}` }
+      { id: logId, message: `[${new Date().toLocaleTimeString()}] ${keyInfo}` },
     ];
   });
 
@@ -39,7 +39,9 @@ const InputDebug = () => {
       {/* Dynamic UI */}
       <Box borderStyle="round" borderColor="cyan" padding={1} marginTop={1}>
         <Box flexDirection="column">
-          <Text bold color="cyan">Keyboard Input Debug</Text>
+          <Text bold color="cyan">
+            Keyboard Input Debug
+          </Text>
           <Box marginTop={1}>
             <Text>Total keys pressed: </Text>
             <Text bold>{() => keyLogs.value.length - 1}</Text>

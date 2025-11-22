@@ -6,7 +6,7 @@ const TestChild = () => {
   try {
     const _manager = useFocusManager();
     return <Text color="green">✓ Context propagation WORKS with descriptor pattern!</Text>;
-  } catch (_error: any) {
+  } catch (_error: unknown) {
     return <Text color="red">✗ Context not found</Text>;
   }
 };

@@ -1,13 +1,12 @@
+import { onMount } from '@zen/runtime';
 /** @jsxImportSource @zen/tui */
 import { signal } from '@zen/signal';
-import { renderToTerminalReactive, useInput, FocusProvider, useFocus } from '@zen/tui';
+import { FocusProvider, renderToTerminalReactive, useFocus, useInput } from '@zen/tui';
 import { Box, Text } from '@zen/tui';
-import { onMount } from '@zen/runtime';
 
 const log = signal<string[]>([]);
 
 function addLog(msg: string) {
-  console.log(msg);
   log.value = [...log.value, msg];
 }
 
@@ -26,7 +25,7 @@ const TestComponent = () => {
     addLog(`[onMount] isFocused.value: ${isFocused.value}`);
   });
 
-  useInput((input, key) => {
+  useInput((input, _key) => {
     addLog(`[useInput] input: "${input}", isFocused.value: ${isFocused.value}`);
 
     if (!isFocused.value) {
@@ -45,9 +44,13 @@ const TestComponent = () => {
         <Text color="yellow">{() => String(isFocused.value)}</Text>
       </Box>
       <Box marginTop={1} flexDirection="column">
-        {() => log.value.slice(-10).map((msg, i) => (
-          <Text key={i} dim>{msg}</Text>
-        ))}
+        {() =>
+          log.value.slice(-10).map((msg) => (
+            <Text key={msg} dim>
+              {msg}
+            </Text>
+          ))
+        }
       </Box>
     </Box>
   );

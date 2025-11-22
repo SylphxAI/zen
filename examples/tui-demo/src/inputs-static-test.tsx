@@ -1,13 +1,7 @@
 /** @jsxImportSource @zen/tui */
 import { signal } from '@zen/signal';
-import { renderToTerminalReactive, Static } from '@zen/tui';
-import {
-  Box,
-  Text,
-  TextInput,
-  Button,
-  FocusProvider,
-} from '@zen/tui';
+import { Static, renderToTerminalReactive } from '@zen/tui';
+import { Box, Button, FocusProvider, Text, TextInput } from '@zen/tui';
 
 interface LogItem {
   id: number;
@@ -15,9 +9,7 @@ interface LogItem {
 }
 
 // Static logs
-const staticLogs = signal<LogItem[]>([
-  { id: 0, message: '[Started] Input test with static logs' }
-]);
+const staticLogs = signal<LogItem[]>([{ id: 0, message: '[Started] Input test with static logs' }]);
 let logId = 1;
 
 // Form state
@@ -32,7 +24,7 @@ function handleSubmit() {
       ...staticLogs.value,
       {
         id: logId,
-        message: `[${new Date().toLocaleTimeString()}] Submitted: ${username.value} - "${message.value}"`
+        message: `[${new Date().toLocaleTimeString()}] Submitted: ${username.value} - "${message.value}"`,
       },
     ];
 
@@ -49,7 +41,9 @@ const InputsStaticTest = () => {
       <Static items={() => staticLogs.value}>
         {(log) => (
           <Box key={log.id}>
-            <Text color="cyan" bold>▸ </Text>
+            <Text color="cyan" bold>
+              ▸{' '}
+            </Text>
             <Text color="white">{log.message}</Text>
           </Box>
         )}
@@ -58,7 +52,9 @@ const InputsStaticTest = () => {
       {/* Dynamic UI - form */}
       <Box borderStyle="round" borderColor="cyan" padding={1} marginTop={1}>
         <Box flexDirection="column">
-          <Text bold color="cyan">Input Components + Static Test</Text>
+          <Text bold color="cyan">
+            Input Components + Static Test
+          </Text>
 
           <Box marginTop={1} flexDirection="column">
             <Text bold>Username:</Text>

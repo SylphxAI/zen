@@ -1,16 +1,12 @@
 /** @jsxImportSource @zen/tui */
-import { renderToTerminalReactive, FocusProvider, useFocusManager } from '@zen/tui';
+import { FocusProvider, renderToTerminalReactive, useFocusManager } from '@zen/tui';
 import { Box, Text } from '@zen/tui';
 
 const TestChild = () => {
-  console.log('[TestChild] Executing...');
-
   try {
-    const manager = useFocusManager();
-    console.log('[TestChild] SUCCESS! Found FocusManager:', Object.keys(manager));
+    const _manager = useFocusManager();
     return <Text color="green">✓ Context found!</Text>;
-  } catch (error) {
-    console.log('[TestChild] ERROR:', error.message);
+  } catch (_error) {
     return <Text color="red">✗ Context not found</Text>;
   }
 };

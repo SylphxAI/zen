@@ -1,6 +1,6 @@
 /** @jsxImportSource @zen/tui */
 import { signal } from '@zen/signal';
-import { renderToTerminalReactive, Static } from '@zen/tui';
+import { Static, renderToTerminalReactive } from '@zen/tui';
 import { Box, Text } from '@zen/tui';
 
 interface LogItem {
@@ -27,7 +27,9 @@ const ConsoleTest = () => {
       {/* Dynamic UI */}
       <Box borderStyle="round" borderColor="cyan" padding={1} marginTop={1}>
         <Box flexDirection="column">
-          <Text bold color="cyan">Console.log + Static Test (Auto)</Text>
+          <Text bold color="cyan">
+            Console.log + Static Test (Auto)
+          </Text>
           <Box marginTop={1}>
             <Text>Static logs: </Text>
             <Text bold>{() => staticLogs.value.length}</Text>
@@ -44,19 +46,16 @@ const cleanup = await renderToTerminalReactive(() => <ConsoleTest />);
 setTimeout(() => {
   logId++;
   staticLogs.value = [...staticLogs.value, { id: logId, message: `Log ${logId}` }];
-  console.log('Added log 1');
 }, 500);
 
 setTimeout(() => {
   logId++;
   staticLogs.value = [...staticLogs.value, { id: logId, message: `Log ${logId}` }];
-  console.log('Added log 2');
 }, 1000);
 
 setTimeout(() => {
   logId++;
   staticLogs.value = [...staticLogs.value, { id: logId, message: `Log ${logId}` }];
-  console.log('Added log 3');
 }, 1500);
 
 setTimeout(() => {

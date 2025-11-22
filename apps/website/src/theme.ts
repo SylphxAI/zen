@@ -1,4 +1,5 @@
 import { effect, signal } from '@zen/signal';
+import { onCleanup } from '@zen/signal';
 
 export type Theme = 'light' | 'dark';
 
@@ -22,7 +23,7 @@ export function toggleTheme() {
 // Initialize theme system - call this from a component
 export function initTheme() {
   // Apply theme to document
-  effect(() => {
+  const dispose = effect(() => {
     const currentTheme = theme.value;
 
     if (currentTheme === 'dark') {
@@ -31,14 +32,31 @@ export function initTheme() {
       document.documentElement.classList.remove('dark');
     }
     localStorage.setItem('theme', currentTheme);
+
+    return undefined;
   });
 
   // Listen to system preference changes
+  let mediaQueryHandler: ((e: MediaQueryListEvent) => void) | undefined;
   if (typeof window !== 'undefined') {
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    mediaQueryHandler = (e: MediaQueryListEvent) => {
       if (!localStorage.getItem('theme')) {
         theme.value = e.matches ? 'dark' : 'light';
       }
-    });
+    };
+    mediaQuery.addEventListener('change', mediaQueryHandler);
   }
+
+  // Cleanup when component unmounts
+  onCleanup(() => {
+    if (dispose) {
+      dispose();
+    }
+    if (mediaQueryHandler && typeof window !== 'undefined') {
+      window
+        .matchMedia('(prefers-color-scheme: dark)')
+        .removeEventListener('change', mediaQueryHandler);
+    }
+  });
 }

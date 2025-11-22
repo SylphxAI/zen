@@ -1,22 +1,22 @@
 /** @jsxImportSource @zen/tui */
 import { signal } from '@zen/signal';
-import { renderToTerminalReactive, Static, Box, Text } from '@zen/tui';
+import { Box, Static, Text, renderToTerminalReactive } from '@zen/tui';
 
 interface LogItem {
   id: number;
   message: string;
 }
 
-const staticLogs = signal<LogItem[]>([
-  { id: 0, message: '[Started] Initial static log' }
-]);
+const staticLogs = signal<LogItem[]>([{ id: 0, message: '[Started] Initial static log' }]);
 
 const App = () => (
   <>
     <Static items={() => staticLogs.value}>
       {(log) => (
         <Box key={log.id}>
-          <Text color="cyan" bold>▸ [STATIC] </Text>
+          <Text color="cyan" bold>
+            ▸ [STATIC]{' '}
+          </Text>
           <Text color="white">{log.message}</Text>
         </Box>
       )}

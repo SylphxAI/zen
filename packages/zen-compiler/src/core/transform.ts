@@ -2,11 +2,10 @@
  * Core JSX transformer for Zen
  *
  * Transforms:
- * 1. Universal lazy children: jsx(Parent, { children: jsx(Child, {}) })
- *    → jsx(Parent, { get children() { return jsx(Child, {}) } })
- * 2. Signal.value auto-unwrap: {signal.value} → {() => signal.value}
+ * 1. Signal.value auto-unwrap: {signal.value} → {() => signal.value}
  *
  * Note: {signal} is NOT transformed - runtime handles it via isSignal()
+ * Note: Lazy children is handled by Descriptor Pattern at runtime, not compiler
  */
 
 import * as babel from '@babel/core';
@@ -20,7 +19,7 @@ export function transformZenJSX(
   options: CompilerOptions = {},
   // biome-ignore lint/suspicious/noExplicitAny: Babel's source map type
 ): { code: string; map: any } | null {
-  const { autoUnwrap = true, universalLazyChildren = true } = options;
+  const { autoUnwrap = true } = options;
 
   const result = babel.transformSync(code, {
     filename,
@@ -39,63 +38,7 @@ export function transformZenJSX(
         },
       ],
 
-      // Phase 2: Universal lazy children transform (on jsx() calls)
-      ...(universalLazyChildren
-        ? [
-            (): babel.PluginObj => ({
-              name: 'zen-lazy-children',
-              visitor: {
-                // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Babel transform requires checking multiple conditions
-                CallExpression(path: NodePath<t.CallExpression>) {
-                  const callee = path.node.callee;
-
-                  // Check if this is a jsx/jsxs/jsxDEV/_jsx/_jsxs call
-                  if (!t.isIdentifier(callee)) return;
-                  if (!['jsx', 'jsxs', 'jsxDEV', '_jsx', '_jsxs'].includes(callee.name)) return;
-
-                  // jsx(type, props)
-                  const [_type, propsArg] = path.node.arguments;
-                  if (!propsArg || !t.isObjectExpression(propsArg)) return;
-
-                  // Find the children property
-                  const childrenPropIndex = propsArg.properties.findIndex(
-                    (prop) =>
-                      t.isObjectProperty(prop) &&
-                      t.isIdentifier(prop.key) &&
-                      prop.key.name === 'children',
-                  );
-
-                  if (childrenPropIndex === -1) return;
-
-                  const childrenProp = propsArg.properties[childrenPropIndex];
-                  if (!t.isObjectProperty(childrenProp)) return;
-
-                  // Skip if children is already a function
-                  if (
-                    t.isArrowFunctionExpression(childrenProp.value) ||
-                    t.isFunctionExpression(childrenProp.value)
-                  ) {
-                    return;
-                  }
-
-                  // Transform: children: value
-                  // Into: get children() { return value }
-                  const getter = t.objectMethod(
-                    'get',
-                    t.identifier('children'),
-                    [],
-                    t.blockStatement([t.returnStatement(childrenProp.value as t.Expression)]),
-                  );
-
-                  // Replace the property with the getter
-                  propsArg.properties[childrenPropIndex] = getter;
-                },
-              },
-            }),
-          ]
-        : []),
-
-      // Phase 3: Custom transforms (signal.value auto-unwrap)
+      // Phase 2: Signal.value auto-unwrap transform
       (): babel.PluginObj => ({
         name: 'zen-jsx-transform',
         visitor: {

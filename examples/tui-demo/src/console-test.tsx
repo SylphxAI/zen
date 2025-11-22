@@ -1,6 +1,6 @@
 /** @jsxImportSource @zen/tui */
 import { signal } from '@zen/signal';
-import { renderToTerminalReactive, useInput, Static } from '@zen/tui';
+import { Static, renderToTerminalReactive, useInput } from '@zen/tui';
 import { Box, Text } from '@zen/tui';
 
 interface LogItem {
@@ -8,9 +8,7 @@ interface LogItem {
   message: string;
 }
 
-const staticLogs = signal<LogItem[]>([
-  { id: 0, message: '[Started] Waiting for logs...' }
-]);
+const staticLogs = signal<LogItem[]>([{ id: 0, message: '[Started] Waiting for logs...' }]);
 const keyCount = signal(0);
 let logId = 1;
 
@@ -18,8 +16,7 @@ const ConsoleTest = () => {
   // 按鍵 = console.log
   useInput((input, _key) => {
     keyCount.value++;
-    const keyName = input === ' ' ? 'space' : input === '\r' ? 'enter' : input;
-    console.log(`Key: "${keyName}"`);
+    const _keyName = input === ' ' ? 'space' : input === '\r' ? 'enter' : input;
   });
 
   return (
@@ -28,7 +25,9 @@ const ConsoleTest = () => {
       <Static items={() => staticLogs.value}>
         {(log) => (
           <Box key={log.id}>
-            <Text color="cyan" bold>▸ [STATIC] </Text>
+            <Text color="cyan" bold>
+              ▸ [STATIC]{' '}
+            </Text>
             <Text color="white">{log.message}</Text>
           </Box>
         )}
@@ -37,7 +36,9 @@ const ConsoleTest = () => {
       {/* Dynamic UI */}
       <Box borderStyle="round" borderColor="cyan" padding={1} marginTop={1}>
         <Box flexDirection="column">
-          <Text bold color="cyan">Console.log + Static Test</Text>
+          <Text bold color="cyan">
+            Console.log + Static Test
+          </Text>
           <Box marginTop={1}>
             <Text>Keys pressed: </Text>
             <Text bold>{() => keyCount.value}</Text>

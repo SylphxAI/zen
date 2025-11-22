@@ -58,6 +58,29 @@ function handleSubmit() {
   }, 5000);
 }
 
+// Interests list component
+const InterestsList = () => {
+  const interests = [];
+  if (likeProgramming.value) interests.push('Programming');
+  if (likeDesign.value) interests.push('Design');
+  if (likeWriting.value) interests.push('Writing');
+  if (likeMusic.value) interests.push('Music');
+
+  if (interests.length === 0) {
+    return (
+      <Text dim style={{ paddingLeft: 2 }}>
+        None selected
+      </Text>
+    );
+  }
+
+  return interests.map((interest) => (
+    <Text key={interest} style={{ paddingLeft: 2 }}>
+      • {interest}
+    </Text>
+  ));
+};
+
 const QuestionnaireForm = () => {
   return (
     <Box style={{ flexDirection: 'column', gap: 1 }}>
@@ -92,25 +115,7 @@ const QuestionnaireForm = () => {
                 <Text bold style={{ marginTop: 1 }}>
                   Interests:
                 </Text>
-                {() => {
-                  const interests = [];
-                  if (likeProgramming.value) interests.push('Programming');
-                  if (likeDesign.value) interests.push('Design');
-                  if (likeWriting.value) interests.push('Writing');
-                  if (likeMusic.value) interests.push('Music');
-
-                  if (interests.length === 0) {
-                    return (
-                      <Text dim style={{ paddingLeft: 2 }}>
-                        None selected
-                      </Text>
-                    );
-                  }
-
-                  return interests.map((interest, idx) => (
-                    <Text key={idx} style={{ paddingLeft: 2 }}>• {interest}</Text>
-                  ));
-                }}
+                <InterestsList />
               </Box>
 
               <Text dim style={{ marginTop: 2 }}>

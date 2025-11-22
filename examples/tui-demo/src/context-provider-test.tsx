@@ -13,8 +13,9 @@ const TestChild = () => {
       return <Text color="red">✗ Context is null</Text>;
     }
     return <Text color="green">✓ Context works! Message: {ctx.message}</Text>;
-  } catch (error: any) {
-    return <Text color="red">✗ Error: {error.message}</Text>;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    return <Text color="red">✗ Error: {message}</Text>;
   }
 };
 

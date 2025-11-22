@@ -1,6 +1,6 @@
 /** @jsxImportSource @zen/tui */
 import { signal } from '@zen/signal';
-import { renderToTerminalReactive, Static } from '@zen/tui';
+import { Static, renderToTerminalReactive } from '@zen/tui';
 import { Box, Text } from '@zen/tui';
 
 interface LogItem {
@@ -8,9 +8,7 @@ interface LogItem {
   message: string;
 }
 
-const staticLogs = signal<LogItem[]>([
-  { id: 0, message: '[Started] Initial static log' }
-]);
+const staticLogs = signal<LogItem[]>([{ id: 0, message: '[Started] Initial static log' }]);
 
 const ConsoleTest = () => {
   return (
@@ -18,7 +16,9 @@ const ConsoleTest = () => {
       <Static items={() => staticLogs.value}>
         {(log) => (
           <Box key={log.id}>
-            <Text color="cyan" bold>▸ [STATIC] </Text>
+            <Text color="cyan" bold>
+              ▸ [STATIC]{' '}
+            </Text>
             <Text color="white">{log.message}</Text>
           </Box>
         )}
@@ -26,7 +26,9 @@ const ConsoleTest = () => {
 
       <Box borderStyle="round" borderColor="cyan" padding={1} marginTop={1}>
         <Box flexDirection="column">
-          <Text bold color="cyan">Console.log + Static Test (Quick)</Text>
+          <Text bold color="cyan">
+            Console.log + Static Test (Quick)
+          </Text>
           <Box marginTop={1}>
             <Text>Static logs: </Text>
             <Text bold>{() => staticLogs.value.length}</Text>
@@ -42,7 +44,6 @@ const cleanup = await renderToTerminalReactive(() => <ConsoleTest />);
 // Test: Add one static log and one console.log
 setTimeout(() => {
   staticLogs.value = [...staticLogs.value, { id: 1, message: '[Test] Static log added' }];
-  console.log('Console.log: Test message');
 }, 200);
 
 // Cleanup after 1 second

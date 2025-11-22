@@ -1,13 +1,13 @@
+import { Show } from '@zen/runtime';
+import { signal } from '@zen/runtime';
 /** @jsxImportSource @zen/tui */
 import { renderToTerminalReactive } from '@zen/tui';
 import { Box, Text } from '@zen/tui';
-import { Show } from '@zen/runtime';
-import { signal } from '@zen/runtime';
 
-console.log('=== Show Lazy Debug Test ===\n');
-
-let step = 1;
-const log = (msg: string) => console.log(`[Step ${step++}] ${msg}`);
+const _step = 1;
+const log = (_msg: string) => {
+  // Log function placeholder
+};
 
 const ExpensiveChild = () => {
   log('❌ ExpensiveChild EXECUTED!');
@@ -22,10 +22,12 @@ const App = () => {
 
   const result = (
     <Box flexDirection="column" padding={1}>
-      <Show when={() => {
-        log(`Show.when() called, returning ${condition.value}`);
-        return condition.value;
-      }}>
+      <Show
+        when={() => {
+          log(`Show.when() called, returning ${condition.value}`);
+          return condition.value;
+        }}
+      >
         <ExpensiveChild />
       </Show>
     </Box>

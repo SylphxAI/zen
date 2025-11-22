@@ -112,7 +112,7 @@ function AutoLayoutDemo() {
 
         {() =>
           items.value.map((item, index) => (
-            <Text key={index} color="yellow">{`${index + 1}. ${item}`}</Text>
+            <Text key={item} color="yellow">{`${index + 1}. ${item}`}</Text>
           ))
         }
       </Box>

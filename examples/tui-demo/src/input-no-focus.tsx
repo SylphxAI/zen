@@ -1,6 +1,6 @@
 /** @jsxImportSource @zen/tui */
 import { signal } from '@zen/signal';
-import { renderToTerminalReactive, useInput, Static } from '@zen/tui';
+import { Static, renderToTerminalReactive, useInput } from '@zen/tui';
 import { Box, Text } from '@zen/tui';
 
 interface LogItem {
@@ -9,7 +9,7 @@ interface LogItem {
 }
 
 const keyLogs = signal<LogItem[]>([
-  { id: 0, message: '[Started] Input test WITHOUT FocusProvider' }
+  { id: 0, message: '[Started] Input test WITHOUT FocusProvider' },
 ]);
 let logId = 1;
 const inputValue = signal('');
@@ -24,13 +24,19 @@ const SimpleInput = () => {
       inputValue.value += input;
       keyLogs.value = [
         ...keyLogs.value,
-        { id: logId, message: `[${new Date().toLocaleTimeString()}] Added: "${input}" - Total: "${inputValue.value}"` }
+        {
+          id: logId,
+          message: `[${new Date().toLocaleTimeString()}] Added: "${input}" - Total: "${inputValue.value}"`,
+        },
       ];
     } else if (key.backspace && inputValue.value.length > 0) {
       inputValue.value = inputValue.value.slice(0, -1);
       keyLogs.value = [
         ...keyLogs.value,
-        { id: logId, message: `[${new Date().toLocaleTimeString()}] Backspace - Total: "${inputValue.value}"` }
+        {
+          id: logId,
+          message: `[${new Date().toLocaleTimeString()}] Backspace - Total: "${inputValue.value}"`,
+        },
       ];
     }
   });
@@ -50,11 +56,15 @@ const SimpleInput = () => {
       {/* Dynamic UI */}
       <Box borderStyle="round" borderColor="cyan" padding={1} marginTop={1}>
         <Box flexDirection="column">
-          <Text bold color="cyan">Simple Input (No FocusProvider)</Text>
+          <Text bold color="cyan">
+            Simple Input (No FocusProvider)
+          </Text>
 
           <Box marginTop={1}>
             <Text>Current value: </Text>
-            <Text bold color="yellow">{() => inputValue.value || '(empty)'}</Text>
+            <Text bold color="yellow">
+              {() => inputValue.value || '(empty)'}
+            </Text>
           </Box>
 
           <Box marginTop={1} dimColor>

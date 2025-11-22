@@ -1,7 +1,26 @@
 /**
- * Icon component - Placeholder (unplugin-icons disabled)
- * TODO: Re-enable unplugin-icons or use alternative icon solution
+ * Icon component using unplugin-icons with Iconify
+ *
+ * Usage:
+ * - <Icon icon="lucide:sun" width="20" height="20" />
+ * - <Icon icon="mdi:home" class="custom-class" />
+ *
+ * Icon format: "collection:name" (e.g., "lucide:sun", "mdi:home")
  */
+
+import IconHeroiconsUser from '~icons/heroicons/user?raw';
+import IconLucideFileText from '~icons/lucide/file-text?raw';
+import IconLucideInfo from '~icons/lucide/info?raw';
+import IconLucideMoon from '~icons/lucide/moon?raw';
+import IconLucidePlay from '~icons/lucide/play?raw';
+import IconLucideRotateCcw from '~icons/lucide/rotate-ccw?raw';
+import IconLucideSearch from '~icons/lucide/search?raw';
+import IconLucideSquare from '~icons/lucide/square?raw';
+import IconLucideSun from '~icons/lucide/sun?raw';
+import IconLucideX from '~icons/lucide/x?raw';
+import IconLucideZap from '~icons/lucide/zap?raw';
+import IconMdiHome from '~icons/mdi/home?raw';
+import IconPhHeartFill from '~icons/ph/heart-fill?raw';
 
 interface IconProps {
   icon: string;
@@ -11,40 +30,60 @@ interface IconProps {
   height?: string | number;
 }
 
-// Simple icon emoji mapping for common icons
-const iconEmojis: Record<string, string> = {
-  'lucide:zap': '⚡',
-  'lucide:search': '🔍',
-  'lucide:file-text': '📄',
-  'lucide:search-x': '✖️',
-  'lucide:play': '▶️',
-  'lucide:square': '⬜',
-  'lucide:rotate-ccw': '↺',
-  'lucide:info': 'ℹ️',
-  'lucide:sun': '☀️',
-  'lucide:moon': '🌙',
-  'mdi:home': '🏠',
-  'heroicons:user': '👤',
-  'ph:heart-fill': '❤️',
+// Map icon names to raw SVG strings
+const iconMap: Record<string, string> = {
+  'lucide:sun': IconLucideSun,
+  'lucide:moon': IconLucideMoon,
+  'lucide:zap': IconLucideZap,
+  'lucide:search': IconLucideSearch,
+  'lucide:file-text': IconLucideFileText,
+  'lucide:search-x': IconLucideX,
+  'lucide:x': IconLucideX,
+  'lucide:play': IconLucidePlay,
+  'lucide:square': IconLucideSquare,
+  'lucide:rotate-ccw': IconLucideRotateCcw,
+  'lucide:info': IconLucideInfo,
+  'mdi:home': IconMdiHome,
+  'heroicons:user': IconHeroiconsUser,
+  'ph:heart-fill': IconPhHeartFill,
 };
 
 export function Icon(props: IconProps) {
   const { icon, class: className, style, width, height } = props;
 
-  const emoji = iconEmojis[icon] || '❓';
+  const svgContent = iconMap[icon];
 
-  const sizeStyle = {
-    ...(style || {}),
-    ...(width && { width: typeof width === 'number' ? `${width}px` : width }),
-    ...(height && { height: typeof height === 'number' ? `${height}px` : height }),
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  };
+  if (!svgContent) {
+    return <span class={className}>?</span>;
+  }
 
-  return (
-    <span class={className} style={sizeStyle}>
-      {emoji}
-    </span>
-  );
+  // Parse SVG and inject custom width/height if provided
+  let modifiedSVG = svgContent;
+
+  // Add custom dimensions if provided
+  if (width || height) {
+    const widthValue = typeof width === 'number' ? `${width}px` : width || '1em';
+    const heightValue = typeof height === 'number' ? `${height}px` : height || '1em';
+
+    // Replace or add width/height attributes
+    modifiedSVG = modifiedSVG
+      .replace(/width="[^"]*"/, `width="${widthValue}"`)
+      .replace(/height="[^"]*"/, `height="${heightValue}"`);
+
+    // If width/height don't exist in the SVG, add them after the opening <svg tag
+    if (!modifiedSVG.includes('width=')) {
+      modifiedSVG = modifiedSVG.replace(
+        '<svg',
+        `<svg width="${widthValue}" height="${heightValue}"`,
+      );
+    }
+  }
+
+  // Add custom class if provided
+  if (className) {
+    modifiedSVG = modifiedSVG.replace('<svg', `<svg class="${className}"`);
+  }
+
+  // Render raw SVG using dangerouslySetInnerHTML equivalent
+  return <span style={style} innerHTML={modifiedSVG} />;
 }

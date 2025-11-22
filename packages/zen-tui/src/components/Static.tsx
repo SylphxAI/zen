@@ -26,12 +26,15 @@
 import { appendChild } from '../jsx-runtime.js';
 import type { TUINode } from '../types.js';
 
+// biome-ignore lint/suspicious/noExplicitAny: Generic component supports any item type
 export interface StaticProps<T = any> {
   items: T[] | (() => T[]);
   children: (item: T, index: number) => TUINode | string;
+  // biome-ignore lint/suspicious/noExplicitAny: Style can be any CSS-like object
   style?: any;
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: Generic component supports any item type
 export function Static<T = any>(props: StaticProps<T>): TUINode {
   // For fine-grained reactivity: store items getter on the node
   // The renderer will check for new items and render them to scrollback
@@ -42,7 +45,7 @@ export function Static<T = any>(props: StaticProps<T>): TUINode {
     tagName: 'static',
     props: {
       ...props,
-      __itemsGetter: itemsGetter,  // Store getter for renderer to use
+      __itemsGetter: itemsGetter, // Store getter for renderer to use
       __renderChild: props.children, // Store render function
     },
     children: [],

@@ -63,28 +63,33 @@ function DynamicLayoutDemo() {
     showPanel.value = !showPanel.value;
   };
 
-  // Keyboard input
-  useInput((input, key) => {
+  // Handle keyboard input
+  const handleKeypress = (input: string, key: { tab?: boolean; shift?: boolean }) => {
     if (key.tab) {
-      if (key.shift) {
-        focusPrevious();
-      } else {
-        focusNext();
-      }
-    } else if (input === '+' || input === '=') {
-      increment();
-    } else if (input === '-' || input === '_') {
-      decrement();
-    } else if (input === 'a' || input === 'A') {
-      addItem();
-    } else if (input === 'r' || input === 'R') {
-      removeItem();
-    } else if (input === 'l' || input === 'L') {
-      toggleLayout();
-    } else if (input === 'p' || input === 'P') {
-      togglePanel();
+      key.shift ? focusPrevious() : focusNext();
+      return;
     }
-  });
+
+    const actions: Record<string, () => void> = {
+      '+': increment,
+      '=': increment,
+      '-': decrement,
+      _: decrement,
+      a: addItem,
+      A: addItem,
+      r: removeItem,
+      R: removeItem,
+      l: toggleLayout,
+      L: toggleLayout,
+      p: togglePanel,
+      P: togglePanel,
+    };
+
+    actions[input]?.();
+  };
+
+  // Keyboard input
+  useInput(handleKeypress);
 
   return (
     <Box

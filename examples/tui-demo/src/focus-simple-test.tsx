@@ -1,6 +1,6 @@
 /** @jsxImportSource @zen/tui */
 import { signal } from '@zen/signal';
-import { renderToTerminalReactive, useInput, FocusProvider, useFocus } from '@zen/tui';
+import { FocusProvider, renderToTerminalReactive, useFocus, useInput } from '@zen/tui';
 import { Box, Text } from '@zen/tui';
 
 const keyLog = signal('No keys pressed yet');
@@ -8,18 +8,10 @@ const keyLog = signal('No keys pressed yet');
 const TestComponent = () => {
   const { isFocused } = useFocus({ id: 'test', autoFocus: true });
 
-  // Log focus state on every render
-  console.log('Component render - isFocused.value:', isFocused.value);
-
-  useInput((input, key) => {
-    console.log('useInput triggered - input:', input, 'isFocused.value:', isFocused.value);
-
+  useInput((input, _key) => {
     if (!isFocused.value) {
-      console.log('Blocked by focus check');
       return;
     }
-
-    console.log('Passed focus check!');
     keyLog.value = `Key: "${input}" at ${new Date().toLocaleTimeString()}`;
   });
 
@@ -28,7 +20,9 @@ const TestComponent = () => {
       <Text bold>Focus Simple Test</Text>
       <Box marginTop={1}>
         <Text>Focus state: </Text>
-        <Text color="yellow" bold>{() => isFocused.value ? 'FOCUSED ✓' : 'not focused ✗'}</Text>
+        <Text color="yellow" bold>
+          {() => (isFocused.value ? 'FOCUSED ✓' : 'not focused ✗')}
+        </Text>
       </Box>
       <Box marginTop={1}>
         <Text>Last key: </Text>

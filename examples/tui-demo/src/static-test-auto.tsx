@@ -4,7 +4,7 @@
  */
 
 import { signal } from '@zen/signal';
-import { Box, Text, Static, renderToTerminalReactive, dispatchInput } from '@zen/tui';
+import { Box, Static, Text, dispatchInput, renderToTerminalReactive } from '@zen/tui';
 
 interface LogEntry {
   id: number;
@@ -22,7 +22,9 @@ function App() {
         {(log) => (
           <Box key={log.id}>
             <Text color="green">✔ </Text>
-            <Text>Log {log.id}: {log.message}</Text>
+            <Text>
+              Log {log.id}: {log.message}
+            </Text>
           </Box>
         )}
       </Static>
@@ -31,7 +33,9 @@ function App() {
       <Box borderStyle="round" borderColor="cyan" padding={1}>
         <Box flexDirection="column">
           <Box>
-            <Text bold color="cyan">Static Test (Auto)</Text>
+            <Text bold color="cyan">
+              Static Test (Auto)
+            </Text>
           </Box>
           <Box marginTop={1}>
             <Text>Count: </Text>

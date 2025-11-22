@@ -4,9 +4,8 @@ import { Box, renderToTerminalReactive, useInput } from '@zen/tui';
 const counter = signal(0);
 
 const DebugTest = () => {
-  useInput((input, _key) => {
+  useInput((_input, _key) => {
     counter.value++;
-    console.log(`[LOG ${counter.value}] Key: "${input}"`);
   });
 
   return (

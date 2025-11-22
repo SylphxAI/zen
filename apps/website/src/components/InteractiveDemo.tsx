@@ -71,7 +71,7 @@ function BasicSignalDemo() {
       <div class="demo-visual">
         <div class="demo-output">
           <span style={{ fontSize: '64px', fontWeight: '700', color: '#667eea' }}>
-            {count.value}
+            {count}
           </span>
         </div>
 
@@ -134,10 +134,10 @@ function ComputedDemo() {
           <div
             style={{ fontSize: '48px', fontWeight: '700', color: '#667eea', marginBottom: '16px' }}
           >
-            {celsius.value}°C
+            {() => `${celsius.value}°C`}
           </div>
           <div style={{ fontSize: '24px', color: '#666', marginBottom: '16px' }}>
-            {fahrenheit.value}°F
+            {() => `${fahrenheit.value}°F`}
           </div>
           <div
             style={{
@@ -145,11 +145,11 @@ function ComputedDemo() {
               fontWeight: '600',
               padding: '8px 16px',
               borderRadius: '8px',
-              background: computed(() => `${status.value.color}20`),
-              color: status.value.color,
+              background: () => `${status.value.color}20`,
+              color: () => status.value.color,
             }}
           >
-            {status.value.text}
+            {() => status.value.text}
           </div>
         </div>
 
@@ -158,7 +158,7 @@ function ComputedDemo() {
             type="range"
             min="-10"
             max="45"
-            value={celsius.value}
+            value={celsius}
             onInput={(e) => {
               celsius.value = Number.parseInt((e.target as HTMLInputElement).value);
             }}
@@ -205,7 +205,7 @@ function EffectDemo() {
           <input
             type="text"
             placeholder="Enter your name..."
-            value={name.value}
+            value={name}
             onInput={(e) => {
               name.value = (e.target as HTMLInputElement).value;
               logEffect();
@@ -362,7 +362,7 @@ function ComplexStateDemo() {
               style={{
                 height: '100%',
                 background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
-                width: `${progress}%`,
+                width: () => `${progress.value}%`,
                 transition: 'width 0.3s ease',
               }}
             />

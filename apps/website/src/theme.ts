@@ -20,8 +20,15 @@ export function toggleTheme() {
   theme.value = theme.value === 'dark' ? 'light' : 'dark';
 }
 
-// Initialize theme system - call this from a component
+// Guard to prevent duplicate initialization
+let initialized = false;
+
+// Initialize theme system - call this once at app startup
 export function initTheme() {
+  // Prevent duplicate initialization
+  if (initialized) return;
+  initialized = true;
+
   // Apply theme to document
   const dispose = effect(() => {
     const currentTheme = theme.value;

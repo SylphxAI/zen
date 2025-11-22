@@ -117,9 +117,10 @@ export function SearchModal(props: SearchModalProps) {
             type="text"
             placeholder="Search docs..."
             class="w-full pl-10 pr-4 py-3 bg-bg-lighter dark:bg-bg-dark-lighter border border-border dark:border-border-dark rounded-zen text-text dark:text-text-dark placeholder-text-muted dark:placeholder-text-dark-muted focus:outline-none focus:border-primary"
-            value={searchQuery.value}
+            value={searchQuery}
             onInput={(e: Event) => {
-              searchQuery.value = (e.target as HTMLInputElement).value;
+              const newValue = (e.target as HTMLInputElement).value;
+              searchQuery.value = newValue;
             }}
             ref={(el) => {
               // Auto-focus search input when modal opens
@@ -134,7 +135,7 @@ export function SearchModal(props: SearchModalProps) {
       {/* Results */}
       <div class="space-y-2">
         <Show when={() => results.value.length > 0}>
-          <For each={results.value}>
+          <For each={results}>
             {(result) => (
               <button
                 type="button"
@@ -176,7 +177,7 @@ export function SearchModal(props: SearchModalProps) {
               class="mx-auto text-text-muted dark:text-text-dark-muted mb-3"
             />
             <p class="text-text-muted dark:text-text-dark-muted">
-              No results found for "{searchQuery.value}"
+              {() => `No results found for "${searchQuery.value}"`}
             </p>
           </div>
         </Show>

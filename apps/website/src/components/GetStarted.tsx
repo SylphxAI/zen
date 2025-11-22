@@ -38,7 +38,7 @@ const count = signal(0);
 
 render(() => (
   <div>
-    <p>Count: {count.value}</p>
+    <p>Count: {count}</p>
     <button onClick={() => count.value++}>
       Increment
     </button>

@@ -63,7 +63,7 @@ function App() {
     <div>
       <h1>My App</h1>
       <button onClick={() => count.value++}>
-        {count.value}
+        {count}
       </button>
     </div>
   )
@@ -121,8 +121,8 @@ function Counter() {
 
   return (
     <div>
-      <p>Count: {count.value}</p>
-      <p>Doubled: {doubled.value}</p>
+      <p>Count: {count}</p>
+      <p>Doubled: {doubled}</p>
       <button onClick={() => count.value++}>+</button>
     </div>
   )

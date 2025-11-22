@@ -26,8 +26,8 @@ const doubled = computed(() => count.value * 2);
 // Create component
 const app = (
   <div style={{ padding: '20px', fontFamily: 'sans-serif', color: 'var(--text)' }}>
-    <h2>Counter: {count.value}</h2>
-    <p>Doubled: {doubled.value}</p>
+    <h2>Counter: {count}</h2>
+    <p>Doubled: {doubled}</p>
     <div style={{ display: 'flex', gap: '10px' }}>
       <button
         onClick={() => count.value--}
@@ -97,10 +97,10 @@ const app = (
       marginBottom: '16px'
     }}>
       <p style={{ fontSize: '24px', margin: '8px 0' }}>
-        Count: <strong>{count.value}</strong>
+        Count: <strong>{count}</strong>
       </p>
       <p style={{ fontSize: '16px', margin: '8px 0', opacity: 0.7 }}>
-        Effect runs: {renderCount.value}
+        Effect runs: {renderCount}
       </p>
     </div>
     <div style={{
@@ -155,7 +155,7 @@ const app = (
     <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
       <input
         type="text"
-        value={input.value}
+        value={input}
         onInput={(e) => input.value = e.target.value}
         placeholder="Add a todo..."
         style={{
@@ -243,7 +243,7 @@ const app = (
           <label style={{ display: 'block', marginBottom: '4px' }}>Name:</label>
           <input
             type="text"
-            value={name.value}
+            value={name}
             onInput={(e) => name.value = e.target.value}
             style={{
               display: 'block',
@@ -260,7 +260,7 @@ const app = (
           <label style={{ display: 'block', marginBottom: '4px' }}>Email:</label>
           <input
             type="email"
-            value={email.value}
+            value={email}
             onInput={(e) => email.value = e.target.value}
             style={{
               display: 'block',
@@ -275,11 +275,11 @@ const app = (
         </div>
         <button
           onClick={handleSubmit}
-          disabled={!isValid.value}
+          disabled={() => !isValid.value}
           style={{
             padding: '10px 16px',
-            opacity: isValid.value ? 1 : 0.5,
-            cursor: isValid.value ? 'pointer' : 'not-allowed',
+            opacity: () => isValid.value ? 1 : 0.5,
+            cursor: () => isValid.value ? 'pointer' : 'not-allowed',
             backgroundColor: 'var(--primary)',
             color: 'white',
             border: 'none',
@@ -299,8 +299,8 @@ const app = (
         borderRadius: '8px'
       }}>
         <h3 style={{ marginBottom: '8px' }}>✓ Form submitted!</h3>
-        <p style={{ margin: '4px 0' }}>Name: {name.value}</p>
-        <p style={{ margin: '4px 0' }}>Email: {email.value}</p>
+        <p style={{ margin: '4px 0' }}>Name: {name}</p>
+        <p style={{ margin: '4px 0' }}>Email: {email}</p>
       </div>
     </Show>
   </div>
@@ -340,18 +340,18 @@ const app = (
     <h2 style={{ marginBottom: '16px' }}>GitHub Repo Info</h2>
     <button
       onClick={fetchData}
-      disabled={loading.value}
+      disabled={loading}
       style={{
         padding: '10px 16px',
-        cursor: loading.value ? 'not-allowed' : 'pointer',
+        cursor: () => loading.value ? 'not-allowed' : 'pointer',
         backgroundColor: 'var(--primary)',
         color: 'white',
         border: 'none',
         borderRadius: '4px',
-        opacity: loading.value ? 0.6 : 1
+        opacity: () => loading.value ? 0.6 : 1
       }}
     >
-      {loading.value ? 'Loading...' : 'Fetch Data'}
+      {() => loading.value ? 'Loading...' : 'Fetch Data'}
     </button>
 
     <Show when={error}>
@@ -362,7 +362,7 @@ const app = (
         backgroundColor: 'var(--bg-light)',
         borderRadius: '4px'
       }}>
-        Error: {error.value}
+        Error: {error}
       </div>
     </Show>
 

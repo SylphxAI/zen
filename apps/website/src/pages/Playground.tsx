@@ -257,7 +257,7 @@ export function Playground() {
                 Examples
               </h3>
               <div class="space-y-2">
-                <For each={filteredExamples.value}>
+                <For each={filteredExamples}>
                   {(example) => (
                     <button
                       type="button"

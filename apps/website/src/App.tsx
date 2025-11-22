@@ -5,12 +5,8 @@ import { NewDocs } from './pages/NewDocs.tsx';
 import { NewHome } from './pages/NewHome.tsx';
 import { Playground } from './pages/Playground.tsx';
 import { TestDescriptor } from './pages/TestDescriptor.tsx';
-import { initTheme } from './theme';
 
 export function App() {
-  // Initialize theme system
-  initTheme();
-
   return (
     <div class="app">
       <Header />

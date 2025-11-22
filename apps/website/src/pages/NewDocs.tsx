@@ -99,7 +99,7 @@ export function NewDocs() {
                   prose-a:text-primary hover:prose-a:text-primary-dark
                   prose-li:text-text-muted dark:prose-li:text-text-dark-muted
                   animate-fade-in-up"
-                innerHTML={renderedContent.value}
+                innerHTML={renderedContent}
               />
             </div>
           </main>

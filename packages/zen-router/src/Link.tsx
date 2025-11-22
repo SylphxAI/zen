@@ -1,3 +1,4 @@
+/** @jsxImportSource @zen/web */
 /**
  * Link component for Zen framework
  * Powered by @zen/router-core
@@ -7,52 +8,41 @@ import { open } from '@zen/router-core';
 
 export interface LinkProps {
   href: string;
-  children: Node | string;
+  children?: unknown;
   class?: string;
-  [key: string]: string | Node | undefined;
+  [key: string]: unknown;
 }
 
 /**
  * Link component - Navigation link with client-side routing
  *
+ * Uses JSX to leverage framework's descriptor pattern and automatic children handling.
+ *
  * @example
  * ```tsx
  * <Link href="/about">About Us</Link>
  * <Link href="/users/123" class="active">User Profile</Link>
+ * <Link href="/"><Icon icon="zap" /><span>Logo</span></Link>
  * ```
  */
 export function Link(props: LinkProps): Node {
   const { href, children, ...restProps } = props;
 
-  const a = document.createElement('a');
-  a.href = href;
+  return (
+    <a
+      href={href}
+      {...restProps}
+      onClick={(e: MouseEvent) => {
+        // Allow modified clicks to open in new tab
+        if (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) {
+          return;
+        }
 
-  // Set attributes
-  for (const [key, value] of Object.entries(restProps)) {
-    if (key === 'class') {
-      a.className = String(value);
-    } else {
-      a.setAttribute(key, String(value));
-    }
-  }
-
-  // Append children
-  if (typeof children === 'string') {
-    a.textContent = children;
-  } else if (children instanceof Node) {
-    a.appendChild(children);
-  }
-
-  // Prevent default and use client-side navigation
-  a.addEventListener('click', (e) => {
-    // Allow modified clicks to open in new tab
-    if (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) {
-      return;
-    }
-
-    e.preventDefault();
-    open(href);
-  });
-
-  return a;
+        e.preventDefault();
+        open(href);
+      }}
+    >
+      {children}
+    </a>
+  );
 }

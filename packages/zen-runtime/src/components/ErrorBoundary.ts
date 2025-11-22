@@ -3,18 +3,22 @@
  *
  * Catch and handle errors in component tree
  *
+ * Platform-agnostic implementation using marker pattern.
+ *
  * Features:
  * - Catch render errors
  * - Display fallback UI
  * - Error recovery
  */
 
-import { signal } from '@zen/signal';
+import { effect, signal, untrack } from '@zen/signal';
 import { disposeNode, onCleanup } from '@zen/signal';
+import { getPlatformOps } from '../platform-ops.js';
+import { children } from '../utils/children.js';
 
 interface ErrorBoundaryProps {
-  fallback: (error: Error, reset: () => void) => Node;
-  children: Node | (() => Node);
+  fallback: (error: Error, reset: () => void) => unknown;
+  children: unknown;
 }
 
 /**
@@ -30,77 +34,98 @@ interface ErrorBoundaryProps {
  *   <App />
  * </ErrorBoundary>
  */
-export function ErrorBoundary(props: ErrorBoundaryProps): Node {
-  const { fallback, children } = props;
+export function ErrorBoundary(props: ErrorBoundaryProps): unknown {
+  // Use children() helper to lazily resolve props
+  const c = children(() => props.children);
 
+  // Get platform operations
+  const ops = getPlatformOps();
+
+  // Anchor to mark position
+  const marker = ops.createMarker('error-boundary');
+
+  // Track current node and error state
+  let currentNode: Node | null = null;
   const error = signal<Error | null>(null);
-  const container = document.createElement('div');
-  let currentChild: Node | null = null;
+  let dispose: (() => void) | undefined;
+  let errorHandler: ((event: ErrorEvent) => void) | undefined;
 
   const reset = () => {
     error.value = null;
-    render();
   };
 
-  const render = () => {
-    try {
-      // Dispose previous child
-      if (currentChild) {
-        if (container.contains(currentChild)) {
-          container.removeChild(currentChild);
+  // Defer effect until marker is in tree
+  queueMicrotask(() => {
+    dispose = effect(() => {
+      const err = error.value;
+
+      // Cleanup previous node
+      if (currentNode) {
+        const parent = ops.getParent(marker);
+        if (parent) {
+          ops.removeChild(parent, currentNode);
         }
-        disposeNode(currentChild);
-        currentChild = null;
+        disposeNode(currentNode);
+        currentNode = null;
       }
 
-      if (error.value) {
-        // Show fallback
-        currentChild = fallback(error.value, reset);
-        container.appendChild(currentChild);
-      } else {
-        // Show children
-        currentChild = typeof children === 'function' ? children() : children;
-        container.appendChild(currentChild);
-      }
-    } catch (err) {
-      error.value = err as Error;
-      // Retry render with error state
-      if (currentChild) {
-        if (container.contains(currentChild)) {
-          container.removeChild(currentChild);
+      // Render appropriate content
+      try {
+        if (err) {
+          // Show error fallback
+          currentNode = untrack(() => props.fallback(err, reset));
+        } else {
+          // Show children
+          currentNode = untrack(() => c());
         }
-        disposeNode(currentChild);
-        currentChild = null;
+      } catch (renderError) {
+        // Caught error during render
+        error.value = renderError as Error;
+        // Retry render with error state
+        currentNode = untrack(() => props.fallback(renderError as Error, reset));
       }
-      currentChild = fallback(err as Error, reset);
-      container.appendChild(currentChild);
-    }
-  };
 
-  // Initial render
-  render();
-
-  // Global error handler (optional - catches async errors)
-  const errorHandler = (event: ErrorEvent) => {
-    if (container.contains(event.target as Node)) {
-      event.preventDefault();
-      error.value = event.error;
-      render();
-    }
-  };
-
-  window.addEventListener('error', errorHandler);
-
-  // Register cleanup via owner system
-  onCleanup(() => {
-    window.removeEventListener('error', errorHandler);
-    if (currentChild) {
-      if (container.contains(currentChild)) {
-        container.removeChild(currentChild);
+      // Insert into tree
+      if (currentNode) {
+        const parent = ops.getParent(marker);
+        if (parent) {
+          ops.insertBefore(parent, currentNode, marker);
+        }
       }
-      disposeNode(currentChild);
+
+      return undefined;
+    });
+
+    // Global error handler (optional - catches async errors)
+    if (typeof window !== 'undefined') {
+      errorHandler = (event: ErrorEvent) => {
+        const parent = ops.getParent(marker);
+        if (parent && (parent as any).contains && (parent as any).contains(event.target)) {
+          event.preventDefault();
+          error.value = event.error;
+        }
+      };
+
+      window.addEventListener('error', errorHandler);
     }
   });
 
-  return container;
+  // Register cleanup via owner system
+  onCleanup(() => {
+    if (errorHandler && typeof window !== 'undefined') {
+      window.removeEventListener('error', errorHandler);
+    }
+    if (dispose) {
+      dispose();
+    }
+    if (currentNode) {
+      const parent = ops.getParent(marker);
+      if (parent) {
+        ops.removeChild(parent, currentNode);
+      }
+      disposeNode(currentNode);
+    }
+  });
+
+  return marker;
 }

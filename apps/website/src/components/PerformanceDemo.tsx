@@ -238,7 +238,7 @@ export function PerformanceDemo() {
           {/* Visual Grid */}
           <div class="bg-bg-lighter dark:bg-bg-dark-lighter border border-border dark:border-border-dark rounded-zen p-4 overflow-hidden">
             <div class="grid grid-cols-10 sm:grid-cols-20 gap-1 max-h-[400px] overflow-y-auto">
-              <For each={items.value}>
+              <For each={items.value} key={(item) => item.id}>
                 {(item) => {
                   const height = Math.max(10, item.value);
                   const hue = (item.value / 100) * 120; // 0 (red) to 120 (green)

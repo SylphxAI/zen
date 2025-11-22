@@ -1,3 +1,4 @@
+/** @jsxImportSource @zen/web */
 /**
  * Router component for Zen framework
  * Powered by @zen/router-core
@@ -6,7 +7,7 @@
 import { $router, defineRoutes, startHistoryListener, stopHistoryListener } from '@zen/router-core';
 import type { RouteConfig } from '@zen/router-core';
 import { executeDescriptor, isDescriptor } from '@zen/runtime';
-import { disposeNode, effect, onCleanup, onMount, untrack } from '@zen/signal';
+import { computed, disposeNode, onCleanup, onMount } from '@zen/signal';
 
 export interface ZenRoute {
   path: string;
@@ -21,7 +22,8 @@ interface RouterProps {
 /**
  * Router component - Client-side routing powered by @zen/router-core
  *
- * Supports descriptor pattern (ADR-011) for proper Context propagation.
+ * Fine-grained reactivity with component caching by path.
+ * JSX runtime handles updates via reference equality check.
  *
  * @example
  * ```tsx
@@ -35,13 +37,18 @@ interface RouterProps {
 export function Router(props: RouterProps): Node {
   const { routes, fallback } = props;
 
-  const container = document.createElement('div');
-  container.className = 'zen-router-container';
-  let currentNode: Node | null = null;
-  let effectDispose: (() => void) | undefined;
+  // Cache rendered components by path for fine-grained reactivity
+  const componentCache = new Map<string, Node>();
+  const disposalMap = new Map<string, () => void>();
 
-  // Helper to find and render matching route
+  // Helper to find and render matching route (with caching)
   function renderRoute(path: string): Node {
+    // Check cache first - returns same Node instance for same path
+    const cached = componentCache.get(path);
+    if (cached) {
+      return cached;
+    }
+
     const route = routes.find((r) => r.path === path);
 
     let result: unknown;
@@ -50,7 +57,7 @@ export function Router(props: RouterProps): Node {
     } else if (fallback) {
       result = fallback();
     } else {
-      return document.createTextNode('404 Not Found');
+      result = document.createTextNode('404 Not Found');
     }
 
     // Handle descriptor (Phase 2)
@@ -58,18 +65,24 @@ export function Router(props: RouterProps): Node {
       result = executeDescriptor(result);
     }
 
-    // Ensure result is a Node
+    // Ensure we have a Node
     if (!(result instanceof Node)) {
-      return document.createTextNode('Error: Invalid component');
+      result = document.createTextNode(String(result));
     }
 
-    return result;
+    const node = result as Node;
+
+    // Cache the rendered component
+    componentCache.set(path, node);
+
+    return node;
   }
 
-  // Render initial route based on current URL
-  const initialPath = typeof window !== 'undefined' ? window.location.pathname : '/';
-  currentNode = renderRoute(initialPath);
-  container.appendChild(currentNode);
+  // Create computed signal for current route component
+  const currentComponent = computed(() => {
+    const { path } = $router.value;
+    return renderRoute(path);
+  });
 
   // Initialize router
   onMount(() => {
@@ -82,50 +95,22 @@ export function Router(props: RouterProps): Node {
     defineRoutes(routeConfigs);
     startHistoryListener();
 
-    // Set up effect for reactive navigation
-    effectDispose = effect(() => {
-      const { path } = $router.value;
-
-      // Cleanup previous node
-      if (currentNode) {
-        if (currentNode.parentNode) {
-          currentNode.parentNode.removeChild(currentNode);
-        }
-        disposeNode(currentNode);
-        currentNode = null;
-      }
-
-      // Render new route
-      currentNode = untrack(() => renderRoute(path));
-
-      // Insert into container
-      if (currentNode && container) {
-        container.appendChild(currentNode);
-      }
-
-      return undefined;
-    });
-
     // Cleanup on unmount
     onCleanup(() => {
       stopHistoryListener();
+
+      // Dispose all cached components
+      for (const [path, node] of componentCache) {
+        disposeNode(node);
+      }
+      componentCache.clear();
+      disposalMap.clear();
     });
 
     return undefined;
   });
 
-  // Register cleanup via owner system
-  onCleanup(() => {
-    if (effectDispose) {
-      effectDispose();
-    }
-    if (currentNode) {
-      if (currentNode.parentNode) {
-        currentNode.parentNode.removeChild(currentNode);
-      }
-      disposeNode(currentNode);
-    }
-  });
-
-  return container;
+  // Return JSX with computed component (use function for reactivity)
+  // jsx-runtime now does reference equality check - same Node = no update
+  return <div class="zen-router-container">{() => currentComponent.value}</div>;
 }

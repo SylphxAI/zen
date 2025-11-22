@@ -157,12 +157,13 @@ function setAttribute(element: Element, key: string, value: unknown): void {
         element instanceof HTMLTextAreaElement ||
         element instanceof HTMLSelectElement)
     ) {
-      (element as any)[key] = value.value;
+      (element as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement)[key] = value.value;
 
       effect(() => {
         const newValue = value.value;
-        if ((element as any)[key] !== newValue) {
-          (element as any)[key] = newValue;
+        const formElement = element as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+        if (formElement[key] !== newValue) {
+          formElement[key] = newValue;
         }
         return undefined;
       });
@@ -189,12 +190,13 @@ function setAttribute(element: Element, key: string, value: unknown): void {
           element instanceof HTMLTextAreaElement ||
           element instanceof HTMLSelectElement)
       ) {
-        (element as any)[key] = value();
+        (element as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement)[key] = value();
 
         effect(() => {
           const newValue = value();
-          if ((element as any)[key] !== newValue) {
-            (element as any)[key] = newValue;
+          const formElement = element as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+          if (formElement[key] !== newValue) {
+            formElement[key] = newValue;
           }
           return undefined;
         });
@@ -267,10 +269,32 @@ function appendChild(parent: Element, child: unknown, hydrating: boolean): void 
     }
 
     let currentNodes: Node[] = [];
+    let previousValue: unknown;
 
     // Wrap in effect for reactivity
     effect(() => {
       const value = child.value;
+
+      // Fine-grained comparison: Only update if value actually changed
+      // For Nodes: reference equality (same instance = no update needed)
+      // For primitives: value equality
+      if (value instanceof Node) {
+        if (previousValue === value) {
+          return undefined; // Same Node instance, skip update
+        }
+      } else if (Array.isArray(value) && Array.isArray(previousValue)) {
+        // Array of nodes: check if all nodes are the same instances
+        if (
+          value.length === previousValue.length &&
+          value.every((item, i) => item === previousValue[i])
+        ) {
+          return undefined; // Same array content, skip update
+        }
+      } else if (value === previousValue) {
+        return undefined; // Same primitive value, skip update
+      }
+
+      previousValue = value;
 
       // Remove previous nodes
       for (const node of currentNodes) {
@@ -328,10 +352,32 @@ function appendChild(parent: Element, child: unknown, hydrating: boolean): void 
     }
 
     let currentNodes: Node[] = [];
+    let previousValue: unknown;
 
     // Wrap in effect for reactivity
     effect(() => {
       const value = child();
+
+      // Fine-grained comparison: Only update if value actually changed
+      // For Nodes: reference equality (same instance = no update needed)
+      // For primitives: value equality
+      if (value instanceof Node) {
+        if (previousValue === value) {
+          return undefined; // Same Node instance, skip update
+        }
+      } else if (Array.isArray(value) && Array.isArray(previousValue)) {
+        // Array of nodes: check if all nodes are the same instances
+        if (
+          value.length === previousValue.length &&
+          value.every((item, i) => item === previousValue[i])
+        ) {
+          return undefined; // Same array content, skip update
+        }
+      } else if (value === previousValue) {
+        return undefined; // Same primitive value, skip update
+      }
+
+      previousValue = value;
 
       // Remove previous nodes
       for (const node of currentNodes) {

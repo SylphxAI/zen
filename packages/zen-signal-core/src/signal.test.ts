@@ -817,4 +817,31 @@ describe('utility helpers', () => {
     effectD();
     expect((source as any)._observers.length).toBe(0);
   });
+
+  it('should handle effect that modifies signal during initialization (race condition test)', () => {
+    // Simulate the PerformanceDemo scenario:
+    // - itemCount signal changes
+    // - Effect reads itemCount and modifies items signal
+    // - This triggers batching which can cause race condition if _execute is null
+
+    const itemCount = signal(1000);
+    const items = signal<Array<{ id: number }>>([]);
+
+    // Effect that modifies signal during initialization (simulates slider change)
+    effect(() => {
+      const count = itemCount.value;
+      items.value = Array.from({ length: count }, (_, i) => ({ id: i }));
+    });
+
+    // Change itemCount (simulates slider movement)
+    // This should not throw "is not a function" error
+    expect(() => {
+      itemCount.value = 2000;
+    }).not.toThrow();
+
+    // Verify the effect ran correctly
+    expect(items.value.length).toBe(2000);
+    expect(items.value[0].id).toBe(0);
+    expect(items.value[1999].id).toBe(1999);
+  });
 });

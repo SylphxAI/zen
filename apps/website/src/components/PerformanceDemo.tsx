@@ -15,14 +15,23 @@ export function PerformanceDemo() {
   let lastFrameTime = performance.now();
   let frameCount = 0;
 
-  // Initialize items (only when not running)
+  // Initialize and dynamically adjust items
   effect(() => {
     const count = itemCount.value;
-    if (!isRunning.value) {
-      items.value = Array.from({ length: count }, (_, i) => ({
-        id: i,
+    const current = items.value;
+
+    if (count === current.length) return; // No change needed
+
+    if (count > current.length) {
+      // Add new items
+      const newItems = Array.from({ length: count - current.length }, (_, i) => ({
+        id: current.length + i,
         value: Math.random() * 100,
       }));
+      items.value = [...current, ...newItems];
+    } else {
+      // Remove excess items
+      items.value = current.slice(0, count);
     }
   });
 
@@ -168,7 +177,6 @@ export function PerformanceDemo() {
                     max="5000"
                     step="100"
                     value={itemCount.value}
-                    disabled={isRunning.value}
                     onInput={(e: Event) => {
                       itemCount.value = Number((e.target as HTMLInputElement).value);
                     }}
@@ -187,7 +195,6 @@ export function PerformanceDemo() {
                   onChange={(e: Event) => {
                     uncappedMode.value = (e.target as HTMLInputElement).checked;
                   }}
-                  disabled={isRunning.value}
                   class="w-4 h-4"
                 />
                 Uncapped FPS

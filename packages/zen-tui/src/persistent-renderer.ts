@@ -100,7 +100,6 @@ function getColorFn(color: string) {
   return (text: string) => `${code + text}\x1b[39m`; // reset to default color
 }
 
-
 /**
  * Apply text styling with ANSI codes
  */

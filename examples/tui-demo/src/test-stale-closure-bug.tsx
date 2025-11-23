@@ -15,13 +15,13 @@ function WrongVersion() {
   // ❌ WRONG: Create nodes ONCE with reactive functions
   // This creates STALE CLOSURES
   const textNode = Text({
-    children: () => `Count: ${count.value}`,  // Reactive function
-    color: () => (count.value % 2 === 0 ? 'cyan' : 'magenta'),  // Reactive function
+    children: () => `Count: ${count.value}`, // Reactive function
+    color: () => (count.value % 2 === 0 ? 'cyan' : 'magenta'), // Reactive function
     bold: true,
   });
 
   const hintNode = Text({
-    children: 'Press Space to increment - THIS WON\'T UPDATE!',
+    children: "Press Space to increment - THIS WON'T UPDATE!",
     dim: true,
     style: { marginTop: 1 },
   });
@@ -36,7 +36,7 @@ function WrongVersion() {
       borderStyle: 'round',
       borderColor: 'red',
     },
-    children: staticChildren,  // ❌ Static array with stale closures
+    children: staticChildren, // ❌ Static array with stale closures
   });
 }
 
@@ -53,7 +53,7 @@ function CorrectVersion() {
       // Fresh nodes created on each render
       return [
         Text({
-          children: `Count: ${count.value}`,  // Direct value read
+          children: `Count: ${count.value}`, // Direct value read
           color: count.value % 2 === 0 ? 'cyan' : 'magenta',
           bold: true,
         }),
@@ -83,7 +83,9 @@ function App() {
         style: { marginBottom: 1 },
       }),
       Text({
-        children: showWrong.value ? '❌ WRONG VERSION (Stale Closures)' : '✅ CORRECT VERSION (Fresh Nodes)',
+        children: showWrong.value
+          ? '❌ WRONG VERSION (Stale Closures)'
+          : '✅ CORRECT VERSION (Fresh Nodes)',
         color: showWrong.value ? 'red' : 'green',
         style: { marginBottom: 1 },
       }),
@@ -92,17 +94,13 @@ function App() {
   });
 }
 
-await renderToTerminalReactive(
-  () => App(),
-  {
-    fps: 10,
-    onKeyPress: (key) => {
-      if (key === ' ') {
-        count.value++;
-        console.log('Count:', count.value);
-      } else if (key === 'w' || key === 'W') {
-        showWrong.value = !showWrong.value;
-      }
-    },
+await renderToTerminalReactive(() => App(), {
+  fps: 10,
+  onKeyPress: (key) => {
+    if (key === ' ') {
+      count.value++;
+    } else if (key === 'w' || key === 'W') {
+      showWrong.value = !showWrong.value;
+    }
   },
-);
+});

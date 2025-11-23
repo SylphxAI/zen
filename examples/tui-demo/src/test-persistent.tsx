@@ -44,7 +44,6 @@ await renderToTerminalPersistent(() => App(), {
   onKeyPress: (key) => {
     if (key === ' ') {
       count.value++;
-      console.log('Count:', count.value);
     }
   },
 });

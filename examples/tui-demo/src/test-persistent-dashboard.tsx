@@ -10,7 +10,7 @@
  * - Keyboard interactions
  */
 
-import { signal, computed } from '@zen/signal';
+import { computed, signal } from '@zen/signal';
 import { Box, Text, renderToTerminalPersistent } from '@zen/tui';
 
 // Application state

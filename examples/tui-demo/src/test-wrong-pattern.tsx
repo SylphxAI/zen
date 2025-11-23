@@ -33,15 +33,11 @@ function App() {
   });
 }
 
-await renderToTerminalReactive(
-  () => App(),
-  {
-    fps: 10,
-    onKeyPress: (key) => {
-      if (key === ' ') {
-        count.value++;
-        console.log('Count:', count.value);
-      }
-    },
+await renderToTerminalReactive(() => App(), {
+  fps: 10,
+  onKeyPress: (key) => {
+    if (key === ' ') {
+      count.value++;
+    }
   },
-);
+});

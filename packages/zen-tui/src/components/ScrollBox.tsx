@@ -5,8 +5,9 @@
  * Enables mouse wheel and keyboard navigation.
  */
 
-import { signal } from '@zen/signal';
+import { effect, signal } from '@zen/signal';
 import { appendChild } from '../jsx-runtime.js';
+import { scheduleNodeUpdate } from '../render-context.js';
 import type { TUINode, TUIStyle } from '../types.js';
 import { useInput } from '../useInput.js';
 import { useMouseScroll } from '../useMouse.js';
@@ -68,6 +69,14 @@ export function ScrollBox(props: ScrollBoxProps): TUINode {
   if (props?.children !== undefined) {
     appendChild(node, props.children);
   }
+
+  // Track scrollOffset changes and trigger re-renders
+  effect(() => {
+    // Read scrollOffset to track it
+    const _offset = scrollOffset.value;
+    // Schedule a render update when scrollOffset changes
+    scheduleNodeUpdate(node, '');
+  });
 
   return node;
 }

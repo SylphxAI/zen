@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { signal } from '../index';
-import { Button, handleButton } from './Button';
 import { Box } from './Box';
+import { Button, handleButton } from './Button';
 
 describe('Button', () => {
   it('should create button node', () => {

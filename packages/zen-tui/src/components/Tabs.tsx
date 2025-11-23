@@ -27,10 +27,23 @@ export interface TabsProps {
 
 /**
  * Tab component - wrapper for tab content
+ * Returns a special marker node that Tabs can identify and extract metadata from
  */
 export function Tab(props: TabProps): TUINode {
-  // Tab is just a data container, rendering handled by Tabs
-  return props.children as TUINode;
+  // Create a marker node that carries tab metadata
+  // Tabs will extract this before rendering
+  const marker: TUINode = {
+    type: 'box',
+    tagName: 'tab-marker',
+    props: {
+      __tabName: props.name, // Store tab name in props for Tabs to extract
+      __tabChildren: props.children,
+    },
+    children: [],
+    style: {},
+  };
+
+  return marker;
 }
 
 /**
@@ -49,7 +62,30 @@ export function Tabs(props: TabsProps): TUINode {
   const { isFocused } = useFocus({ id });
 
   // Extract tab data from children
-  const tabs = Array.isArray(props.children) ? props.children : [props.children];
+  const rawChildren = Array.isArray(props.children) ? props.children : [props.children];
+
+  // Extract tab data: children are executed Tab components which return marker nodes
+  const tabs = rawChildren.map((child: any) => {
+    // Check if this is a tab marker node (created by Tab component)
+    if (
+      child &&
+      typeof child === 'object' &&
+      child.tagName === 'tab-marker' &&
+      child.props?.__tabName
+    ) {
+      // Extract metadata from marker
+      return {
+        name: child.props.__tabName,
+        children: child.props.__tabChildren,
+      };
+    }
+    // Fallback for non-marker children
+    return {
+      name: undefined,
+      children: child,
+    };
+  });
+
   const tabCount = tabs.length;
 
   // Handle keyboard input
@@ -86,10 +122,11 @@ export function Tabs(props: TabsProps): TUINode {
 
       // Get active tab content
       const activeTab = tabs[activeIndex];
-      const activeContent = activeTab
-        ? typeof activeTab.children === 'function'
-          ? activeTab.children()
-          : activeTab.children
+      const tabChildren = activeTab?.children;
+      const activeContent = tabChildren
+        ? typeof tabChildren === 'function'
+          ? tabChildren()
+          : tabChildren
         : null;
 
       return [

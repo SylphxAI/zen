@@ -15,7 +15,6 @@ function App() {
     const current = activeTab.value;
     if (current < 3) {
       activeTab.value = current + 1;
-      console.error(`\n=== Switched to tab ${current + 1} ===\n`);
     } else {
       clearInterval(interval);
       setTimeout(() => process.exit(0), 500);

@@ -5,8 +5,8 @@
  * App takes over entire terminal like vim/less/top.
  */
 
-import { Box, Text, renderToTerminalReactive } from '@zen/tui';
 import { signal } from '@zen/signal';
+import { Box, Text, renderToTerminalReactive } from '@zen/tui';
 
 function FullScreenApp() {
   const counter = signal(0);
@@ -22,23 +22,14 @@ function FullScreenApp() {
         Full-Screen TUI Demo
       </Text>
       <Text>─────────────────────</Text>
-      <Text>
-        This app runs in alternate screen buffer mode.
-      </Text>
+      <Text>This app runs in alternate screen buffer mode.</Text>
       <Text>When you quit, terminal returns to previous state.</Text>
       <Text />
-      <Text color="yellow">
-        Counter: {() => counter.value}
-      </Text>
+      <Text color="yellow">Counter: {() => counter.value}</Text>
       <Text />
-      <Text dim>
-        Press 'q' or Ctrl+C to exit
-      </Text>
+      <Text dim>Press 'q' or Ctrl+C to exit</Text>
     </Box>
   );
 }
 
-await renderToTerminalReactive(
-  () => <FullScreenApp />,
-  { fullscreen: true }
-);
+await renderToTerminalReactive(() => <FullScreenApp />, { fullscreen: true });

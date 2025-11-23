@@ -116,6 +116,15 @@ export {
 // TUI-specific: Keyboard Input
 export { useInput, dispatchInput, type InputHandler, type Key } from './useInput';
 
+// TUI-specific: Mouse Input
+export {
+  useMouse,
+  useMouseClick,
+  useMouseScroll,
+  dispatchMouseEvent,
+} from './useMouse.js';
+export type { MouseEvent } from './mouse-parser.js';
+
 // TUI-specific: Application Control (Ink-compatible API)
 export { useApp, type AppContext } from './useApp.js';
 

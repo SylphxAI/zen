@@ -15,10 +15,12 @@ import sliceAnsi from 'slice-ansi';
 import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
 import { renderToBuffer } from './layout-renderer.js';
+import { parseMouseEvent } from './mouse-parser.js';
 import { setRenderContext } from './render-context.js';
 import { TerminalBuffer } from './terminal-buffer.js';
 import type { RenderOutput, TUINode, TUIStyle } from './types.js';
 import { dispatchInput } from './useInput.js';
+import { dispatchMouseEvent } from './useMouse.js';
 import { type LayoutMap, computeLayout } from './yoga-layout.js';
 
 // Force chalk color level (Bun workaround - must be after chalk import)
@@ -543,6 +545,7 @@ export async function renderToTerminalReactive(
     onKeyPress?: (key: string) => void;
     fps?: number;
     fullscreen?: boolean;
+    mouse?: boolean;
   } = {},
 ): Promise<() => void> {
   const { onKeyPress } = options;
@@ -580,6 +583,14 @@ export async function renderToTerminalReactive(
 
   // Hide cursor during rendering
   process.stdout.write('\x1b[?25l');
+
+  // Enable mouse tracking if requested
+  if (options.mouse) {
+    // Enable mouse click tracking
+    process.stdout.write('\x1b[?1000h');
+    // Enable SGR extended mouse mode (better coordinates)
+    process.stdout.write('\x1b[?1006h');
+  }
 
   let isRunning = true;
   const terminalWidth = process.stdout.columns || 80;
@@ -911,8 +922,17 @@ export async function renderToTerminalReactive(
     currentBuffer.writeAt(0, i, initialLines[i], terminalWidth);
   }
 
-  // Set up keyboard handler
+  // Set up keyboard and mouse handler
   const keyHandler = (key: string) => {
+    // Try to parse as mouse event first (if mouse enabled)
+    if (options.mouse) {
+      const mouseEvent = parseMouseEvent(key);
+      if (mouseEvent) {
+        dispatchMouseEvent(mouseEvent);
+        return; // Don't process as keyboard input
+      }
+    }
+
     // Ctrl+C to exit
     if (key === '\u0003') {
       cleanup();
@@ -959,6 +979,12 @@ export async function renderToTerminalReactive(
         process.stdout.write('\x1b[1B'); // Move down
       }
       process.stdout.write('\n');
+    }
+
+    // Disable mouse tracking if enabled
+    if (options.mouse) {
+      process.stdout.write('\x1b[?1006l'); // Disable SGR extended mode
+      process.stdout.write('\x1b[?1000l'); // Disable mouse tracking
     }
 
     // Show cursor again

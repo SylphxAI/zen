@@ -15,10 +15,12 @@ import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
 import initYoga, { type Yoga } from 'yoga-wasm-web';
 import { TUIElement, TUITextNode } from './element.js';
+import { parseMouseEvent } from './mouse-parser.js';
 import { TerminalBuffer } from './terminal-buffer.js';
 import { buildPersistentTree } from './tree-builder.js';
 import type { TUINode } from './types.js';
 import { dispatchInput } from './useInput.js';
+import { dispatchMouseEvent } from './useMouse.js';
 
 // Yoga WASM instance
 let yogaInstance: Yoga | null = null;
@@ -343,6 +345,7 @@ export async function renderToTerminalPersistent(
     onKeyPress?: (key: string) => void;
     fps?: number;
     fullscreen?: boolean;
+    mouse?: boolean;
   } = {},
 ): Promise<void> {
   const { onKeyPress } = options;
@@ -366,6 +369,14 @@ export async function renderToTerminalPersistent(
 
   // Hide cursor during rendering
   process.stdout.write('\x1b[?25l');
+
+  // Enable mouse tracking if requested
+  if (options.mouse) {
+    // Enable mouse click tracking
+    process.stdout.write('\x1b[?1000h');
+    // Enable SGR extended mouse mode (better coordinates)
+    process.stdout.write('\x1b[?1006h');
+  }
 
   let isRunning = true;
   const terminalWidth = process.stdout.columns || 80;
@@ -527,8 +538,17 @@ export async function renderToTerminalPersistent(
     1000 / (options.fps || 10),
   );
 
-  // Set up keyboard handler
+  // Set up keyboard and mouse handler
   const keyHandler = (key: string) => {
+    // Try to parse as mouse event first (if mouse enabled)
+    if (options.mouse) {
+      const mouseEvent = parseMouseEvent(key);
+      if (mouseEvent) {
+        dispatchMouseEvent(mouseEvent);
+        return; // Don't process as keyboard input
+      }
+    }
+
     // Ctrl+C to exit
     if (key === '\u0003') {
       cleanup();
@@ -577,6 +597,12 @@ export async function renderToTerminalPersistent(
         process.stdout.write('\x1b[1B');
       }
       process.stdout.write('\n');
+    }
+
+    // Disable mouse tracking if enabled
+    if (options.mouse) {
+      process.stdout.write('\x1b[?1006l'); // Disable SGR extended mode
+      process.stdout.write('\x1b[?1000l'); // Disable mouse tracking
     }
 
     // Show cursor

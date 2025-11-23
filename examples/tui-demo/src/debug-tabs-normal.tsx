@@ -48,5 +48,5 @@ function App() {
 render(
   <FocusProvider>
     <App />
-  </FocusProvider>
+  </FocusProvider>,
 );

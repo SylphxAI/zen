@@ -4,7 +4,7 @@
  * Debug Tabs - Auto switch to tab 2 (Examples)
  */
 
-import { signal, effect } from '@zen/signal';
+import { effect, signal } from '@zen/signal';
 import { Box, FocusProvider, Tab, Tabs, Text, renderToTerminalReactive } from '@zen/tui';
 
 const activeTab = signal(0);

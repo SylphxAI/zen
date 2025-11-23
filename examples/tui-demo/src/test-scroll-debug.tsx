@@ -4,7 +4,7 @@
  */
 
 import { signal } from '@zen/signal';
-import { Box, Text, renderToTerminalReactive, useMouseScroll, useInput } from '@zen/tui';
+import { Box, Text, renderToTerminalReactive, useInput, useMouseScroll } from '@zen/tui';
 
 function ScrollDebug() {
   const mouseEvents = signal(0);

@@ -3,7 +3,7 @@
  * Simple List Test
  */
 
-import { Box, Text, renderToTerminalReactive, For } from '@zen/tui';
+import { Box, For, Text, renderToTerminalReactive } from '@zen/tui';
 
 function SimpleList() {
   const items = ['Line 1', 'Line 2', 'Line 3', 'Line 4', 'Line 5'];
@@ -25,9 +25,7 @@ function SimpleList() {
 
       <Box style={{ flexDirection: 'column', borderStyle: 'single', padding: 1 }}>
         <Text>Using For component:</Text>
-        <For each={items}>
-          {(item) => <Text>{item}</Text>}
-        </For>
+        <For each={items}>{(item) => <Text>{item}</Text>}</For>
       </Box>
 
       <Text> </Text>

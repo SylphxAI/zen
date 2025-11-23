@@ -17,10 +17,12 @@ export interface ScrollBoxProps {
   height: number; // Viewport height (required)
   scrollStep?: number; // Lines to scroll per step (default: 1)
   pageSize?: number; // Lines to scroll on page up/down (default: height - 1)
+  scrollOffset?: any; // Optional external scroll offset signal (for integration with Scrollbar)
 }
 
 export function ScrollBox(props: ScrollBoxProps): TUINode {
-  const scrollOffset = signal(0);
+  // Use external scrollOffset if provided, otherwise create internal one
+  const scrollOffset = props.scrollOffset ?? signal(0);
   const scrollStep = props.scrollStep ?? 1;
   const pageSize = props.pageSize ?? Math.max(1, props.height - 1);
 

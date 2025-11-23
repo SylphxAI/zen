@@ -4,7 +4,7 @@
  */
 
 import { signal } from '@zen/signal';
-import { Box, Text, renderToTerminalReactive, useMouseScroll, useInput, For } from '@zen/tui';
+import { Box, For, Text, renderToTerminalReactive, useInput, useMouseScroll } from '@zen/tui';
 
 function ScrollWithIndicator() {
   const scrollOffset = signal(0);
@@ -41,10 +41,19 @@ function ScrollWithIndicator() {
       <Text>─────────────────────</Text>
       <Text> </Text>
       <Text style={{ color: 'yellow' }}>Scroll Offset: {() => scrollOffset.value}</Text>
-      <Text style={{ color: 'yellow' }}>Showing lines {() => startIndex() + 1} to {() => endIndex()}</Text>
+      <Text style={{ color: 'yellow' }}>
+        Showing lines {() => startIndex() + 1} to {() => endIndex()}
+      </Text>
       <Text> </Text>
 
-      <Box style={{ flexDirection: 'column', borderStyle: 'single', padding: 1, height: viewportHeight + 2 }}>
+      <Box
+        style={{
+          flexDirection: 'column',
+          borderStyle: 'single',
+          padding: 1,
+          height: viewportHeight + 2,
+        }}
+      >
         {() => visibleItems().map((item) => <Text key={item}>{item}</Text>)}
       </Box>
 

@@ -80,7 +80,7 @@ export function Scrollbar(props: ScrollbarProps): TUINode {
         height: viewportHeight,
       }}
     >
-      {lines}
+      {() => lines()}
     </Box>
   );
 }

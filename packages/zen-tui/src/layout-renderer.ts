@@ -217,10 +217,11 @@ function renderNodeToBuffer(
                 if (isScrollBox) {
                   const childLayout = layoutMap.get(markerChild as TUINode);
                   if (childLayout) {
-                    const childY = childLayout.y + childOffsetY;
-                    const childBottom = childY + childLayout.height;
+                    // Calculate absolute child position
+                    const absoluteChildY = y + childLayout.y + childOffsetY;
+                    const absoluteChildBottom = absoluteChildY + childLayout.height;
                     // Skip if completely outside viewport
-                    if (childBottom < contentY || childY >= contentY + contentHeight) {
+                    if (absoluteChildBottom <= contentY || absoluteChildY >= contentY + contentHeight) {
                       continue;
                     }
                   }
@@ -245,10 +246,11 @@ function renderNodeToBuffer(
           if (isScrollBox) {
             const childLayout = layoutMap.get(child as TUINode);
             if (childLayout) {
-              const childY = childLayout.y + childOffsetY;
-              const childBottom = childY + childLayout.height;
+              // Calculate absolute child position
+              const absoluteChildY = y + childLayout.y + childOffsetY;
+              const absoluteChildBottom = absoluteChildY + childLayout.height;
               // Skip if completely outside viewport
-              if (childBottom < contentY || childY >= contentY + contentHeight) {
+              if (absoluteChildBottom <= contentY || absoluteChildY >= contentY + contentHeight) {
                 continue;
               }
             }

@@ -327,7 +327,7 @@ export async function renderToTerminalPersistent(
     onKeyPress?: (key: string) => void;
     fps?: number;
   } = {},
-): Promise<() => void> {
+): Promise<void> {
   const { onKeyPress } = options;
 
   // Enable raw mode for keyboard input
@@ -359,7 +359,7 @@ export async function renderToTerminalPersistent(
   });
 
   if (!rootElement) {
-    return () => {};
+    return;
   }
 
   // Terminal buffers for diff-based updates
@@ -398,7 +398,7 @@ export async function renderToTerminalPersistent(
     renderElementToBuffer(rootElement, currentBuffer, layoutMap);
 
     // Calculate output height from buffer
-    const bufferOutput = currentBuffer.toString();
+    const bufferOutput = currentBuffer.renderFull();
     const newOutputHeight = bufferOutput.split('\n').length;
 
     // Diff and update only changed lines
@@ -470,7 +470,7 @@ export async function renderToTerminalPersistent(
   renderElementToBuffer(rootElement, currentBuffer, initialLayoutMap);
 
   // Render buffer to terminal
-  const initialOutput = currentBuffer.toString();
+  const initialOutput = currentBuffer.renderFull();
   process.stdout.write(initialOutput);
 
   // Track how many lines we rendered
@@ -562,5 +562,10 @@ export async function renderToTerminalPersistent(
     }
   };
 
-  return cleanup;
+  // Keep the process running until cleanup is called
+  // Return Promise<void> to prevent cleanup function from being printed
+  return new Promise<void>((resolve) => {
+    // Cleanup will be called by exit handlers
+    // This promise never resolves - process exits directly
+  });
 }

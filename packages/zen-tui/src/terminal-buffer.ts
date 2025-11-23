@@ -115,12 +115,47 @@ export class TerminalBuffer {
       newLine += line;
 
       // Add existing content after the new text (if any)
-      // This is simplified - we just append what comes after
-      // A more robust implementation would handle character-level merging
+      // Need to preserve content that comes after our written text (e.g., right border)
       const afterX = x + lineWidth;
-      if (afterX < stringWidth(stripAnsi(existingLine))) {
-        // There's content after our write position, but for simplicity
-        // we'll let the new content overwrite it (which is the current behavior)
+      const existingVisualWidth = stringWidth(stripAnsi(existingLine));
+
+      if (afterX < existingVisualWidth) {
+        // Extract the portion of existingLine that starts at visual position afterX
+        // We need to find the actual string index that corresponds to visual position afterX
+        const strippedLine = stripAnsi(existingLine);
+        let visualPos = 0;
+        let stringPos = 0;
+        let inAnsiCode = false;
+
+        // Walk through existingLine to find where visual position afterX starts
+        for (let i = 0; i < existingLine.length; i++) {
+          const char = existingLine[i];
+
+          // Track ANSI codes
+          if (char === '\x1b') {
+            inAnsiCode = true;
+          }
+
+          if (inAnsiCode) {
+            if (char === 'm') {
+              inAnsiCode = false;
+            }
+            continue; // ANSI codes don't contribute to visual width
+          }
+
+          // Check if we've reached the target visual position
+          if (visualPos >= afterX) {
+            stringPos = i;
+            break;
+          }
+
+          visualPos += stringWidth(char);
+        }
+
+        // Extract everything from stringPos onwards
+        if (stringPos < existingLine.length) {
+          newLine += existingLine.substring(stringPos);
+        }
       }
 
       // Store the merged line

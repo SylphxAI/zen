@@ -74,6 +74,10 @@ export { Spacer } from './components/Spacer.js';
 export { ScrollBox } from './components/ScrollBox.js';
 export { Scrollbar } from './components/Scrollbar.js';
 
+// TUI-specific: Routing Components
+export { Router, type TUIRoute, type RouterProps } from './components/Router.js';
+export { RouterLink, type RouterLinkProps } from './components/RouterLink.js';
+
 // TUI-specific: Input Components
 export { TextInput, handleTextInput } from './components/TextInput.js';
 export { SelectInput, handleSelectInput, type SelectOption } from './components/SelectInput.js';
@@ -129,6 +133,21 @@ export type { MouseEvent } from './mouse-parser.js';
 
 // TUI-specific: Application Control (Ink-compatible API)
 export { useApp, type AppContext } from './useApp.js';
+
+// TUI-specific: Routing Primitives (re-export from @zen/router-core for convenience)
+export {
+  $router,
+  defineRoutes,
+  startHistoryListener,
+  stopHistoryListener,
+  open,
+  back,
+  forward,
+  replace,
+  type RouteConfig,
+  type RouterState,
+  type RouteParams,
+} from '@zen/router-core';
 
 // TUI-specific: Types
 export type { TUINode, TUIStyle, RenderOutput } from './types.js';

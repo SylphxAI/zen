@@ -302,7 +302,16 @@ export class TerminalBuffer {
       // Add reset codes at end of line to prevent background/foreground bleeding
       // Only add if line is non-empty and doesn't already end with reset
       if (line.length > 0 && !line.endsWith('\x1b[49m\x1b[39m')) {
-        return `${line}\x1b[49m\x1b[39m`;
+        // Check if line has any active background/foreground colors
+        // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape codes require control characters
+        const hasBackgroundColor = /\x1b\[4[0-9]m/.test(line) || /\x1b\[10[0-7]m/.test(line);
+        // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape codes require control characters
+        const hasForegroundColor = /\x1b\[[39][0-9]m/.test(line);
+
+        // Only add reset codes if there are active colors
+        if (hasBackgroundColor || hasForegroundColor) {
+          return `${line}\x1b[49m\x1b[39m`;
+        }
       }
       return line;
     }

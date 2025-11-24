@@ -129,9 +129,6 @@ function renderBorder(
   borderColor?: string,
   backgroundColor?: string,
 ): void {
-  // First, fill the entire box area with background (clears previous content)
-  fillArea(buffer, x, y, width, height, backgroundColor);
-
   const box = cliBoxes[borderStyle as keyof typeof cliBoxes] || cliBoxes.single;
 
   const colorFn = borderColor ? getColorFn(borderColor) : (s: string) => s;
@@ -140,9 +137,15 @@ function renderBorder(
   const topBorder = colorFn(box.topLeft + box.top.repeat(Math.max(0, width - 2)) + box.topRight);
   buffer.writeAt(x, y, topBorder, width);
 
-  // Side borders
+  // Side borders and fill content area with background
   for (let i = 1; i < height - 1; i++) {
     buffer.writeAt(x, y + i, colorFn(box.left), 1);
+    // Fill content area (between left and right borders) with background
+    if (backgroundColor && width > 2) {
+      const bgCode = getBgColorCode(backgroundColor);
+      const fillLine = bgCode + ' '.repeat(width - 2);
+      buffer.writeAt(x + 1, y + i, fillLine, width - 2, true);
+    }
     buffer.writeAt(x + width - 1, y + i, colorFn(box.right), 1);
   }
 
@@ -382,6 +385,7 @@ export function renderToBuffer(node: TUINode, buffer: TerminalBuffer, layoutMap:
   }> = [];
 
   // Recursive function to find absolute nodes
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Recursive tree traversal requires complex conditionals
   function findAbsoluteNodes(
     n: TUINode,
     parentLayout: { x: number; y: number } = { x: 0, y: 0 },

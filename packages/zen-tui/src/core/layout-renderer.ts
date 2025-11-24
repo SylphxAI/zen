@@ -107,9 +107,8 @@ function fillArea(
   bgColor?: string,
 ): void {
   const bgCode = bgColor ? getBgColorCode(bgColor) : '';
-  // Don't add reset code at the end - it will cause the background to be reset
-  // when text is rendered on top with replace=false
-  const fillLine = bgCode + ' '.repeat(width);
+  // Add background reset at end to prevent bleeding to adjacent content
+  const fillLine = bgColor ? bgCode + ' '.repeat(width) + '\x1b[49m' : ' '.repeat(width);
 
   for (let row = 0; row < height; row++) {
     buffer.writeAt(x, y + row, fillLine, width, true); // replace=true to clear existing content
@@ -143,7 +142,8 @@ function renderBorder(
     // Fill content area (between left and right borders) with background
     if (backgroundColor && width > 2) {
       const bgCode = getBgColorCode(backgroundColor);
-      const fillLine = bgCode + ' '.repeat(width - 2);
+      // Add background reset at end to prevent bleeding to right border
+      const fillLine = bgCode + ' '.repeat(width - 2) + '\x1b[49m';
       buffer.writeAt(x + 1, y + i, fillLine, width - 2, true);
     }
     buffer.writeAt(x + width - 1, y + i, colorFn(box.right), 1);

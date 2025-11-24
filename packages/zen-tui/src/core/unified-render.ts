@@ -24,19 +24,54 @@
  */
 
 import { createRoot, effect, signal } from '@zen/signal';
-import { parseMouseEvent } from '../utils/mouse-parser.js';
 import { dispatchInput } from '../hooks/useInput.js';
 import { dispatchMouseEvent as dispatchGlobalMouseEvent } from '../hooks/useMouse.js';
-import { setHitTestLayout, clearHitTestLayout, hitTest } from '../utils/hit-test.js';
+import type { MouseContextValue } from '../providers/MouseProvider.js';
+import {
+  type RenderSettings,
+  RenderSettingsProvider,
+  setGlobalRenderSettings,
+} from '../providers/RenderContext.js';
+import { clearHitTestLayout, hitTest, hitTestAll, setHitTestLayout } from '../utils/hit-test.js';
+import { parseMouseEvent } from '../utils/mouse-parser.js';
 import { renderToBuffer } from './layout-renderer.js';
 import { TerminalBuffer } from './terminal-buffer.js';
 import type { TUINode } from './types.js';
-import { computeLayout, type LayoutMap } from './yoga-layout.js';
-import {
-  RenderSettingsProvider,
-  setGlobalRenderSettings,
-  type RenderSettings,
-} from '../providers/RenderContext.js';
+import { type LayoutMap, computeLayout } from './yoga-layout.js';
+
+/**
+ * Find a node with __mouseId by walking up from hit results
+ * Returns the node and its mouseId
+ */
+function findMouseTarget(
+  hits: Array<{ node: TUINode; localX: number; localY: number }>,
+): { node: TUINode; mouseId: string; localX: number; localY: number } | null {
+  // hits are in root-to-leaf order, so we search from the end (deepest first)
+  for (let i = hits.length - 1; i >= 0; i--) {
+    const hit = hits[i];
+    const mouseId = hit.node.props?.__mouseId as string | undefined;
+    if (mouseId) {
+      return { node: hit.node, mouseId, localX: hit.localX, localY: hit.localY };
+    }
+  }
+  return null;
+}
+
+/**
+ * Find MouseProvider context by walking up from hit results
+ */
+function findMouseContext(
+  hits: Array<{ node: TUINode }>,
+): MouseContextValue | null {
+  // hits are in root-to-leaf order, check from root first
+  for (const hit of hits) {
+    const ctx = hit.node.props?.__mouseContext as MouseContextValue | undefined;
+    if (ctx) {
+      return ctx;
+    }
+  }
+  return null;
+}
 
 /**
  * Render a TUI app to the terminal
@@ -96,8 +131,8 @@ export async function renderApp(createApp: () => unknown): Promise<() => void> {
     // Fullscreen mode
     if (shouldFullscreen && !fullscreenActive) {
       process.stdout.write('\x1b[?1049h'); // Enter alternate screen
-      process.stdout.write('\x1b[2J');     // Clear screen
-      process.stdout.write('\x1b[H');      // Move to top-left
+      process.stdout.write('\x1b[2J'); // Clear screen
+      process.stdout.write('\x1b[H'); // Move to top-left
       fullscreenActive = true;
     } else if (!shouldFullscreen && fullscreenActive) {
       process.stdout.write('\x1b[?1049l'); // Exit alternate screen
@@ -119,7 +154,7 @@ export async function renderApp(createApp: () => unknown): Promise<() => void> {
   // Watch settings and apply modes
   effect(() => {
     settings.fullscreen.value; // Subscribe
-    settings.mouse.value;      // Subscribe
+    settings.mouse.value; // Subscribe
     applyTerminalModes();
   });
 
@@ -223,18 +258,31 @@ export async function renderApp(createApp: () => unknown): Promise<() => void> {
 
   // Input handler
   const keyHandler = (key: string) => {
-    // Try mouse event first
-    if (mouseActive) {
-      const mouseEvent = parseMouseEvent(key);
-      if (mouseEvent) {
-        // Hit test and dispatch
-        const hit = hitTest(mouseEvent.x, mouseEvent.y);
+    // Try mouse event first - always try to parse, as MouseProvider may enable mouse independently
+    const mouseEvent = parseMouseEvent(key);
+    if (mouseEvent) {
+        // Hit test - get all nodes from root to deepest hit
+        const hits = hitTestAll(mouseEvent.x, mouseEvent.y);
 
-        // Find MouseProvider context and dispatch
-        // For now, use global dispatch (will improve later)
+        // Find MouseProvider context and dispatch to composable system
+        const mouseContext = findMouseContext(hits);
+
+        if (mouseContext) {
+          // Find the target node with __mouseId
+          const target = findMouseTarget(hits);
+          mouseContext.dispatchMouseEvent(
+            mouseEvent,
+            target?.node || null,
+            target?.localX || 0,
+            target?.localY || 0,
+          );
+        }
+
+        // Legacy: dispatch to global useMouse handlers
         dispatchGlobalMouseEvent(mouseEvent);
 
-        // Auto-dispatch onClick for backward compatibility
+        // Legacy: auto-dispatch onClick for backward compatibility
+        const hit = hits.length > 0 ? hits[hits.length - 1] : null;
         if (mouseEvent.type === 'mouseup' && hit?.node.props?.onClick) {
           hit.node.props.onClick({
             x: mouseEvent.x,
@@ -248,11 +296,10 @@ export async function renderApp(createApp: () => unknown): Promise<() => void> {
           });
         }
 
-        queueMicrotask(() => {
-          if (isRunning) flushUpdates();
-        });
-        return;
-      }
+      queueMicrotask(() => {
+        if (isRunning) flushUpdates();
+      });
+      return;
     }
 
     // Ctrl+C to exit
@@ -275,9 +322,8 @@ export async function renderApp(createApp: () => unknown): Promise<() => void> {
     });
   };
 
-  if (process.stdin.isTTY) {
-    process.stdin.on('data', keyHandler);
-  }
+  // Always register input handler (isTTY may be undefined in some environments)
+  process.stdin.on('data', keyHandler);
 
   // Cleanup function
   const cleanup = () => {

@@ -30,10 +30,12 @@ function* iterateGraphemes(str: string): Generator<string> {
  * Returns empty string if no background color is found
  */
 function extractActiveBackground(str: string): string {
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape codes require control characters
   const ansiCodePattern = /\x1b\[([0-9;]+)m/g;
   let lastBgCode = '';
-  let match;
+  let match: RegExpExecArray | null;
 
+  // biome-ignore lint/suspicious/noAssignInExpressions: Standard pattern for regex.exec() iteration
   while ((match = ansiCodePattern.exec(str)) !== null) {
     const codes = match[1].split(';');
     for (const code of codes) {
@@ -77,6 +79,7 @@ export class TerminalBuffer {
    * Returns the bounding box of what was written
    * @param replace If true, don't preserve content after the written text (used for clearing areas)
    */
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Complex buffer merging logic requires detailed control flow
   writeAt(
     x: number,
     y: number,
@@ -194,6 +197,7 @@ export class TerminalBuffer {
         // Only inherit background if it appears at the very start of existing line
         // This prevents background from bleeding from middle of line to start
         // but allows fillArea backgrounds at x=0 to be inherited
+        // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape codes require control characters
         const leadingAnsi = existingLine.match(/^(\x1b\[[0-9;]+m)+/);
         if (leadingAnsi) {
           activeBackground = extractActiveBackground(leadingAnsi[0]);
@@ -290,10 +294,17 @@ export class TerminalBuffer {
 
   /**
    * Get a line as a string
+   * Appends ANSI reset codes to prevent formatting from bleeding beyond the line
    */
   getLine(y: number): string {
     if (y >= 0 && y < this.height) {
-      return this.buffer[y];
+      const line = this.buffer[y];
+      // Add reset codes at end of line to prevent background/foreground bleeding
+      // Only add if line is non-empty and doesn't already end with reset
+      if (line.length > 0 && !line.endsWith('\x1b[49m\x1b[39m')) {
+        return `${line}\x1b[49m\x1b[39m`;
+      }
+      return line;
     }
     return '';
   }
@@ -302,7 +313,12 @@ export class TerminalBuffer {
    * Render the entire buffer to terminal
    */
   renderFull(): string {
-    return this.buffer.join('\n');
+    // Use getLine() to ensure reset codes are appended to each line
+    const lines: string[] = [];
+    for (let y = 0; y < this.height; y++) {
+      lines.push(this.getLine(y));
+    }
+    return lines.join('\n');
   }
 
   /**

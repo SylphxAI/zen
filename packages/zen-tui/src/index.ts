@@ -61,10 +61,6 @@ export {
 // ============================================================================
 // Core - Rendering infrastructure
 // ============================================================================
-// Legacy render APIs (deprecated - use renderApp instead)
-export { render, renderToTerminal, renderToTerminalReactive } from './core/render.js';
-export { renderToTerminalPersistent } from './core/persistent-renderer.js';
-// New unified render API
 export { renderApp } from './core/unified-render.js';
 export { Fragment } from './core/jsx-runtime.js';
 export type { TUINode, TUIStyle, RenderOutput, MouseClickEvent } from './core/types.js';

@@ -57,7 +57,10 @@ export function useMouseClick(
 ): void {
   useMouse((event) => {
     // mouseup = click complete (button released)
-    if (event.type === 'mouseup' && (event.button === 'left' || event.button === 'middle' || event.button === 'right')) {
+    if (
+      event.type === 'mouseup' &&
+      (event.button === 'left' || event.button === 'middle' || event.button === 'right')
+    ) {
       const { ctrl, shift, meta } = event;
       handler(event.x, event.y, event.button, {
         ctrl,

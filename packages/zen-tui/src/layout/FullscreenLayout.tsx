@@ -26,13 +26,12 @@ export interface FullscreenLayoutProps {
 let fullscreenActive = false;
 
 export function FullscreenLayout(props: FullscreenLayoutProps): TUINode {
-
   // Enter fullscreen mode directly
   onMount(() => {
     if (!fullscreenActive) {
       process.stdout.write('\x1b[?1049h'); // Enter alternate screen
-      process.stdout.write('\x1b[2J');     // Clear screen
-      process.stdout.write('\x1b[H');      // Move to top-left
+      process.stdout.write('\x1b[2J'); // Clear screen
+      process.stdout.write('\x1b[H'); // Move to top-left
       fullscreenActive = true;
     }
   });
@@ -52,7 +51,7 @@ export function FullscreenLayout(props: FullscreenLayoutProps): TUINode {
   const node: TUINode = {
     type: 'box',
     tagName: 'fullscreen-layout',
-    props: {},  // Don't spread props - it includes children!
+    props: {}, // Don't spread props - it includes children!
     children: [],
     style: {
       width: terminalWidth,

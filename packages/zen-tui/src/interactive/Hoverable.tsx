@@ -29,7 +29,7 @@
 import { onCleanup, onMount, signal } from '@zen/runtime';
 import { appendChild } from '../core/jsx-runtime.js';
 import type { TUINode } from '../core/types.js';
-import { useMouseContext, type HoverEvent } from '../providers/MouseProvider.js';
+import { type HoverEvent, useMouseContext } from '../providers/MouseProvider.js';
 
 export interface HoverableProps {
   /** Render function receiving hover state */

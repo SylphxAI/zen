@@ -21,7 +21,7 @@
 
 import { createContext, effect, onCleanup, onMount, signal, useContext } from '@zen/runtime';
 import { appendChild } from '../core/jsx-runtime.js';
-import type { TUINode, MouseClickEvent } from '../core/types.js';
+import type { MouseClickEvent, TUINode } from '../core/types.js';
 import type { MouseEvent } from '../utils/mouse-parser.js';
 
 // ============================================================================
@@ -38,7 +38,12 @@ export interface MouseContextValue {
   /** Register a hoverable element */
   registerHoverable: (id: string, handler: HoverableHandler) => () => void;
   /** Dispatch mouse event (called by renderer) */
-  dispatchMouseEvent: (event: MouseEvent, hitNode: TUINode | null, localX: number, localY: number) => void;
+  dispatchMouseEvent: (
+    event: MouseEvent,
+    hitNode: TUINode | null,
+    localX: number,
+    localY: number,
+  ) => void;
 }
 
 export interface PressableHandler {
@@ -49,7 +54,7 @@ export interface PressableHandler {
 }
 
 export interface DraggableHandler {
-  onDragStart?: (event: DragEvent) => boolean | void;
+  onDragStart?: (event: DragEvent) => boolean | undefined;
   onDrag?: (event: DragEvent) => void;
   onDragEnd?: (event: DragEvent) => void;
   disabled?: boolean;
@@ -110,9 +115,8 @@ export function MouseProvider(props: MouseProviderProps): TUINode {
   // Enable mouse tracking directly
   onMount(() => {
     const updateEnabled = () => {
-      const isEnabled = typeof props.enabled === 'function'
-        ? props.enabled()
-        : props.enabled !== false;
+      const isEnabled =
+        typeof props.enabled === 'function' ? props.enabled() : props.enabled !== false;
       enabled.value = isEnabled;
 
       // Enable/disable mouse tracking
@@ -191,7 +195,9 @@ export function MouseProvider(props: MouseProviderProps): TUINode {
         shift: event.shift,
         meta: event.meta,
       },
-      stopPropagation: () => { propagationStopped = true; },
+      stopPropagation: () => {
+        propagationStopped = true;
+      },
     });
 
     const createDragEvent = (startX: number, startY: number): DragEvent => ({
@@ -209,7 +215,8 @@ export function MouseProvider(props: MouseProviderProps): TUINode {
         if (event.type === 'mousemove') {
           handler.onDrag?.(createDragEvent(activeDrag.startX, activeDrag.startY));
           return;
-        } else if (event.type === 'mouseup') {
+        }
+        if (event.type === 'mouseup') {
           handler.onDragEnd?.(createDragEvent(activeDrag.startX, activeDrag.startY));
           activeDrag = null;
           return;

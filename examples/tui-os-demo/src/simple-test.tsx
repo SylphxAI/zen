@@ -1,9 +1,11 @@
-import { Box, Text, render } from '@zen/tui';
 import { executeDescriptor, isDescriptor } from '@zen/runtime';
+import { Box, Text, render } from '@zen/tui';
 
 const Demo = () => (
   <Box flexDirection="column" padding={1}>
-    <Text color="cyan" bold>🍎 ZenOS Test</Text>
+    <Text color="cyan" bold>
+      🍎 ZenOS Test
+    </Text>
     <Text color="green">This should render!</Text>
   </Box>
 );
@@ -14,5 +16,4 @@ if (isDescriptor(node)) {
   node = executeDescriptor(node);
 }
 
-const output = render(node);
-console.log(output);
+const _output = render(node);

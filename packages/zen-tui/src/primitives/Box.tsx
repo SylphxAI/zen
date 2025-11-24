@@ -6,7 +6,7 @@
  */
 
 import { appendChild } from '../core/jsx-runtime.js';
-import type { TUINode, TUIStyle, MouseClickEvent } from '../core/types.js';
+import type { MouseClickEvent, TUINode, TUIStyle } from '../core/types.js';
 
 export interface BoxProps {
   children?: any;

@@ -22,12 +22,12 @@
 import { onCleanup, onMount } from '@zen/runtime';
 import { appendChild } from '../core/jsx-runtime.js';
 import type { TUINode } from '../core/types.js';
-import { useMouseContext, type DragEvent } from '../providers/MouseProvider.js';
+import { type DragEvent, useMouseContext } from '../providers/MouseProvider.js';
 
 export interface DraggableProps {
   children?: unknown;
   /** Called when drag starts. Return false to prevent drag. */
-  onDragStart?: (event: DragEvent) => boolean | void;
+  onDragStart?: (event: DragEvent) => boolean | undefined;
   /** Called during drag with delta from start position */
   onDrag?: (event: DragEvent) => void;
   /** Called when drag ends */

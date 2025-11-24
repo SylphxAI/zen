@@ -25,6 +25,9 @@ type SignalCore<T> = {
   _listeners?: Listener<T>[];
 };
 
+// Signal type: writable signal with value property
+export type Signal<T> = SignalCore<T> & { value: T };
+
 type ComputedCore<T> = SignalCore<T | null> & {
   _kind: 'computed';
   _dirty: boolean;
@@ -134,13 +137,11 @@ const zenProto = {
 };
 
 export function signal<T>(initialValue: T): Signal<T> {
-  const sig = Object.create(zenProto) as SignalCore<T> & { value: T };
+  const sig = Object.create(zenProto) as Signal<T>;
   sig._kind = 'zen';
   sig._value = initialValue;
   return sig;
 }
-
-export type Signal<T> = ReturnType<typeof signal<T>>;
 
 // ============================================================================
 // SUBSCRIBE

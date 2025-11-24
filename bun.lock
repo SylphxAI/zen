@@ -92,6 +92,13 @@
         "@types/bun": "latest",
       },
     },
+    "examples/tui-os-demo": {
+      "name": "tui-os-demo",
+      "version": "0.1.0",
+      "dependencies": {
+        "@zen/tui": "workspace:*",
+      },
+    },
     "packages/babel-plugin-zen-jsx": {
       "name": "@zen/babel-plugin-jsx",
       "version": "0.1.0",
@@ -373,6 +380,23 @@
         "bunup": "^0.15.13",
         "typescript": "^5.8.3",
         "vitest": "^3.2.4",
+      },
+    },
+    "packages/zen-tui-router": {
+      "name": "@zen/tui-router",
+      "version": "0.0.0",
+      "dependencies": {
+        "@zen/router-core": "workspace:*",
+      },
+      "devDependencies": {
+        "bunup": "^0.15.13",
+        "typescript": "^5.8.3",
+        "vitest": "^3.2.4",
+      },
+      "peerDependencies": {
+        "@zen/runtime": "workspace:*",
+        "@zen/signal": "workspace:*",
+        "@zen/tui": "workspace:*",
       },
     },
     "packages/zen-web": {
@@ -1060,6 +1084,8 @@
     "@zen/start": ["@zen/start@workspace:packages/zen-start"],
 
     "@zen/tui": ["@zen/tui@workspace:packages/zen-tui"],
+
+    "@zen/tui-router": ["@zen/tui-router@workspace:packages/zen-tui-router"],
 
     "@zen/web": ["@zen/web@workspace:packages/zen-web"],
 
@@ -2028,6 +2054,8 @@
     "tsup": ["tsup@8.5.1", "", { "dependencies": { "bundle-require": "^5.1.0", "cac": "^6.7.14", "chokidar": "^4.0.3", "consola": "^3.4.0", "debug": "^4.4.0", "esbuild": "^0.27.0", "fix-dts-default-cjs-exports": "^1.0.0", "joycon": "^3.1.1", "picocolors": "^1.1.1", "postcss-load-config": "^6.0.1", "resolve-from": "^5.0.0", "rollup": "^4.34.8", "source-map": "^0.7.6", "sucrase": "^3.35.0", "tinyexec": "^0.3.2", "tinyglobby": "^0.2.11", "tree-kill": "^1.2.2" }, "peerDependencies": { "@microsoft/api-extractor": "^7.36.0", "@swc/core": "^1", "postcss": "^8.4.12", "typescript": ">=4.5.0" }, "optionalPeers": ["@microsoft/api-extractor", "@swc/core", "postcss", "typescript"], "bin": { "tsup": "dist/cli-default.js", "tsup-node": "dist/cli-node.js" } }, "sha512-xtgkqwdhpKWr3tKPmCkvYmS9xnQK3m3XgxZHwSUjvfTjp7YfXe5tT3GgWi0F2N+ZSMsOeWeZFh7ZZFg5iPhing=="],
 
     "tui-demo": ["tui-demo@workspace:examples/tui-demo"],
+
+    "tui-os-demo": ["tui-os-demo@workspace:examples/tui-os-demo"],
 
     "tunnel-agent": ["tunnel-agent@0.3.0", "", {}, "sha512-jlGqHGoKzyyjhwv/c9omAgohntThMcGtw8RV/RDLlkbbc08kni/akVxO62N8HaXMVbVsK1NCnpSK3N2xCt22ww=="],
 

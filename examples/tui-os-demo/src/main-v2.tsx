@@ -13,13 +13,13 @@ import { batch, signal } from '@zen/signal';
 import {
   Box,
   Divider,
-  Text,
-  renderApp,
+  Draggable,
   FullscreenLayout,
+  Hoverable,
   MouseProvider,
   Pressable,
-  Draggable,
-  Hoverable,
+  Text,
+  renderApp,
   useInput,
 } from '@zen/tui';
 
@@ -67,10 +67,7 @@ function openWindow(app: string) {
   const y = 3 + offset;
 
   batch(() => {
-    $windows.value = [
-      ...$windows.value,
-      { id, ...cfg, app, x, y, zIndex: nextZIndex++ },
-    ];
+    $windows.value = [...$windows.value, { id, ...cfg, app, x, y, zIndex: nextZIndex++ }];
     $focused.value = id;
   });
 }
@@ -95,16 +92,14 @@ function focusWindow(id: string) {
   if (!win || $focused.value === id) return;
 
   batch(() => {
-    $windows.value = $windows.value.map((w) =>
-      w.id === id ? { ...w, zIndex: nextZIndex++ } : w
-    );
+    $windows.value = $windows.value.map((w) => (w.id === id ? { ...w, zIndex: nextZIndex++ } : w));
     $focused.value = id;
   });
 }
 
 function moveWindow(id: string, x: number, y: number) {
   $windows.value = $windows.value.map((w) =>
-    w.id === id ? { ...w, x: Math.max(0, x), y: Math.max(2, y) } : w
+    w.id === id ? { ...w, x: Math.max(0, x), y: Math.max(2, y) } : w,
   );
 }
 
@@ -158,11 +153,21 @@ function CalcContent() {
 function SettingsContent() {
   return (
     <Box style={{ flexDirection: 'column' }}>
-      <Text>🌙 Dark Mode: <Text style={{ color: 'green' }}>ON</Text></Text>
-      <Text>🔊 Sounds: <Text style={{ color: 'green' }}>ON</Text></Text>
-      <Text>📶 WiFi: <Text style={{ color: 'green' }}>Connected</Text></Text>
-      <Text>🔵 Bluetooth: <Text style={{ color: 'red' }}>OFF</Text></Text>
-      <Text>🔋 Battery: <Text style={{ color: 'green' }}>98%</Text></Text>
+      <Text>
+        🌙 Dark Mode: <Text style={{ color: 'green' }}>ON</Text>
+      </Text>
+      <Text>
+        🔊 Sounds: <Text style={{ color: 'green' }}>ON</Text>
+      </Text>
+      <Text>
+        📶 WiFi: <Text style={{ color: 'green' }}>Connected</Text>
+      </Text>
+      <Text>
+        🔵 Bluetooth: <Text style={{ color: 'red' }}>OFF</Text>
+      </Text>
+      <Text>
+        🔋 Battery: <Text style={{ color: 'green' }}>98%</Text>
+      </Text>
     </Box>
   );
 }
@@ -180,12 +185,18 @@ function AboutContent() {
 
 function getAppContent(app: string) {
   switch (app) {
-    case 'terminal': return <TerminalContent />;
-    case 'files': return <FilesContent />;
-    case 'calc': return <CalcContent />;
-    case 'settings': return <SettingsContent />;
-    case 'about': return <AboutContent />;
-    default: return <Text>Unknown App</Text>;
+    case 'terminal':
+      return <TerminalContent />;
+    case 'files':
+      return <FilesContent />;
+    case 'calc':
+      return <CalcContent />;
+    case 'settings':
+      return <SettingsContent />;
+    case 'about':
+      return <AboutContent />;
+    default:
+      return <Text>Unknown App</Text>;
   }
 }
 
@@ -198,12 +209,14 @@ function DesktopIcon({ icon, label, onOpen }: { icon: string; label: string; onO
     <Pressable onPress={onOpen}>
       <Hoverable>
         {(isHovered) => (
-          <Box style={{
-            flexDirection: 'column',
-            alignItems: 'center',
-            marginBottom: 1,
-            backgroundColor: isHovered ? 'blue' : undefined,
-          }}>
+          <Box
+            style={{
+              flexDirection: 'column',
+              alignItems: 'center',
+              marginBottom: 1,
+              backgroundColor: isHovered ? 'blue' : undefined,
+            }}
+          >
             <Text>{icon}</Text>
             <Text style={{ dim: !isHovered }}>{label}</Text>
           </Box>
@@ -254,18 +267,18 @@ function Window({ win }: { win: WindowState }) {
             <Text style={{ color: 'white', bold: true }}>
               {win.icon} {win.title}
             </Text>
-            <Pressable onPress={(e) => {
-              e.stopPropagation();
-              closeWindow(win.id);
-            }}>
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation();
+                closeWindow(win.id);
+              }}
+            >
               <Text style={{ color: 'red' }}>✕</Text>
             </Pressable>
           </Box>
 
           {/* Content */}
-          <Box style={{ padding: 1, flex: 1 }}>
-            {getAppContent(win.app)}
-          </Box>
+          <Box style={{ padding: 1, flex: 1 }}>{getAppContent(win.app)}</Box>
         </Box>
       </Pressable>
     </Draggable>
@@ -304,7 +317,14 @@ function ZenOS() {
       <MouseProvider>
         <Box style={{ flexDirection: 'column', flex: 1 }}>
           {/* Menu Bar */}
-          <Box style={{ backgroundColor: 'gray', paddingLeft: 1, paddingRight: 1, justifyContent: 'space-between' }}>
+          <Box
+            style={{
+              backgroundColor: 'gray',
+              paddingLeft: 1,
+              paddingRight: 1,
+              justifyContent: 'space-between',
+            }}
+          >
             <Box style={{ flexDirection: 'row', gap: 2 }}>
               <Text style={{ color: 'cyan', bold: true }}>🍎 ZenOS</Text>
               <Text style={{ color: 'white' }}>File</Text>
@@ -334,16 +354,18 @@ function ZenOS() {
             {/* Windows Area */}
             <Box style={{ flex: 1, position: 'relative' }}>
               {/* Help text when no windows */}
-              {() => $windows.value.length === 0 ? (
-                <Box style={{ flexDirection: 'column', padding: 2 }}>
-                  <Text style={{ color: 'gray', bold: true }}>Welcome to ZenOS v2!</Text>
-                  <Text> </Text>
-                  <Text style={{ color: 'cyan' }}>Click desktop icons to open apps</Text>
-                  <Text style={{ color: 'yellow' }}>Drag window title bar to move</Text>
-                  <Text style={{ color: 'green' }}>Click windows to focus</Text>
-                  <Text style={{ dim: true }}>Tab to cycle • Esc to close • q to quit</Text>
-                </Box>
-              ) : null}
+              {() =>
+                $windows.value.length === 0 ? (
+                  <Box style={{ flexDirection: 'column', padding: 2 }}>
+                    <Text style={{ color: 'gray', bold: true }}>Welcome to ZenOS v2!</Text>
+                    <Text> </Text>
+                    <Text style={{ color: 'cyan' }}>Click desktop icons to open apps</Text>
+                    <Text style={{ color: 'yellow' }}>Drag window title bar to move</Text>
+                    <Text style={{ color: 'green' }}>Click windows to focus</Text>
+                    <Text style={{ dim: true }}>Tab to cycle • Esc to close • q to quit</Text>
+                  </Box>
+                ) : null
+              }
 
               {/* Render all windows */}
               {() => $windows.value.map((win) => <Window win={win} key={win.id} />)}
@@ -354,13 +376,17 @@ function ZenOS() {
           <Box style={{ backgroundColor: 'gray', paddingLeft: 1, paddingRight: 1, height: 1 }}>
             <Text style={{ color: 'white', bold: true }}>🚀 Start</Text>
             <Text style={{ color: 'gray' }}> │</Text>
-            {() => $windows.value.map((w) => (
-              <Pressable key={w.id} onPress={() => focusWindow(w.id)}>
-                <Text style={{ color: () => ($focused.value === w.id ? 'cyan' : 'white') }}>
-                  {' '}{w.icon}{w.title}
-                </Text>
-              </Pressable>
-            ))}
+            {() =>
+              $windows.value.map((w) => (
+                <Pressable key={w.id} onPress={() => focusWindow(w.id)}>
+                  <Text style={{ color: () => ($focused.value === w.id ? 'cyan' : 'white') }}>
+                    {' '}
+                    {w.icon}
+                    {w.title}
+                  </Text>
+                </Pressable>
+              ))
+            }
           </Box>
         </Box>
       </MouseProvider>

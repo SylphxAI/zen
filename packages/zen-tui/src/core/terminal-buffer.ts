@@ -189,9 +189,15 @@ export class TerminalBuffer {
 
         // Extract active background color at position x
         activeBackground = extractActiveBackground(beforeX);
-      } else {
-        // Even if x = 0, check for background color in existing line
-        activeBackground = extractActiveBackground(existingLine);
+      } else if (x === 0) {
+        // Special case: x = 0 (start of line)
+        // Only inherit background if it appears at the very start of existing line
+        // This prevents background from bleeding from middle of line to start
+        // but allows fillArea backgrounds at x=0 to be inherited
+        const leadingAnsi = existingLine.match(/^(\x1b\[[0-9;]+m)+/);
+        if (leadingAnsi) {
+          activeBackground = extractActiveBackground(leadingAnsi[0]);
+        }
       }
 
       // Add new text (with background code prepended if present)

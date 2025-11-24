@@ -249,68 +249,21 @@ export class TerminalBuffer {
           if (visualPos >= afterX) {
             // Extract active background from content before afterX
             const trailingBg = extractActiveBackground(beforeAfterX);
-            // Include any ANSI codes that appeared right before this position
-            // by using stringPosBeforeAnsi instead of stringPos
+            // Use stringPosBeforeAnsi to include any ANSI codes that appeared right before this position
+            // This ensures border colors are preserved
             const remainingContent = existingLine.substring(stringPosBeforeAnsi);
 
-            // Count leading spaces in remaining content
-            const strippedRemaining = stripAnsi(remainingContent);
-            let leadingSpaces = 0;
-            for (let i = 0; i < strippedRemaining.length; i++) {
-              if (strippedRemaining[i] !== ' ') {
-                break;
-              }
-              leadingSpaces++;
-            }
-
-            // If remaining content starts with spaces followed by meaningful content (like border),
-            // we need to preserve the spacing to maintain correct positioning
-            // But we should add spaces WITHOUT any ANSI codes from the remaining content
-            if (leadingSpaces > 0 && leadingSpaces < strippedRemaining.length) {
-              // Add background (if any) with spaces
-              newLine += trailingBg + ' '.repeat(leadingSpaces);
-
-              // Skip the spaces in remainingContent and add the rest
-              let skipped = 0;
-              let pos = 0;
-              let inAnsi = false;
-              let ansiBeforeContent = ''; // Collect ANSI codes that appear before the meaningful content
-              for (const grapheme of iterateGraphemes(remainingContent)) {
-                if (grapheme === '\x1b') {
-                  inAnsi = true;
-                  ansiBeforeContent += grapheme;
-                  pos += grapheme.length;
-                  continue;
-                }
-                if (inAnsi) {
-                  ansiBeforeContent += grapheme;
-                  pos += grapheme.length;
-                  if (grapheme === 'm') {
-                    inAnsi = false;
-                  }
-                  continue;
-                }
-                if (grapheme === ' ' && skipped < leadingSpaces) {
-                  skipped++;
-                  pos += grapheme.length;
-                  continue;
-                }
-                // Add ANSI codes that appeared before content, then the content itself
-                newLine += ansiBeforeContent + remainingContent.substring(pos);
-                break;
-              }
-            } else {
-              // No leading spaces, or only spaces - include as-is
-              newLine += trailingBg + remainingContent;
-            }
+            // Simply include remaining content with background
+            newLine += trailingBg + remainingContent;
             break;
           }
 
           // After processing a visual grapheme, reset the ANSI position marker
-          stringPosBeforeAnsi = stringPos;
+          // This should point to AFTER the current grapheme
           beforeAfterX += grapheme;
           visualPos += terminalWidth(grapheme);
           stringPos += grapheme.length;
+          stringPosBeforeAnsi = stringPos; // Update AFTER advancing stringPos
         }
       }
 

@@ -222,11 +222,14 @@ export class TerminalBuffer {
         let stringPos = 0;
         let inAnsiCode = false;
         let beforeAfterX = ''; // Accumulate content before afterX to extract active background
+        let stringPosBeforeAnsi = 0; // Track position before ANSI codes started
 
         // Walk through existingLine by graphemes to find where visual position afterX starts
         for (const grapheme of iterateGraphemes(existingLine)) {
           // Track ANSI codes
           if (grapheme === '\x1b') {
+            // Remember position before ANSI codes
+            stringPosBeforeAnsi = stringPos;
             inAnsiCode = true;
             beforeAfterX += grapheme;
             stringPos += grapheme.length;
@@ -246,11 +249,17 @@ export class TerminalBuffer {
           if (visualPos >= afterX) {
             // Extract active background from content before afterX
             const trailingBg = extractActiveBackground(beforeAfterX);
+            // Include any ANSI codes that appeared right before this position
+            // by using stringPosBeforeAnsi instead of stringPos
+            const remainingContent = existingLine.substring(stringPosBeforeAnsi);
+
             // Include background with the remaining content
-            newLine += trailingBg + existingLine.substring(stringPos);
+            newLine += trailingBg + remainingContent;
             break;
           }
 
+          // After processing a visual grapheme, reset the ANSI position marker
+          stringPosBeforeAnsi = stringPos;
           beforeAfterX += grapheme;
           visualPos += terminalWidth(grapheme);
           stringPos += grapheme.length;

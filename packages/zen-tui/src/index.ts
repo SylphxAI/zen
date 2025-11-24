@@ -69,7 +69,7 @@ export type { TUINode, TUIStyle, RenderOutput, MouseClickEvent } from './core/ty
 // ============================================================================
 // Primitives - Basic building blocks
 // ============================================================================
-export { Box } from './primitives/Box.js';
+export { Box, type BoxProps } from './primitives/Box.js';
 export { Text } from './primitives/Text.js';
 export { Static } from './primitives/Static.js';
 export { Newline } from './primitives/Newline.js';

@@ -16,7 +16,6 @@ import {
   Text,
   renderToTerminalReactive,
   useInput,
-  useMouseClick,
   useMouseDrag,
   useTerminalSize,
 } from '@zen/tui';
@@ -284,17 +283,6 @@ function ZenOS() {
     }
   });
 
-  // Desktop icon clicks - icons are at x=1-10, y starts at 4
-  // Each icon takes 3 rows (icon, name, margin)
-  useMouseClick((x, y) => {
-    // Desktop icons area: x < 12, y >= 3
-    if (x <= 12 && y >= 3) {
-      const iconIndex = Math.floor((y - 3) / 3);
-      if (iconIndex >= 0 && iconIndex < icons.length) {
-        openWindow(icons[iconIndex].app);
-      }
-    }
-  });
 
   // Mouse drag handling for window movement
   useMouseDrag({
@@ -381,12 +369,13 @@ function ZenOS() {
 
       {/* Main Area - Relative container for absolute windows */}
       <Box style={{ flex: 1, flexDirection: 'row' }}>
-        {/* Desktop Icons */}
+        {/* Desktop Icons - clickable! */}
         <Box style={{ flexDirection: 'column', width: 12, padding: 1 }}>
           {icons.map((i) => (
             <Box
               style={{ flexDirection: 'column', alignItems: 'center', marginBottom: 1 }}
               key={i.app}
+              onClick={() => openWindow(i.app)}
             >
               <Text>{i.icon}</Text>
               <Text style={{ dim: true }}>{i.name}</Text>

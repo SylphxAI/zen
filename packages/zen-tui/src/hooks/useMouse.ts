@@ -56,9 +56,10 @@ export function useMouseClick(
   ) => void,
 ): void {
   useMouse((event) => {
-    if (event.type === 'click') {
+    // mouseup = click complete (button released)
+    if (event.type === 'mouseup' && (event.button === 'left' || event.button === 'middle' || event.button === 'right')) {
       const { ctrl, shift, meta } = event;
-      handler(event.x, event.y, event.button as 'left' | 'middle' | 'right', {
+      handler(event.x, event.y, event.button, {
         ctrl,
         shift,
         meta,
@@ -98,7 +99,7 @@ export function useMouseScroll(
  * });
  */
 export function useMouseDrag(handlers: {
-  onDragStart?: (x: number, y: number, button: 'left' | 'middle' | 'right') => boolean | void;
+  onDragStart?: (x: number, y: number, button: 'left' | 'middle' | 'right') => boolean | undefined;
   onDragMove?: (x: number, y: number, startX: number, startY: number) => void;
   onDragEnd?: (x: number, y: number) => void;
 }): void {
@@ -107,7 +108,10 @@ export function useMouseDrag(handlers: {
   let startY = 0;
 
   useMouse((event) => {
-    if (event.type === 'mousedown' && (event.button === 'left' || event.button === 'middle' || event.button === 'right')) {
+    if (
+      event.type === 'mousedown' &&
+      (event.button === 'left' || event.button === 'middle' || event.button === 'right')
+    ) {
       const shouldDrag = handlers.onDragStart?.(event.x, event.y, event.button);
       if (shouldDrag !== false) {
         isDragging = true;

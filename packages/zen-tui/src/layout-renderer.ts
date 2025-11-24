@@ -6,7 +6,6 @@
 
 import chalk from 'chalk';
 import cliBoxes from 'cli-boxes';
-import stringWidth from 'string-width';
 import type { TerminalBuffer } from './terminal-buffer.js';
 import type { TUINode, TUIStyle } from './types.js';
 import type { LayoutMap } from './yoga-layout.js';
@@ -182,12 +181,14 @@ function renderNodeToBuffer(
   const isScrollBox = node.tagName === 'scrollbox';
   const scrollOffset = isScrollBox && node.props?.scrollOffset ? node.props.scrollOffset.value : 0;
 
-  // Set viewport clipping bounds for ScrollBox children
+  // Set viewport clipping bounds for children
+  // Apply clipping for any box with border (to prevent content overflow into borders)
   let childClipMinY = clipMinY;
   let childClipMaxY = clipMaxY;
-  if (isScrollBox) {
-    childClipMinY = contentY;
-    childClipMaxY = contentY + contentHeight;
+  if (isScrollBox || hasBorder) {
+    // For bordered boxes, clip children to content area
+    childClipMinY = clipMinY !== undefined ? Math.max(clipMinY, contentY) : contentY;
+    childClipMaxY = clipMaxY !== undefined ? Math.min(clipMaxY, contentY + contentHeight) : contentY + contentHeight;
   }
 
   // Check if this node is completely outside the clipping region
@@ -200,12 +201,56 @@ function renderNodeToBuffer(
 
   // Render text node
   if (node.type === 'text') {
+    // Skip if text would be rendered outside clip bounds
+    if (clipMinY !== undefined && clipMaxY !== undefined) {
+      if (contentY < clipMinY || contentY >= clipMaxY) {
+        return; // Text line is outside visible area
+      }
+    }
+
+    // Collect text from all children including fragment nodes
     const textContent = node.children
-      .map((child) => (typeof child === 'string' ? child : ''))
+      .map((child) => {
+        if (typeof child === 'string') {
+          return child;
+        }
+        // Handle fragment nodes - extract their string/number children
+        if (typeof child === 'object' && child !== null && 'type' in child) {
+          const childNode = child as TUINode;
+          if (childNode.type === 'fragment' && Array.isArray(childNode.children)) {
+            return childNode.children
+              .map((fc) => (typeof fc === 'string' || typeof fc === 'number' ? String(fc) : ''))
+              .join('');
+          }
+        }
+        // Legacy: Handle deprecated markers (for backwards compatibility)
+        if (typeof child === 'object' && child !== null && '_type' in child && (child as any)._type === 'marker') {
+          const marker = child as { _type: string; children?: unknown[] };
+          if (marker.children && Array.isArray(marker.children)) {
+            return marker.children
+              .map((mc) => (typeof mc === 'string' || typeof mc === 'number' ? String(mc) : ''))
+              .join('');
+          }
+        }
+        return '';
+      })
       .join('');
 
     const styledText = applyTextStyle(textContent, node.style);
     buffer.writeAt(contentX, contentY, styledText, contentWidth);
+    return;
+  }
+
+  // Render fragment node - transparent container, just render children
+  if (node.type === 'fragment') {
+    for (const child of node.children) {
+      if (typeof child === 'string') {
+        const styledText = applyTextStyle(child, style);
+        buffer.writeAt(contentX, contentY, styledText, contentWidth);
+      } else if (typeof child === 'object' && child !== null && 'type' in child) {
+        renderNodeToBuffer(child as TUINode, buffer, layoutMap, offsetX, offsetY, clipMinY, clipMaxY);
+      }
+    }
     return;
   }
 
@@ -217,28 +262,57 @@ function renderNodeToBuffer(
         const styledText = applyTextStyle(child, style);
         buffer.writeAt(contentX, contentY, styledText, contentWidth);
       } else if (typeof child === 'object' && child !== null) {
-        if ('_type' in child && child._type === 'marker') {
-          // Reactive marker - render its children
+        // Calculate child offset (ScrollBox needs special handling)
+        const contentOffsetX = isScrollBox ? paddingX : 0;
+        const contentOffsetY = isScrollBox ? paddingY : 0;
+        const childOffsetX = offsetX + contentOffsetX;
+        const childOffsetY = isScrollBox
+          ? offsetY - scrollOffset + contentOffsetY
+          : offsetY + contentOffsetY;
+
+        if ('type' in child) {
+          const childNode = child as TUINode;
+
+          // Fragment nodes are transparent - render their children directly
+          if (childNode.type === 'fragment') {
+            for (const fragmentChild of childNode.children) {
+              if (typeof fragmentChild === 'string') {
+                const styledText = applyTextStyle(fragmentChild, style);
+                buffer.writeAt(contentX, contentY, styledText, contentWidth);
+              } else if (typeof fragmentChild === 'object' && fragmentChild !== null && 'type' in fragmentChild) {
+                renderNodeToBuffer(
+                  fragmentChild as TUINode,
+                  buffer,
+                  layoutMap,
+                  childOffsetX,
+                  childOffsetY,
+                  childClipMinY,
+                  childClipMaxY,
+                );
+              }
+            }
+          } else {
+            // Regular TUINode
+            renderNodeToBuffer(
+              childNode,
+              buffer,
+              layoutMap,
+              childOffsetX,
+              childOffsetY,
+              childClipMinY,
+              childClipMaxY,
+            );
+          }
+        }
+        // Legacy: Handle deprecated markers (for backwards compatibility)
+        else if ('_type' in child && (child as any)._type === 'marker') {
           const marker = child as any;
           if (marker.children && Array.isArray(marker.children)) {
             for (const markerChild of marker.children) {
               if (typeof markerChild === 'string') {
                 const styledText = applyTextStyle(markerChild, style);
                 buffer.writeAt(contentX, contentY, styledText, contentWidth);
-              } else if (
-                typeof markerChild === 'object' &&
-                markerChild !== null &&
-                'type' in markerChild
-              ) {
-                // Apply border offset for any parent with border
-                // ScrollBox also needs padding offset and scroll offset
-                const contentOffsetX = borderOffset + (isScrollBox ? paddingX : 0);
-                const contentOffsetY = borderOffset + (isScrollBox ? paddingY : 0);
-                const childOffsetX = offsetX + contentOffsetX;
-                const childOffsetY = isScrollBox
-                  ? offsetY - scrollOffset + contentOffsetY
-                  : offsetY + contentOffsetY;
-
+              } else if (typeof markerChild === 'object' && markerChild !== null && 'type' in markerChild) {
                 renderNodeToBuffer(
                   markerChild as TUINode,
                   buffer,
@@ -251,26 +325,6 @@ function renderNodeToBuffer(
               }
             }
           }
-        } else if ('type' in child) {
-          // Regular TUINode
-          // Apply border offset for any parent with border
-          // ScrollBox also needs padding offset and scroll offset
-          const contentOffsetX = borderOffset + (isScrollBox ? paddingX : 0);
-          const contentOffsetY = borderOffset + (isScrollBox ? paddingY : 0);
-          const childOffsetX = offsetX + contentOffsetX;
-          const childOffsetY = isScrollBox
-            ? offsetY - scrollOffset + contentOffsetY
-            : offsetY + contentOffsetY;
-
-          renderNodeToBuffer(
-            child as TUINode,
-            buffer,
-            layoutMap,
-            childOffsetX,
-            childOffsetY,
-            childClipMinY,
-            childClipMaxY,
-          );
         }
       }
     }

@@ -8,6 +8,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import initYoga, { type Yoga } from 'yoga-wasm-web';
+import { terminalWidth } from './terminal-width.js';
 import type { TUINode, TUIStyle } from './types.js';
 
 // Initialize Yoga WASM once
@@ -88,22 +89,24 @@ function applyStylesToYogaNode(yogaNode: any, style: TUIStyle, Yoga: any) {
     yogaNode.setAlignItems(Yoga.ALIGN_FLEX_END);
   }
 
-  // Width
-  if (typeof style.width === 'number') {
-    yogaNode.setWidth(style.width);
-  } else if (style.width === 'auto') {
+  // Width - resolve functions
+  const widthValue = typeof style.width === 'function' ? style.width() : style.width;
+  if (typeof widthValue === 'number') {
+    yogaNode.setWidth(widthValue);
+  } else if (widthValue === 'auto') {
     yogaNode.setWidthAuto();
-  } else if (typeof style.width === 'string' && style.width.endsWith('%')) {
-    yogaNode.setWidthPercent(Number.parseFloat(style.width));
+  } else if (typeof widthValue === 'string' && widthValue.endsWith('%')) {
+    yogaNode.setWidthPercent(Number.parseFloat(widthValue));
   }
 
-  // Height
-  if (typeof style.height === 'number') {
-    yogaNode.setHeight(style.height);
-  } else if (style.height === 'auto') {
+  // Height - resolve functions
+  const heightValue = typeof style.height === 'function' ? style.height() : style.height;
+  if (typeof heightValue === 'number') {
+    yogaNode.setHeight(heightValue);
+  } else if (heightValue === 'auto') {
     yogaNode.setHeightAuto();
-  } else if (typeof style.height === 'string' && style.height.endsWith('%')) {
-    yogaNode.setHeightPercent(Number.parseFloat(style.height));
+  } else if (typeof heightValue === 'string' && heightValue.endsWith('%')) {
+    yogaNode.setHeightPercent(Number.parseFloat(heightValue));
   }
 
   // MinWidth / MaxWidth
@@ -174,6 +177,11 @@ function applyStylesToYogaNode(yogaNode: any, style: TUIStyle, Yoga: any) {
   if (typeof style.flexShrink === 'number') {
     yogaNode.setFlexShrink(style.flexShrink);
   }
+
+  // Gap - space between flex children
+  if (typeof style.gap === 'number') {
+    yogaNode.setGap(Yoga.GUTTER_ALL, style.gap);
+  }
 }
 
 /**
@@ -191,44 +199,76 @@ function buildYogaTree(tuiNode: TUINode, yogaNodeMap: Map<TUINode, any>, Yoga: a
   if (tuiNode.children) {
     for (const child of tuiNode.children) {
       if (typeof child === 'string') {
-        // Text leaf - create a sized yoga node based on text length
+        // Text leaf - create a sized yoga node based on visual width
         const textYogaNode = Yoga.Node.create();
-        textYogaNode.setWidth(child.length);
+        textYogaNode.setWidth(terminalWidth(child));
         textYogaNode.setHeight(1);
         yogaNode.insertChild(textYogaNode, yogaNode.getChildCount());
       } else if (typeof child === 'object' && child !== null) {
-        if ('_type' in child && child._type === 'marker') {
-          // Reactive marker - treat as container that expands to fill parent
-          const markerYogaNode = Yoga.Node.create();
-          // Markers should expand to fill their parent container
-          markerYogaNode.setFlexGrow(1);
-          markerYogaNode.setFlexShrink(1);
-          yogaNodeMap.set(child as any, markerYogaNode);
+        if ('type' in child) {
+          const childNode = child as TUINode;
 
-          // Process marker's children
-          if ('children' in child && Array.isArray(child.children)) {
-            for (const markerChild of child.children) {
+          // Fragment nodes are transparent containers
+          if (childNode.type === 'fragment') {
+            // Create yoga node for fragment (for layout tracking)
+            const fragmentYogaNode = Yoga.Node.create();
+            fragmentYogaNode.setFlexGrow(1);
+            fragmentYogaNode.setFlexShrink(1);
+            yogaNodeMap.set(childNode, fragmentYogaNode);
+
+            // Process fragment's children
+            for (const fragmentChild of childNode.children) {
+              if (typeof fragmentChild === 'string') {
+                const textYogaNode = Yoga.Node.create();
+                textYogaNode.setWidth(terminalWidth(fragmentChild));
+                textYogaNode.setHeight(1);
+                fragmentYogaNode.insertChild(textYogaNode, fragmentYogaNode.getChildCount());
+              } else if (
+                typeof fragmentChild === 'object' &&
+                fragmentChild !== null &&
+                'type' in fragmentChild
+              ) {
+                const childYogaNode = buildYogaTree(fragmentChild as TUINode, yogaNodeMap, Yoga);
+                fragmentYogaNode.insertChild(childYogaNode, fragmentYogaNode.getChildCount());
+              }
+            }
+
+            yogaNode.insertChild(fragmentYogaNode, yogaNode.getChildCount());
+          } else {
+            // Regular TUINode
+            const childYogaNode = buildYogaTree(childNode, yogaNodeMap, Yoga);
+            yogaNode.insertChild(childYogaNode, yogaNode.getChildCount());
+          }
+        }
+        // Legacy: Handle deprecated markers (for backwards compatibility)
+        else if ('_type' in child && (child as any)._type === 'marker') {
+          const markerChildren = 'children' in child && Array.isArray((child as any).children)
+            ? (child as any).children
+            : [];
+
+          // Only add marker to layout if it has children
+          // Empty markers should NOT be added to prevent gap calculation issues
+          if (markerChildren.length > 0) {
+            const markerYogaNode = Yoga.Node.create();
+            yogaNodeMap.set(child as any, markerYogaNode);
+            markerYogaNode.setFlexGrow(1);
+            markerYogaNode.setFlexShrink(1);
+
+            for (const markerChild of markerChildren) {
               if (typeof markerChild === 'string') {
                 const textYogaNode = Yoga.Node.create();
-                textYogaNode.setWidth(markerChild.length);
+                textYogaNode.setWidth(terminalWidth(markerChild));
                 textYogaNode.setHeight(1);
                 markerYogaNode.insertChild(textYogaNode, markerYogaNode.getChildCount());
-              } else if (
-                typeof markerChild === 'object' &&
-                markerChild !== null &&
-                'type' in markerChild
-              ) {
+              } else if (typeof markerChild === 'object' && markerChild !== null && 'type' in markerChild) {
                 const childYogaNode = buildYogaTree(markerChild as TUINode, yogaNodeMap, Yoga);
                 markerYogaNode.insertChild(childYogaNode, markerYogaNode.getChildCount());
               }
             }
-          }
 
-          yogaNode.insertChild(markerYogaNode, yogaNode.getChildCount());
-        } else if ('type' in child) {
-          // Regular TUINode
-          const childYogaNode = buildYogaTree(child as TUINode, yogaNodeMap, Yoga);
-          yogaNode.insertChild(childYogaNode, yogaNode.getChildCount());
+            yogaNode.insertChild(markerYogaNode, yogaNode.getChildCount());
+          }
+          // Empty markers are NOT added to yoga tree to prevent gap issues
         }
       }
     }
@@ -263,11 +303,42 @@ function extractLayout(
   if (tuiNode.children) {
     for (const child of tuiNode.children) {
       if (typeof child === 'object' && child !== null) {
-        if ('_type' in child && child._type === 'marker') {
-          // Marker
+        if ('type' in child) {
+          const childNode = child as TUINode;
+
+          // Fragment nodes - extract layout for fragment and its children
+          if (childNode.type === 'fragment') {
+            const fragmentYogaNode = yogaNodeMap.get(childNode);
+            let fragmentLayout: LayoutResult | null = null;
+            if (fragmentYogaNode) {
+              fragmentLayout = {
+                x: layout.x + fragmentYogaNode.getComputedLeft(),
+                y: layout.y + fragmentYogaNode.getComputedTop(),
+                width: fragmentYogaNode.getComputedWidth(),
+                height: fragmentYogaNode.getComputedHeight(),
+              };
+              layoutMap.set(childNode, fragmentLayout);
+            }
+
+            // Process fragment's children using fragment's position as offset
+            const childOffsetX = fragmentLayout?.x ?? layout.x;
+            const childOffsetY = fragmentLayout?.y ?? layout.y;
+            for (const fragmentChild of childNode.children) {
+              if (typeof fragmentChild === 'object' && fragmentChild !== null && 'type' in fragmentChild) {
+                extractLayout(fragmentChild as TUINode, yogaNodeMap, layoutMap, childOffsetX, childOffsetY);
+              }
+            }
+          } else {
+            // Regular TUINode
+            extractLayout(childNode, yogaNodeMap, layoutMap, layout.x, layout.y);
+          }
+        }
+        // Legacy: Handle deprecated markers (for backwards compatibility)
+        else if ('_type' in child && (child as any)._type === 'marker') {
           const markerYogaNode = yogaNodeMap.get(child as any);
+          let markerLayout: LayoutResult | null = null;
           if (markerYogaNode) {
-            const markerLayout: LayoutResult = {
+            markerLayout = {
               x: layout.x + markerYogaNode.getComputedLeft(),
               y: layout.y + markerYogaNode.getComputedTop(),
               width: markerYogaNode.getComputedWidth(),
@@ -276,20 +347,16 @@ function extractLayout(
             layoutMap.set(child as any, markerLayout);
           }
 
-          // Process marker's children
-          if ('children' in child && Array.isArray(child.children)) {
-            for (const markerChild of child.children) {
-              if (
-                typeof markerChild === 'object' &&
-                markerChild !== null &&
-                'type' in markerChild
-              ) {
-                extractLayout(markerChild as TUINode, yogaNodeMap, layoutMap, layout.x, layout.y);
+          // Process marker's children using marker's position as offset
+          const childOffsetX = markerLayout?.x ?? layout.x;
+          const childOffsetY = markerLayout?.y ?? layout.y;
+          if ('children' in child && Array.isArray((child as any).children)) {
+            for (const markerChild of (child as any).children) {
+              if (typeof markerChild === 'object' && markerChild !== null && 'type' in markerChild) {
+                extractLayout(markerChild as TUINode, yogaNodeMap, layoutMap, childOffsetX, childOffsetY);
               }
             }
           }
-        } else if ('type' in child) {
-          extractLayout(child as TUINode, yogaNodeMap, layoutMap, layout.x, layout.y);
         }
       }
     }

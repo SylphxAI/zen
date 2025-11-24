@@ -79,7 +79,12 @@ export { Router, type TUIRoute, type RouterProps } from './components/Router.js'
 export { RouterLink, type RouterLinkProps } from './components/RouterLink.js';
 
 // TUI-specific: Input Components
-export { TextInput, handleTextInput } from './components/TextInput.js';
+export {
+  TextInput,
+  handleTextInput,
+  type TextInputProps,
+  type SuggestionProvider,
+} from './components/TextInput.js';
 export { SelectInput, handleSelectInput, type SelectOption } from './components/SelectInput.js';
 export {
   MultiSelect,
@@ -109,6 +114,46 @@ export { Badge } from './components/Badge.js';
 export { StatusMessage } from './components/StatusMessage.js';
 export { Tabs, Tab, handleTabsInput, type TabProps, type TabsProps } from './components/Tabs.js';
 export { Link } from './components/Link.js';
+export {
+  TreeView,
+  type TreeNode,
+  type TreeViewProps,
+} from './components/TreeView.js';
+export { Markdown, type MarkdownProps } from './components/Markdown.js';
+export {
+  Modal,
+  ConfirmDialog,
+  AlertDialog,
+  type ModalProps,
+  type ModalButton,
+  type ConfirmDialogProps,
+  type AlertDialogProps,
+} from './components/Modal.js';
+export {
+  CommandPalette,
+  type Command,
+  type CommandPaletteProps,
+} from './components/CommandPalette.js';
+export {
+  Toast,
+  ToastContainer,
+  toast,
+  type ToastType,
+  type ToastMessage,
+  type ToastProps,
+  type SingleToastProps,
+} from './components/Toast.js';
+export {
+  StatusBar,
+  StatusBarItem,
+  StatusBarMode,
+  StatusBarShortcut,
+  StatusBarSeparator,
+  type StatusBarProps,
+  type StatusBarItemProps,
+  type StatusBarModeProps,
+  type StatusBarShortcutProps,
+} from './components/StatusBar.js';
 
 // TUI-specific: Focus Management (Ink-compatible API)
 export {
@@ -131,8 +176,24 @@ export {
 } from './useMouse.js';
 export type { MouseEvent } from './mouse-parser.js';
 
+// TUI-specific: Hit Testing
+export {
+  hitTest,
+  hitTestAll,
+  findClickableAncestor,
+  type HitTestResult,
+} from './hit-test.js';
+
 // TUI-specific: Application Control (Ink-compatible API)
 export { useApp, type AppContext } from './useApp.js';
+
+// TUI-specific: Terminal Size
+export {
+  useTerminalSize,
+  useTerminalResize,
+  getTerminalSize,
+  type TerminalSize,
+} from './useTerminalSize.js';
 
 // TUI-specific: Routing Primitives (re-export from @zen/router-core for convenience)
 export {
@@ -149,5 +210,8 @@ export {
   type RouteParams,
 } from '@zen/router-core';
 
+// TUI-specific: Utilities
+export { terminalWidth } from './terminal-width.js';
+
 // TUI-specific: Types
-export type { TUINode, TUIStyle, RenderOutput } from './types.js';
+export type { TUINode, TUIStyle, RenderOutput, MouseClickEvent } from './types.js';

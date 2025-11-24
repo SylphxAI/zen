@@ -24,6 +24,9 @@ interface ReactElement {
   props: Props;
 }
 
+/**
+ * @deprecated Use TUINode with type: 'fragment' instead
+ */
 interface TUIMarker {
   _type: 'marker';
   _kind: string;
@@ -153,66 +156,89 @@ function handleSignal(parent: TUINode, signal: SignalLike): void {
   });
 }
 
+/**
+ * Handle reactive function children like {() => expr}
+ * Creates a fragment node that updates its children reactively.
+ *
+ * Fragment nodes are transparent containers - renderers just iterate their children.
+ * This is the architectural equivalent of React Fragments for dynamic content.
+ */
 function handleReactiveFunction(parent: TUINode, fn: () => unknown): void {
-  const marker: TUIMarker = {
-    _type: 'marker',
-    _kind: 'reactive',
+  // Create a proper fragment node instead of marker
+  // Fragment is a first-class TUINode that renderers naturally support
+  const fragment: TUINode = {
+    type: 'fragment',
+    props: { _reactive: true },  // Mark as reactive for debugging
     children: [],
   };
 
-  parent.children.push(marker);
+  parent.children.push(fragment);
   // CRITICAL: Set parentNode before effect runs (effects are immediate sync)
   try {
-    marker.parentNode = parent;
+    fragment.parentNode = parent;
   } catch {
     // Object is frozen/sealed, skip parentNode assignment
   }
 
   effect(() => {
     const value = fn();
-    marker.children = [];
+    fragment.children = [];
 
     // Check if value is a descriptor (component not yet executed)
     if (isDescriptor(value)) {
-      const node = withParent(marker.parentNode || parent, () => executeDescriptor(value));
+      const node = withParent(fragment.parentNode || parent, () => executeDescriptor(value));
       if (node) {
         if (Array.isArray(node)) {
-          marker.children.push(...node);
+          fragment.children.push(...node);
         } else {
-          marker.children.push(node);
+          fragment.children.push(node);
         }
       }
-      scheduleNodeUpdate(marker, '');
+      scheduleNodeUpdate(fragment, '');
       // Notify persistent tree builder to rebuild (for persistent renderer)
-      (marker as any).onUpdate?.();
+      (fragment as any).onUpdate?.();
       return undefined;
     }
 
     if (value && typeof value === 'object' && 'type' in value) {
-      marker.children.push(value as TUINode);
-      // Schedule fine-grained update for the marker
-      scheduleNodeUpdate(marker, ''); // Will render the TUINode
+      fragment.children.push(value as TUINode);
+      // Schedule fine-grained update for the fragment
+      scheduleNodeUpdate(fragment, ''); // Will render the TUINode
       // Notify persistent tree builder to rebuild (for persistent renderer)
-      (marker as any).onUpdate?.();
+      (fragment as any).onUpdate?.();
       return undefined;
     }
 
     if (Array.isArray(value)) {
-      marker.children.push(...value);
-      // Schedule fine-grained update for the marker
-      scheduleNodeUpdate(marker, ''); // Will render the array
+      for (const item of value) {
+        // Execute descriptors in arrays (e.g., from array.map() returning <Component />)
+        if (isDescriptor(item)) {
+          const node = withParent(fragment.parentNode || parent, () => executeDescriptor(item));
+          if (node) {
+            if (Array.isArray(node)) {
+              fragment.children.push(...node);
+            } else {
+              fragment.children.push(node);
+            }
+          }
+        } else if (item != null && item !== false) {
+          fragment.children.push(item);
+        }
+      }
+      // Schedule fine-grained update for the fragment
+      scheduleNodeUpdate(fragment, ''); // Will render the array
       // Notify persistent tree builder to rebuild (for persistent renderer)
-      (marker as any).onUpdate?.();
+      (fragment as any).onUpdate?.();
       return undefined;
     }
 
     if (value != null && value !== false) {
       const stringValue = String(value);
-      marker.children.push(stringValue);
-      // Schedule fine-grained update for the marker
-      scheduleNodeUpdate(marker, stringValue);
+      fragment.children.push(stringValue);
+      // Schedule fine-grained update for the fragment
+      scheduleNodeUpdate(fragment, stringValue);
       // Notify persistent tree builder to rebuild (for persistent renderer)
-      (marker as any).onUpdate?.();
+      (fragment as any).onUpdate?.();
     }
 
     return undefined;
@@ -269,12 +295,14 @@ export function appendChild(parent: TUINode, child: unknown): void {
 }
 
 /**
- * Fragment component
+ * Fragment component - groups children without adding a container element.
+ * Like React.Fragment or <></> syntax.
+ *
+ * Fragment nodes are transparent - renderers just iterate their children.
  */
 export function Fragment(props: { children?: unknown }): TUINode {
   const node: TUINode = {
-    type: 'box',
-    tagName: 'fragment',
+    type: 'fragment',  // Proper fragment type, not box
     props: {},
     children: [],
   };

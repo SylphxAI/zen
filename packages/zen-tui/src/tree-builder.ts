@@ -8,6 +8,7 @@
 import { executeDescriptor, isDescriptor } from '@zen/runtime';
 import { createRoot } from '@zen/signal';
 import { TUIElement, type TUITextNode, createElement, createTextNode } from './element.js';
+import { scheduleNodeUpdate } from './render-context.js';
 import type { TUINode } from './types.js';
 
 /**
@@ -35,21 +36,21 @@ export function buildPersistentTree(
     return buildPersistentTree(executed);
   }
 
-  // Handle marker (reactive container)
-  if ('_type' in node && node._type === 'marker') {
-    const marker = node as any;
+  // Handle fragment node (reactive container)
+  if ('type' in node && (node as any).type === 'fragment') {
+    const fragmentNode = node as TUINode;
 
-    // Create a persistent fragment element for this marker
+    // Create a persistent fragment element
     const fragment = new TUIElement('fragment', {}, {});
 
-    // Function to rebuild fragment children from marker
+    // Function to rebuild fragment children
     const rebuildChildren = () => {
       // Clear existing children
       fragment.children = [];
 
-      // Rebuild from marker.children
-      if (marker.children && marker.children.length > 0) {
-        for (const child of marker.children) {
+      // Rebuild from fragmentNode.children
+      if (fragmentNode.children && fragmentNode.children.length > 0) {
+        for (const child of fragmentNode.children) {
           const childElement = buildPersistentTree(child);
           if (childElement) {
             fragment.appendChild(childElement);
@@ -64,8 +65,37 @@ export function buildPersistentTree(
     // Build initial children
     rebuildChildren();
 
-    // Hook into marker updates: when jsx-runtime effect updates marker.children,
+    // Hook into fragment updates: when jsx-runtime effect updates fragment.children,
     // it will call this callback to rebuild our TUIElement tree
+    (fragmentNode as any).onUpdate = rebuildChildren;
+
+    return fragment;
+  }
+
+  // Legacy: Handle deprecated marker (reactive container)
+  if ('_type' in node && (node as any)._type === 'marker') {
+    const marker = node as any;
+
+    // Create a persistent fragment element for this marker
+    const fragment = new TUIElement('fragment', {}, {});
+
+    // Function to rebuild fragment children from marker
+    const rebuildChildren = () => {
+      fragment.children = [];
+
+      if (marker.children && marker.children.length > 0) {
+        for (const child of marker.children) {
+          const childElement = buildPersistentTree(child);
+          if (childElement) {
+            fragment.appendChild(childElement);
+          }
+        }
+      }
+
+      fragment.markDirty();
+    };
+
+    rebuildChildren();
     marker.onUpdate = rebuildChildren;
 
     return fragment;
@@ -110,6 +140,9 @@ export function buildPersistentTree(
                 childrenContainer.appendChild(childElement);
               }
             }
+
+            // Notify renderer that tree has changed
+            scheduleNodeUpdate(childrenContainer, '');
           });
 
           element.effects.add(eff as any);

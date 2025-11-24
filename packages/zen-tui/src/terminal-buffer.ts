@@ -4,8 +4,26 @@
  * Maintains a line-based representation of the terminal screen with ANSI codes preserved.
  */
 
-import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
+import { terminalWidth } from './terminal-width.js';
+
+// Grapheme segmenter for proper Unicode handling (handles emojis, Hindi, Thai, etc.)
+const segmenter = new Intl.Segmenter('en', { granularity: 'grapheme' });
+
+/**
+ * Iterate through a string by grapheme clusters
+ * This correctly handles complex Unicode like:
+ * - Emojis with ZWJ (👨‍👩‍👧)
+ * - Flag emojis (🇺🇸)
+ * - Skin tone modifiers (👋🏻)
+ * - Hindi/Thai combining characters
+ * - Keycap emojis (1️⃣)
+ */
+function* iterateGraphemes(str: string): Generator<string> {
+  for (const { segment } of segmenter.segment(str)) {
+    yield segment;
+  }
+}
 
 export class TerminalBuffer {
   private buffer: string[];
@@ -49,27 +67,26 @@ export class TerminalBuffer {
       // Clip line to maxWidth if specified
       if (maxWidth !== undefined) {
         const strippedLine = stripAnsi(line);
-        const visualWidth = stringWidth(strippedLine);
+        const visualWidth = terminalWidth(strippedLine);
 
         if (visualWidth > maxWidth) {
           // Truncate to maxWidth, preserving ANSI codes
+          // Use grapheme segmenter for proper Unicode handling
           let currentWidth = 0;
           let truncated = '';
           let inAnsiCode = false;
           let ansiCode = '';
 
-          for (let i = 0; i < line.length; i++) {
-            const char = line[i];
-
-            if (char === '\x1b') {
+          for (const grapheme of iterateGraphemes(line)) {
+            if (grapheme === '\x1b') {
               inAnsiCode = true;
-              ansiCode = char;
+              ansiCode = grapheme;
               continue;
             }
 
             if (inAnsiCode) {
-              ansiCode += char;
-              if (char === 'm') {
+              ansiCode += grapheme;
+              if (grapheme === 'm') {
                 inAnsiCode = false;
                 truncated += ansiCode;
                 ansiCode = '';
@@ -77,11 +94,11 @@ export class TerminalBuffer {
               continue;
             }
 
-            const charWidth = stringWidth(char);
-            if (currentWidth + charWidth > maxWidth) break;
+            const graphemeWidth = terminalWidth(grapheme);
+            if (currentWidth + graphemeWidth > maxWidth) break;
 
-            truncated += char;
-            currentWidth += charWidth;
+            truncated += grapheme;
+            currentWidth += graphemeWidth;
           }
 
           line = truncated;
@@ -93,21 +110,50 @@ export class TerminalBuffer {
 
       // Merge new text at position x with existing content
       // We need to preserve content before x and after x + line width
-      const lineWidth = stringWidth(stripAnsi(line));
+      const lineWidth = terminalWidth(stripAnsi(line));
 
       // Build the new line: existing content before x + new text + existing content after
       let newLine = '';
 
       // Add existing content before position x (or spaces if needed)
+      // IMPORTANT: We must walk through existingLine accounting for ANSI codes,
+      // as substring() would cut ANSI codes incorrectly
+      // Use grapheme segmenter for proper Unicode handling
       if (x > 0) {
-        const existingBeforeX = existingLine.substring(0, Math.min(x, existingLine.length));
-        const existingWidth = stringWidth(stripAnsi(existingBeforeX));
+        let visualPos = 0;
+        let inAnsiCode = false;
+        let beforeX = '';
 
-        newLine += existingBeforeX;
+        for (const grapheme of iterateGraphemes(existingLine)) {
+          // Track ANSI codes
+          if (grapheme === '\x1b') {
+            inAnsiCode = true;
+            beforeX += grapheme;
+            continue;
+          }
+
+          if (inAnsiCode) {
+            beforeX += grapheme;
+            if (grapheme === 'm') {
+              inAnsiCode = false;
+            }
+            continue; // ANSI codes don't contribute to visual width
+          }
+
+          // Check if we've reached the target visual position
+          if (visualPos >= x) {
+            break;
+          }
+
+          beforeX += grapheme;
+          visualPos += terminalWidth(grapheme);
+        }
+
+        newLine += beforeX;
 
         // Pad with spaces if existing content doesn't reach position x
-        if (existingWidth < x) {
-          newLine += ' '.repeat(x - existingWidth);
+        if (visualPos < x) {
+          newLine += ' '.repeat(x - visualPos);
         }
       }
 
@@ -116,16 +162,17 @@ export class TerminalBuffer {
 
       // Add existing content after the new text (if any)
       // Need to preserve content that comes after our written text (e.g., right border)
+      // Use grapheme segmenter for proper Unicode handling
       const afterX = x + lineWidth;
-      const existingVisualWidth = stringWidth(stripAnsi(existingLine));
+      const existingVisualWidth = terminalWidth(stripAnsi(existingLine));
 
       if (afterX < existingVisualWidth) {
         // Extract the portion of existingLine that starts at visual position afterX
         // We need to find the actual string index that corresponds to visual position afterX
-        const _strippedLine = stripAnsi(existingLine);
         let visualPos = 0;
         let stringPos = 0;
         let inAnsiCode = false;
+        let lastAnsiStart = -1; // Track start of most recent ANSI sequence
 
         // Walk through existingLine to find where visual position afterX starts
         for (let i = 0; i < existingLine.length; i++) {
@@ -134,6 +181,7 @@ export class TerminalBuffer {
           // Track ANSI codes
           if (char === '\x1b') {
             inAnsiCode = true;
+            lastAnsiStart = i; // Remember where this ANSI sequence started
           }
 
           if (inAnsiCode) {
@@ -145,11 +193,13 @@ export class TerminalBuffer {
 
           // Check if we've reached the target visual position
           if (visualPos >= afterX) {
-            stringPos = i;
+            // Include any preceding ANSI codes that style this character
+            stringPos = lastAnsiStart >= 0 ? lastAnsiStart : i;
             break;
           }
 
-          visualPos += stringWidth(char);
+          visualPos += terminalWidth(char);
+          lastAnsiStart = -1; // Reset after processing a visual character
         }
 
         // Extract everything from stringPos onwards
@@ -162,7 +212,7 @@ export class TerminalBuffer {
       this.buffer[targetY] = newLine;
 
       // Track max visual width (without ANSI codes)
-      const visualWidth = stringWidth(line);
+      const visualWidth = terminalWidth(line);
       maxLineWidth = Math.max(maxLineWidth, visualWidth);
     }
 

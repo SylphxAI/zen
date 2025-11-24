@@ -5,7 +5,7 @@
 
 import { Box, Text, render } from '@zen/tui';
 
-const output = render(
+const _output = render(
   <Box style={{ width: 60, height: 15, flexDirection: 'column' }}>
     <Text style={{ bold: true }}>Simple Window Test</Text>
 
@@ -42,5 +42,3 @@ const output = render(
     </Box>
   </Box>,
 );
-
-console.log(output);

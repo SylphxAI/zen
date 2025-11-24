@@ -3,7 +3,7 @@
  * Simplified window test without emoji
  */
 
-import { Box, Text, renderApp, useInput, useTerminalSize, FullscreenLayout } from '@zen/tui';
+import { Box, FullscreenLayout, Text, renderApp, useInput, useTerminalSize } from '@zen/tui';
 
 function App() {
   const { width, height } = useTerminalSize();

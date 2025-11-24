@@ -404,8 +404,8 @@ render(() => <ZenOS />);
 
 ### Phase 1: Unified Render API
 - [x] Single `render()` function
-- [ ] Remove `renderToTerminal`, `renderToTerminalReactive`
-- [ ] Remove render options (`fullscreen`, `mouse`)
+- [x] Remove `renderToTerminal`, `renderToTerminalReactive`
+- [x] Remove render options (`fullscreen`, `mouse`)
 
 ### Phase 2: Layout Components
 - [ ] `FullscreenLayout` - alternate screen buffer

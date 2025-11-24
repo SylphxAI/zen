@@ -171,24 +171,26 @@ export class TerminalBuffer {
 
       if (!replace && afterX < existingVisualWidth) {
         // Extract the portion of existingLine that starts at visual position afterX
-        // We need to find the actual string index that corresponds to visual position afterX
+        // Use grapheme iteration to properly handle multi-code-unit characters like emojis
         let visualPos = 0;
         let stringPos = 0;
         let inAnsiCode = false;
-        let lastAnsiStart = -1; // Track start of most recent ANSI sequence
+        let pendingAnsi = ''; // Accumulate ANSI codes to include with next visible content
 
-        // Walk through existingLine to find where visual position afterX starts
-        for (let i = 0; i < existingLine.length; i++) {
-          const char = existingLine[i];
-
+        // Walk through existingLine by graphemes to find where visual position afterX starts
+        for (const grapheme of iterateGraphemes(existingLine)) {
           // Track ANSI codes
-          if (char === '\x1b') {
+          if (grapheme === '\x1b') {
             inAnsiCode = true;
-            lastAnsiStart = i; // Remember where this ANSI sequence started
+            pendingAnsi += grapheme;
+            stringPos += grapheme.length;
+            continue;
           }
 
           if (inAnsiCode) {
-            if (char === 'm') {
+            pendingAnsi += grapheme;
+            stringPos += grapheme.length;
+            if (grapheme === 'm') {
               inAnsiCode = false;
             }
             continue; // ANSI codes don't contribute to visual width
@@ -196,18 +198,14 @@ export class TerminalBuffer {
 
           // Check if we've reached the target visual position
           if (visualPos >= afterX) {
-            // Include any preceding ANSI codes that style this character
-            stringPos = lastAnsiStart >= 0 ? lastAnsiStart : i;
+            // Include pending ANSI codes with the remaining content
+            newLine += pendingAnsi + existingLine.substring(stringPos);
             break;
           }
 
-          visualPos += terminalWidth(char);
-          lastAnsiStart = -1; // Reset after processing a visual character
-        }
-
-        // Extract everything from stringPos onwards
-        if (stringPos < existingLine.length) {
-          newLine += existingLine.substring(stringPos);
+          visualPos += terminalWidth(grapheme);
+          stringPos += grapheme.length;
+          pendingAnsi = ''; // Clear pending ANSI after processing a visual character
         }
       }
 

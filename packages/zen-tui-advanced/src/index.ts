@@ -58,10 +58,11 @@ export { TextArea, type TextAreaProps } from './input/TextArea.js';
 // ============================================================================
 // Navigation - Menu and navigation
 // ============================================================================
-// export { MenuBar, type MenuBarProps } from './navigation/MenuBar.js';
-// export { Menu, type MenuProps } from './navigation/Menu.js';
-// export { MenuItem, type MenuItemProps } from './navigation/MenuItem.js';
-// export { ContextMenu, type ContextMenuProps } from './navigation/ContextMenu.js';
+export {
+  MenuBar,
+  type MenuBarProps,
+  type MenuItemConfig,
+} from './navigation/MenuBar.js';
 
 // ============================================================================
 // Chart - Data visualization

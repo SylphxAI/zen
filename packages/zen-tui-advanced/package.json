@@ -21,16 +21,7 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
-  "keywords": [
-    "zen",
-    "tui",
-    "terminal",
-    "cli",
-    "advanced",
-    "window",
-    "splitter",
-    "fullscreen"
-  ],
+  "keywords": ["zen", "tui", "terminal", "cli", "advanced", "window", "splitter", "fullscreen"],
   "author": "Zen Team",
   "license": "MIT",
   "repository": {

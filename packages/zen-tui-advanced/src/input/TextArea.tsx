@@ -318,6 +318,11 @@ export function TextArea(props: TextAreaProps) {
     { isActive: isFocused, priority: 10 },
   );
 
+  // Calculate available content width (inside border, minus line numbers)
+  const lineNumberWidth = showLineNumbers ? 5 : 0; // "   1 " = 5 chars
+  const borderWidth = border ? 2 : 0; // left + right border
+  const contentWidth = cols - borderWidth - lineNumberWidth;
+
   // Render
   return (
     <Box
@@ -327,6 +332,7 @@ export function TextArea(props: TextAreaProps) {
         height: rows + (border ? 2 : 0),
         borderStyle: border ? 'single' : undefined,
         borderColor: isFocused ? 'cyan' : 'gray',
+        overflow: 'hidden',
       }}
     >
       {() => {
@@ -334,7 +340,7 @@ export function TextArea(props: TextAreaProps) {
         const isEmpty = currentValue.value === '';
 
         if (isEmpty && placeholder) {
-          return <Text style={{ dim: true }}>{placeholder}</Text>;
+          return <Text style={{ dim: true }}>{placeholder.slice(0, contentWidth)}</Text>;
         }
 
         return displayLines.map((line, index) => {
@@ -342,12 +348,25 @@ export function TextArea(props: TextAreaProps) {
           const isCursorRow = globalRow === cursorRow.value;
           const lineNumber = showLineNumbers ? `${`${globalRow + 1}`.padStart(4, ' ')} ` : '';
 
+          // Calculate horizontal scroll offset for cursor visibility
+          let hScrollOffset = 0;
+          if (isCursorRow) {
+            const col = cursorCol.value;
+            // If cursor is beyond visible area, scroll horizontally
+            if (col >= contentWidth) {
+              hScrollOffset = col - contentWidth + 1;
+            }
+          }
+
+          // Get visible portion of line with horizontal scroll
+          const visibleLine = line.slice(hScrollOffset, hScrollOffset + contentWidth);
+
           // For cursor row, render with inline cursor highlight
           if (isCursorRow && isFocused) {
-            const col = cursorCol.value;
-            const before = line.slice(0, col);
-            const cursorChar = line[col] || ' ';
-            const after = line.slice(col + 1);
+            const col = cursorCol.value - hScrollOffset;
+            const before = visibleLine.slice(0, col);
+            const cursorChar = visibleLine[col] || ' ';
+            const after = visibleLine.slice(col + 1);
 
             // Use nested Text for inline styling - architecturally correct pattern
             return (
@@ -360,11 +379,11 @@ export function TextArea(props: TextAreaProps) {
             );
           }
 
-          // Non-cursor rows
+          // Non-cursor rows - truncate to fit
           return (
             <Text key={globalRow}>
               {showLineNumbers && <Text style={{ dim: true }}>{lineNumber}</Text>}
-              {line || ' '}
+              {visibleLine || ' '}
             </Text>
           );
         });

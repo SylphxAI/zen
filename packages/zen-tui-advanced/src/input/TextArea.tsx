@@ -73,39 +73,109 @@ export function TextArea(props: TextAreaProps) {
     cols = 60,
     placeholder = '',
     showLineNumbers = false,
-    // wrap is accepted but not implemented yet
+    wrap = true,
     readOnly = false,
     isFocused = true,
     border = true,
   } = props;
 
+  // Calculate available content width (inside border, minus line numbers)
+  const lineNumberWidth = showLineNumbers ? 5 : 0; // "   1 " = 5 chars
+  const borderWidth = border ? 2 : 0; // left + right border
+  const contentWidth = Math.max(1, cols - borderWidth - lineNumberWidth);
+
   // Internal state
   const internalValue = signal(externalValue);
-  const cursorRow = signal(0);
-  const cursorCol = signal(0);
-  const scrollOffset = signal(0);
+  const cursorRow = signal(0); // Logical row (actual line in text)
+  const cursorCol = signal(0); // Logical column (position in actual line)
+  const scrollOffset = signal(0); // Visual line scroll offset
 
   // Always use internal value for display (supports immediate updates)
-  // Internal value is synced from external value on mount
   const currentValue = computed(() => internalValue.value);
 
-  // Split text into lines
-  const lines = computed(() => {
+  // Split text into logical lines (actual newlines)
+  const logicalLines = computed(() => {
     const text = currentValue.value;
     return text ? text.split('\n') : [''];
   });
 
-  // Visible lines with scroll offset
-  const visibleLines = computed(() => {
-    const allLines = lines.value;
+  // Wrap logical lines into visual lines for display
+  // Each visual line tracks: { text, logicalRow, startCol }
+  interface VisualLine {
+    text: string;
+    logicalRow: number;
+    startCol: number;
+  }
+
+  const visualLines = computed((): VisualLine[] => {
+    const logical = logicalLines.value;
+    const result: VisualLine[] = [];
+
+    for (let logicalRow = 0; logicalRow < logical.length; logicalRow++) {
+      const line = logical[logicalRow];
+
+      if (!wrap || line.length <= contentWidth) {
+        // No wrapping needed - single visual line
+        result.push({ text: line, logicalRow, startCol: 0 });
+      } else {
+        // Wrap long line into multiple visual lines
+        let startCol = 0;
+        while (startCol < line.length) {
+          const chunk = line.slice(startCol, startCol + contentWidth);
+          result.push({ text: chunk, logicalRow, startCol });
+          startCol += contentWidth;
+        }
+        // Handle empty trailing chunk (cursor at end of wrapped line)
+        if (line.length > 0 && line.length % contentWidth === 0) {
+          result.push({ text: '', logicalRow, startCol: line.length });
+        }
+      }
+    }
+
+    return result;
+  });
+
+  // Find visual line index for current cursor position
+  const cursorVisualRow = computed(() => {
+    const visual = visualLines.value;
+    const logRow = cursorRow.value;
+    const logCol = cursorCol.value;
+
+    for (let i = 0; i < visual.length; i++) {
+      const vl = visual[i];
+      if (vl.logicalRow === logRow) {
+        // Check if cursor is in this visual line's range
+        const endCol = vl.startCol + (vl.text.length || contentWidth);
+        if (logCol >= vl.startCol && logCol < endCol) {
+          return i;
+        }
+        // Cursor at end of line
+        if (logCol === vl.startCol + vl.text.length && i + 1 < visual.length) {
+          const next = visual[i + 1];
+          if (next.logicalRow !== logRow) {
+            return i; // Last visual line of this logical line
+          }
+        }
+      }
+    }
+    // Fallback: find last visual line for this logical row
+    for (let i = visual.length - 1; i >= 0; i--) {
+      if (visual[i].logicalRow === logRow) return i;
+    }
+    return 0;
+  });
+
+  // Visible visual lines with scroll offset
+  const visibleVisualLines = computed(() => {
+    const all = visualLines.value;
     const start = scrollOffset.value;
-    const end = Math.min(start + rows, allLines.length);
-    return allLines.slice(start, end);
+    const end = Math.min(start + rows, all.length);
+    return all.slice(start, end);
   });
 
   // Update cursor position constraints
   const constrainCursor = () => {
-    const currentLines = lines.value;
+    const currentLines = logicalLines.value;
     const maxRow = Math.max(0, currentLines.length - 1);
     const currentRow = Math.min(cursorRow.value, maxRow);
     const currentLine = currentLines[currentRow] || '';
@@ -114,11 +184,12 @@ export function TextArea(props: TextAreaProps) {
     cursorRow.value = currentRow;
     cursorCol.value = Math.min(cursorCol.value, maxCol);
 
-    // Auto-scroll to keep cursor visible
-    if (currentRow < scrollOffset.value) {
-      scrollOffset.value = currentRow;
-    } else if (currentRow >= scrollOffset.value + rows) {
-      scrollOffset.value = currentRow - rows + 1;
+    // Auto-scroll to keep cursor visible (using visual lines)
+    const visualRow = cursorVisualRow.value;
+    if (visualRow < scrollOffset.value) {
+      scrollOffset.value = visualRow;
+    } else if (visualRow >= scrollOffset.value + rows) {
+      scrollOffset.value = visualRow - rows + 1;
     }
   };
 
@@ -126,7 +197,7 @@ export function TextArea(props: TextAreaProps) {
   const insertText = (text: string) => {
     if (readOnly) return;
 
-    const currentLines = lines.value;
+    const currentLines = logicalLines.value;
     const row = cursorRow.value;
     const col = cursorCol.value;
     const line = currentLines[row] || '';
@@ -149,7 +220,7 @@ export function TextArea(props: TextAreaProps) {
   const deleteChar = (direction: 'forward' | 'backward') => {
     if (readOnly) return;
 
-    const currentLines = [...lines.value];
+    const currentLines = [...logicalLines.value];
     const row = cursorRow.value;
     const col = cursorCol.value;
     const line = currentLines[row] || '';
@@ -205,7 +276,7 @@ export function TextArea(props: TextAreaProps) {
   const insertNewline = () => {
     if (readOnly) return;
 
-    const currentLines = [...lines.value];
+    const currentLines = [...logicalLines.value];
     const row = cursorRow.value;
     const col = cursorCol.value;
     const line = currentLines[row] || '';
@@ -238,7 +309,7 @@ export function TextArea(props: TextAreaProps) {
     (input, key) => {
       if (!isFocused || readOnly) return false;
 
-      const currentLines = lines.value;
+      const currentLines = logicalLines.value;
 
       // Arrow keys - cursor movement
       if (key.upArrow) {
@@ -318,11 +389,6 @@ export function TextArea(props: TextAreaProps) {
     { isActive: isFocused, priority: 10 },
   );
 
-  // Calculate available content width (inside border, minus line numbers)
-  const lineNumberWidth = showLineNumbers ? 5 : 0; // "   1 " = 5 chars
-  const borderWidth = border ? 2 : 0; // left + right border
-  const contentWidth = cols - borderWidth - lineNumberWidth;
-
   // Render
   return (
     <Box
@@ -336,41 +402,38 @@ export function TextArea(props: TextAreaProps) {
       }}
     >
       {() => {
-        const displayLines = visibleLines.value;
+        const displayLines = visibleVisualLines.value;
         const isEmpty = currentValue.value === '';
 
         if (isEmpty && placeholder) {
           return <Text style={{ dim: true }}>{placeholder.slice(0, contentWidth)}</Text>;
         }
 
-        return displayLines.map((line, index) => {
-          const globalRow = scrollOffset.value + index;
-          const isCursorRow = globalRow === cursorRow.value;
-          const lineNumber = showLineNumbers ? `${`${globalRow + 1}`.padStart(4, ' ')} ` : '';
+        return displayLines.map((vl, index) => {
+          const visualIndex = scrollOffset.value + index;
+          // Check if cursor is on this visual line
+          const isCursorLine =
+            vl.logicalRow === cursorRow.value &&
+            cursorCol.value >= vl.startCol &&
+            cursorCol.value <= vl.startCol + vl.text.length;
 
-          // Calculate horizontal scroll offset for cursor visibility
-          let hScrollOffset = 0;
-          if (isCursorRow) {
-            const col = cursorCol.value;
-            // If cursor is beyond visible area, scroll horizontally
-            if (col >= contentWidth) {
-              hScrollOffset = col - contentWidth + 1;
-            }
-          }
+          // Line numbers show the logical row number (only on first visual line of each logical line)
+          const isFirstVisualLine = vl.startCol === 0;
+          const lineNumber = showLineNumbers
+            ? isFirstVisualLine
+              ? `${`${vl.logicalRow + 1}`.padStart(4, ' ')} `
+              : '     ' // continuation lines get blank line number
+            : '';
 
-          // Get visible portion of line with horizontal scroll
-          const visibleLine = line.slice(hScrollOffset, hScrollOffset + contentWidth);
+          // For cursor line, render with inline cursor highlight
+          if (isCursorLine && isFocused) {
+            const colInVisual = cursorCol.value - vl.startCol;
+            const before = vl.text.slice(0, colInVisual);
+            const cursorChar = vl.text[colInVisual] || ' ';
+            const after = vl.text.slice(colInVisual + 1);
 
-          // For cursor row, render with inline cursor highlight
-          if (isCursorRow && isFocused) {
-            const col = cursorCol.value - hScrollOffset;
-            const before = visibleLine.slice(0, col);
-            const cursorChar = visibleLine[col] || ' ';
-            const after = visibleLine.slice(col + 1);
-
-            // Use nested Text for inline styling - architecturally correct pattern
             return (
-              <Text key={globalRow}>
+              <Text key={visualIndex}>
                 {showLineNumbers && <Text style={{ dim: true }}>{lineNumber}</Text>}
                 {before}
                 <Text style={{ inverse: true }}>{cursorChar}</Text>
@@ -379,26 +442,28 @@ export function TextArea(props: TextAreaProps) {
             );
           }
 
-          // Non-cursor rows - truncate to fit
+          // Non-cursor rows
           return (
-            <Text key={globalRow}>
+            <Text key={visualIndex}>
               {showLineNumbers && <Text style={{ dim: true }}>{lineNumber}</Text>}
-              {visibleLine || ' '}
+              {vl.text || ' '}
             </Text>
           );
         });
       }}
 
       {/* Scroll indicator */}
-      {lines.value.length > rows && (
-        <Box style={{ marginTop: 1 }}>
-          <Text style={{ dim: true }}>
-            {() =>
-              `Lines ${scrollOffset.value + 1}-${Math.min(scrollOffset.value + rows, lines.value.length)} of ${lines.value.length}`
-            }
-          </Text>
-        </Box>
-      )}
+      {() => {
+        const totalVisualLines = visualLines.value.length;
+        if (totalVisualLines <= rows) return null;
+        return (
+          <Box style={{ marginTop: 1 }}>
+            <Text style={{ dim: true }}>
+              {`Lines ${scrollOffset.value + 1}-${Math.min(scrollOffset.value + rows, totalVisualLines)} of ${totalVisualLines}`}
+            </Text>
+          </Box>
+        );
+      }}
     </Box>
   );
 }

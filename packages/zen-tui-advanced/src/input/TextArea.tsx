@@ -2,16 +2,19 @@
 /**
  * TextArea Component
  *
- * Multi-line text editor with scrolling, selection, and editing support.
- * Essential for commit messages, file editing, form inputs in TUI apps.
+ * Simple multi-line text input for TUI applications.
+ * Similar to HTML <textarea> - for general text input, NOT a code editor.
  *
  * Features:
  * - Multi-line text editing
  * - Cursor movement (arrows, home/end, page up/down)
- * - Text selection and clipboard operations
- * - Line wrapping support
- * - Scrolling for large content
- * - Line numbers (optional)
+ * - Soft text wrapping (default on)
+ * - Keyboard scrolling for large content
+ *
+ * NOT included (use a CodeEditor component for these):
+ * - Line numbers (available as opt-in prop, but off by default)
+ * - Syntax highlighting
+ * - Mouse scroll (future: opt-in via MouseProvider context)
  *
  * @example
  * ```tsx
@@ -450,19 +453,6 @@ export function TextArea(props: TextAreaProps) {
             </Text>
           );
         });
-      }}
-
-      {/* Scroll indicator */}
-      {() => {
-        const totalVisualLines = visualLines.value.length;
-        if (totalVisualLines <= rows) return null;
-        return (
-          <Box style={{ marginTop: 1 }}>
-            <Text style={{ dim: true }}>
-              {`Lines ${scrollOffset.value + 1}-${Math.min(scrollOffset.value + rows, totalVisualLines)} of ${totalVisualLines}`}
-            </Text>
-          </Box>
-        );
       }}
     </Box>
   );

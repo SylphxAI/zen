@@ -76,13 +76,13 @@ export function List<T = unknown>(props: ListProps<T>) {
   } = props;
 
   // Internal state for selection
-  const internalSelectedIndex = signal(externalSelectedIndex ?? -1);
+  // Note: In @zen/tui, props are static (captured at render time), so we always
+  // use internal state. The externalSelectedIndex prop is only the INITIAL value.
+  const internalSelectedIndex = signal(externalSelectedIndex ?? 0);
   const scrollOffset = signal(0);
 
-  // Use external selection if provided, otherwise use internal
-  const selectedIndex = computed(() =>
-    externalSelectedIndex !== undefined ? externalSelectedIndex : internalSelectedIndex.value,
-  );
+  // Always use internal state (props don't update reactively in @zen/tui)
+  const selectedIndex = computed(() => internalSelectedIndex.value);
 
   // Calculate visible window
   const visibleLimit = limit ?? items.length;
@@ -103,9 +103,7 @@ export function List<T = unknown>(props: ListProps<T>) {
       // Move up
       if (key.upArrow || input === 'k') {
         const newIndex = Math.max(0, currentIndex - 1);
-        if (externalSelectedIndex === undefined) {
-          internalSelectedIndex.value = newIndex;
-        }
+        internalSelectedIndex.value = newIndex;
 
         // Scroll up if needed
         if (limit && newIndex < scrollOffset.value) {
@@ -122,9 +120,7 @@ export function List<T = unknown>(props: ListProps<T>) {
       // Move down
       if (key.downArrow || input === 'j') {
         const newIndex = Math.min(items.length - 1, currentIndex + 1);
-        if (externalSelectedIndex === undefined) {
-          internalSelectedIndex.value = newIndex;
-        }
+        internalSelectedIndex.value = newIndex;
 
         // Scroll down if needed
         if (limit && newIndex >= scrollOffset.value + visibleLimit) {
@@ -150,9 +146,7 @@ export function List<T = unknown>(props: ListProps<T>) {
       // Page up
       if (key.pageUp && limit) {
         const newIndex = Math.max(0, currentIndex - visibleLimit);
-        if (externalSelectedIndex === undefined) {
-          internalSelectedIndex.value = newIndex;
-        }
+        internalSelectedIndex.value = newIndex;
         scrollOffset.value = Math.max(0, scrollOffset.value - visibleLimit);
         if (onSelect) {
           onSelect(items[newIndex], newIndex);
@@ -163,11 +157,9 @@ export function List<T = unknown>(props: ListProps<T>) {
       // Page down
       if (key.pageDown && limit) {
         const newIndex = Math.min(items.length - 1, currentIndex + visibleLimit);
-        if (externalSelectedIndex === undefined) {
-          internalSelectedIndex.value = newIndex;
-        }
+        internalSelectedIndex.value = newIndex;
         scrollOffset.value = Math.min(
-          items.length - visibleLimit,
+          Math.max(0, items.length - visibleLimit),
           scrollOffset.value + visibleLimit,
         );
         if (onSelect) {
@@ -178,9 +170,7 @@ export function List<T = unknown>(props: ListProps<T>) {
 
       // Home
       if (key.home) {
-        if (externalSelectedIndex === undefined) {
-          internalSelectedIndex.value = 0;
-        }
+        internalSelectedIndex.value = 0;
         scrollOffset.value = 0;
         if (onSelect) {
           onSelect(items[0], 0);
@@ -191,9 +181,7 @@ export function List<T = unknown>(props: ListProps<T>) {
       // End
       if (key.end) {
         const lastIndex = items.length - 1;
-        if (externalSelectedIndex === undefined) {
-          internalSelectedIndex.value = lastIndex;
-        }
+        internalSelectedIndex.value = lastIndex;
         scrollOffset.value = Math.max(0, items.length - visibleLimit);
         if (onSelect) {
           onSelect(items[lastIndex], lastIndex);

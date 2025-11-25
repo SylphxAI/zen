@@ -221,8 +221,8 @@ export function dispatchInput(input: string): void {
   // which would cause infinite iteration if we iterate the Set directly
   const handlers = [...inputHandlers];
 
-  for (const { handler } of handlers) {
-    const consumed = handler(input, key);
+  for (let i = 0; i < handlers.length; i++) {
+    const consumed = handlers[i].handler(input, key);
     if (consumed === true) {
       // Event was consumed, stop propagation
       return;

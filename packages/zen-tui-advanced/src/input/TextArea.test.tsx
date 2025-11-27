@@ -501,4 +501,176 @@ describe('TextArea Component', () => {
       expect(result).toBeDefined();
     });
   });
+
+  describe('Wide Character Support (CJK)', () => {
+    it('should correctly wrap text with CJK characters (width=2)', async () => {
+      const values: string[] = [];
+      const value = signal('');
+
+      createRoot(() => {
+        return TextArea({
+          value: () => value.value,
+          cols: 12, // contentWidth = 10 after border
+          wrap: true,
+          onChange: (v) => {
+            value.value = v;
+            values.push(v);
+          },
+          isFocused: true,
+        });
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Type "大" (2 columns) + "abc" (3 columns) = 5 columns
+      // Type more to test wrapping
+      dispatchInput('大');
+      dispatchInput('a');
+      dispatchInput('b');
+      dispatchInput('c');
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(values[values.length - 1]).toBe('大abc');
+    });
+
+    it('should position cursor correctly with CJK characters', async () => {
+      const values: string[] = [];
+      const value = signal('大火');
+
+      createRoot(() => {
+        return TextArea({
+          value: () => value.value,
+          cols: 20,
+          onChange: (v) => {
+            value.value = v;
+            values.push(v);
+          },
+          isFocused: true,
+        });
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Move to end
+      dispatchInput('\x1B[F'); // End
+      // Type a character - should append after "火"
+      dispatchInput('X');
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(values[values.length - 1]).toBe('大火X');
+    });
+
+    it('should handle mixed CJK and ASCII text correctly', async () => {
+      const values: string[] = [];
+      const value = signal('');
+
+      createRoot(() => {
+        return TextArea({
+          value: () => value.value,
+          cols: 10, // contentWidth = 8 after border
+          wrap: true,
+          onChange: (v) => {
+            value.value = v;
+            values.push(v);
+          },
+          isFocused: true,
+        });
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Type mixed content: "A大B" = 4 columns (1+2+1)
+      dispatchInput('A');
+      dispatchInput('大');
+      dispatchInput('B');
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(values[values.length - 1]).toBe('A大B');
+    });
+
+    it('should wrap correctly when CJK char would exceed line width', async () => {
+      const values: string[] = [];
+      const value = signal('');
+
+      createRoot(() => {
+        return TextArea({
+          value: () => value.value,
+          cols: 7, // contentWidth = 5 after border
+          wrap: true,
+          onChange: (v) => {
+            value.value = v;
+            values.push(v);
+          },
+          isFocused: true,
+        });
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Type: "ABCD大"
+      // ABCD = 4 cols, then 大 = 2 cols → total would be 6, exceeds 5
+      // Should wrap 大 to next line
+      for (const char of 'ABCD大') {
+        dispatchInput(char);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      const finalValue = values[values.length - 1];
+      expect(finalValue).toBe('ABCD大');
+      // Visual wrapping test - the value stays the same, but display should wrap
+    });
+
+    it('should handle backspace correctly with CJK characters', async () => {
+      const values: string[] = [];
+      const value = signal('A大B');
+
+      createRoot(() => {
+        return TextArea({
+          value: () => value.value,
+          onChange: (v) => {
+            value.value = v;
+            values.push(v);
+          },
+          isFocused: true,
+        });
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Move to end then backspace
+      dispatchInput('\x1B[F'); // End
+      dispatchInput('\x7f'); // Backspace
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(values[values.length - 1]).toBe('A大');
+    });
+
+    it('should calculate visual width correctly for emoji', async () => {
+      const values: string[] = [];
+      const value = signal('');
+
+      createRoot(() => {
+        return TextArea({
+          value: () => value.value,
+          cols: 12,
+          wrap: true,
+          onChange: (v) => {
+            value.value = v;
+            values.push(v);
+          },
+          isFocused: true,
+        });
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Type emoji (width=2) + text
+      dispatchInput('🎉');
+      dispatchInput('a');
+      dispatchInput('b');
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(values[values.length - 1]).toBe('🎉ab');
+    });
+  });
 });

@@ -210,5 +210,129 @@ export function terminalWidthStripped(text: string): number {
   return stringWidth(stripped);
 }
 
+/**
+ * Slice a string to fit within a maximum visual width.
+ * Returns { text, width, charCount } where:
+ * - text: the sliced string
+ * - width: the actual visual width of the sliced string
+ * - charCount: the number of characters (not graphemes) included
+ *
+ * This properly handles wide characters (CJK, emoji) that take 2 columns.
+ */
+export function sliceByWidth(
+  text: string,
+  maxWidth: number,
+): { text: string; width: number; charCount: number } {
+  let width = 0;
+  let result = '';
+
+  for (const grapheme of graphemeClusters(text)) {
+    const gWidth = graphemeWidth(grapheme);
+    if (width + gWidth > maxWidth) {
+      break;
+    }
+    width += gWidth;
+    result += grapheme;
+  }
+
+  return { text: result, width, charCount: result.length };
+}
+
+/**
+ * Slice a string starting from a visual column offset.
+ * Returns the remaining string after skipping `startColumn` visual columns.
+ */
+export function sliceFromColumn(text: string, startColumn: number): string {
+  let currentCol = 0;
+  let result = '';
+  let started = false;
+
+  for (const grapheme of graphemeClusters(text)) {
+    if (started) {
+      result += grapheme;
+    } else {
+      const gWidth = graphemeWidth(grapheme);
+      if (currentCol + gWidth > startColumn) {
+        // This grapheme overlaps the start column
+        started = true;
+        result += grapheme;
+      }
+      currentCol += gWidth;
+      if (currentCol >= startColumn && !started) {
+        started = true;
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Convert a character index to a visual column position.
+ * Character index is the position in the string (0-based).
+ * Visual column is the terminal column where that character appears.
+ */
+export function charIndexToColumn(text: string, charIndex: number): number {
+  let column = 0;
+  let index = 0;
+
+  for (const grapheme of graphemeClusters(text)) {
+    if (index >= charIndex) break;
+    column += graphemeWidth(grapheme);
+    index += grapheme.length;
+  }
+
+  return column;
+}
+
+/**
+ * Convert a visual column position to a character index.
+ * Returns the character index at or after the given column.
+ */
+export function columnToCharIndex(text: string, column: number): number {
+  let currentCol = 0;
+  let charIndex = 0;
+
+  for (const grapheme of graphemeClusters(text)) {
+    if (currentCol >= column) break;
+    const gWidth = graphemeWidth(grapheme);
+    currentCol += gWidth;
+    charIndex += grapheme.length;
+  }
+
+  return charIndex;
+}
+
+/**
+ * Get an array of grapheme clusters from a string.
+ * Each element is a single grapheme (which may be multiple code points).
+ */
+export function getGraphemes(text: string): string[] {
+  return [...graphemeClusters(text)];
+}
+
+/**
+ * Get the grapheme at a specific character index.
+ * Returns the entire grapheme cluster that contains the character at `charIndex`.
+ */
+export function graphemeAt(text: string, charIndex: number): string {
+  let currentIndex = 0;
+  for (const grapheme of graphemeClusters(text)) {
+    if (charIndex >= currentIndex && charIndex < currentIndex + grapheme.length) {
+      return grapheme;
+    }
+    currentIndex += grapheme.length;
+  }
+  return '';
+}
+
+/**
+ * Get the visual width of a grapheme at a specific character index.
+ */
+export function graphemeWidthAt(text: string, charIndex: number): number {
+  const grapheme = graphemeAt(text, charIndex);
+  return grapheme ? graphemeWidth(grapheme) : 0;
+}
+
 // Export as default
 export default terminalWidth;

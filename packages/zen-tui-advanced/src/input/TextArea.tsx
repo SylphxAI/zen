@@ -34,9 +34,15 @@ import {
   type MaybeReactive,
   Text,
   batch,
+  charIndexToColumn,
+  columnToCharIndex,
   computed,
+  getGraphemes,
+  graphemeAt,
   resolve,
   signal,
+  sliceByWidth,
+  terminalWidth,
   useFocus,
   useInput,
 } from '@zen/tui';
@@ -182,11 +188,14 @@ export function TextArea(props: TextAreaProps) {
   });
 
   // Wrap logical lines into visual lines for display
-  // Each visual line tracks: { text, logicalRow, startCol }
+  // Each visual line tracks: { text, logicalRow, startCol, startVisualCol }
+  // startCol = character index in logical line
+  // startVisualCol = visual column (terminal columns) where this line starts
   interface VisualLine {
     text: string;
     logicalRow: number;
-    startCol: number;
+    startCol: number; // character index
+    startVisualCol: number; // visual column offset
   }
 
   const visualLines = computed((): VisualLine[] => {
@@ -195,21 +204,56 @@ export function TextArea(props: TextAreaProps) {
 
     for (let logicalRow = 0; logicalRow < logical.length; logicalRow++) {
       const line = logical[logicalRow];
+      const lineWidth = terminalWidth(line);
 
-      if (!wrap || line.length <= contentWidth) {
+      if (!wrap || lineWidth <= contentWidth) {
         // No wrapping needed - single visual line
-        result.push({ text: line, logicalRow, startCol: 0 });
+        result.push({ text: line, logicalRow, startCol: 0, startVisualCol: 0 });
       } else {
-        // Wrap long line into multiple visual lines
+        // Wrap long line into multiple visual lines using visual width
         let startCol = 0;
+        let startVisualCol = 0;
+        const graphemes = getGraphemes(line);
+
         while (startCol < line.length) {
-          const chunk = line.slice(startCol, startCol + contentWidth);
-          result.push({ text: chunk, logicalRow, startCol });
-          startCol += contentWidth;
+          // Slice by visual width from current position
+          const remaining = line.slice(startCol);
+          const sliced = sliceByWidth(remaining, contentWidth);
+
+          if (sliced.charCount === 0) {
+            // Edge case: single wide character wider than contentWidth
+            // Take at least one grapheme to avoid infinite loop
+            const firstGrapheme = graphemes.find(
+              (_, i) =>
+                graphemes.slice(0, i).reduce((sum, g) => sum + g.length, 0) >= startCol,
+            );
+            if (firstGrapheme) {
+              result.push({
+                text: firstGrapheme,
+                logicalRow,
+                startCol,
+                startVisualCol,
+              });
+              startCol += firstGrapheme.length;
+              startVisualCol += terminalWidth(firstGrapheme);
+            } else {
+              break;
+            }
+          } else {
+            result.push({
+              text: sliced.text,
+              logicalRow,
+              startCol,
+              startVisualCol,
+            });
+            startCol += sliced.charCount;
+            startVisualCol += sliced.width;
+          }
         }
+
         // Handle empty trailing chunk (cursor at end of wrapped line)
-        if (line.length > 0 && line.length % contentWidth === 0) {
-          result.push({ text: '', logicalRow, startCol: line.length });
+        if (line.length > 0 && startCol === line.length && startVisualCol % contentWidth === 0) {
+          result.push({ text: '', logicalRow, startCol: line.length, startVisualCol });
         }
       }
     }
@@ -303,7 +347,7 @@ export function TextArea(props: TextAreaProps) {
     constrainCursor();
   };
 
-  // Delete character at cursor
+  // Delete grapheme at cursor (handles multi-codepoint characters like emoji)
   const deleteChar = (direction: 'forward' | 'backward') => {
     if (readOnly) return;
 
@@ -317,10 +361,23 @@ export function TextArea(props: TextAreaProps) {
 
     if (direction === 'backward') {
       if (col > 0) {
-        // Delete character before cursor
-        const newLine = line.slice(0, col - 1) + line.slice(col);
+        // Delete grapheme before cursor (not just one character)
+        const graphemes = getGraphemes(line);
+        let charIndex = 0;
+        let prevCharIndex = 0;
+        let graphemeToDelete = '';
+
+        for (const g of graphemes) {
+          if (charIndex >= col) break;
+          prevCharIndex = charIndex;
+          graphemeToDelete = g;
+          charIndex += g.length;
+        }
+
+        // Delete the grapheme by reconstructing the line
+        const newLine = line.slice(0, prevCharIndex) + line.slice(prevCharIndex + graphemeToDelete.length);
         currentLines[row] = newLine;
-        newCol = col - 1;
+        newCol = prevCharIndex;
       } else if (row > 0) {
         // Merge with previous line
         const prevLine = currentLines[row - 1];
@@ -332,8 +389,23 @@ export function TextArea(props: TextAreaProps) {
     } else {
       // forward
       if (col < line.length) {
-        // Delete character at cursor
-        const newLine = line.slice(0, col) + line.slice(col + 1);
+        // Delete grapheme at cursor (not just one character)
+        const graphemes = getGraphemes(line);
+        let charIndex = 0;
+        let graphemeToDelete = '';
+        let graphemeStartIndex = col;
+
+        for (const g of graphemes) {
+          if (charIndex >= col) {
+            graphemeToDelete = g;
+            graphemeStartIndex = charIndex;
+            break;
+          }
+          charIndex += g.length;
+        }
+
+        // Delete the grapheme by reconstructing the line
+        const newLine = line.slice(0, graphemeStartIndex) + line.slice(graphemeStartIndex + graphemeToDelete.length);
         currentLines[row] = newLine;
       } else if (row < currentLines.length - 1) {
         // Merge with next line
@@ -414,7 +486,17 @@ export function TextArea(props: TextAreaProps) {
       }
       if (key.leftArrow) {
         if (cursorCol.value > 0) {
-          cursorCol.value -= 1;
+          // Move by grapheme (not character) to handle multi-codepoint sequences
+          const currentLine = currentLines[cursorRow.value] || '';
+          const graphemes = getGraphemes(currentLine);
+          let charIndex = 0;
+          let prevCharIndex = 0;
+          for (const g of graphemes) {
+            if (charIndex >= cursorCol.value) break;
+            prevCharIndex = charIndex;
+            charIndex += g.length;
+          }
+          cursorCol.value = prevCharIndex;
         } else if (cursorRow.value > 0) {
           cursorRow.value -= 1;
           cursorCol.value = (currentLines[cursorRow.value] || '').length;
@@ -425,7 +507,16 @@ export function TextArea(props: TextAreaProps) {
       if (key.rightArrow) {
         const currentLine = currentLines[cursorRow.value] || '';
         if (cursorCol.value < currentLine.length) {
-          cursorCol.value += 1;
+          // Move by grapheme (not character) to handle multi-codepoint sequences
+          const graphemes = getGraphemes(currentLine);
+          let charIndex = 0;
+          for (const g of graphemes) {
+            if (charIndex >= cursorCol.value) {
+              cursorCol.value = charIndex + g.length;
+              break;
+            }
+            charIndex += g.length;
+          }
         } else if (cursorRow.value < currentLines.length - 1) {
           cursorRow.value += 1;
           cursorCol.value = 0;
@@ -517,16 +608,31 @@ export function TextArea(props: TextAreaProps) {
           // For cursor line, render with inline cursor highlight
           if (isCursorLine && effectiveFocused.value) {
             const colInVisual = cursorCol.value - vl.startCol;
-            const before = vl.text.slice(0, colInVisual);
-            const cursorChar = vl.text[colInVisual] || ' ';
-            const after = vl.text.slice(colInVisual + 1);
+            // Use grapheme-aware operations for proper wide character handling
+            const graphemes = getGraphemes(vl.text);
+            let charIndex = 0;
+            let graphemeIndex = 0;
+
+            // Find the grapheme at cursor position
+            for (let i = 0; i < graphemes.length; i++) {
+              if (charIndex >= colInVisual) {
+                graphemeIndex = i;
+                break;
+              }
+              charIndex += graphemes[i].length;
+              graphemeIndex = i + 1;
+            }
+
+            const beforeGraphemes = graphemes.slice(0, graphemeIndex);
+            const cursorGrapheme = graphemes[graphemeIndex] || ' ';
+            const afterGraphemes = graphemes.slice(graphemeIndex + 1);
 
             return (
               <Text key={visualIndex}>
                 {showLineNumbers && <Text style={{ dim: true }}>{lineNumber}</Text>}
-                {before}
-                <Text style={{ inverse: true }}>{cursorChar}</Text>
-                {after}
+                {beforeGraphemes.join('')}
+                <Text style={{ inverse: true }}>{cursorGrapheme}</Text>
+                {afterGraphemes.join('')}
               </Text>
             );
           }

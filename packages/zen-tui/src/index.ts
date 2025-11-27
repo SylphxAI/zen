@@ -248,7 +248,16 @@ export {
   type HitTestResult,
 } from './utils/hit-test.js';
 export type { MouseEvent } from './utils/mouse-parser.js';
-export { terminalWidth } from './utils/terminal-width.js';
+export {
+  terminalWidth,
+  sliceByWidth,
+  sliceFromColumn,
+  charIndexToColumn,
+  columnToCharIndex,
+  getGraphemes,
+  graphemeAt,
+  graphemeWidthAt,
+} from './utils/terminal-width.js';
 
 // ============================================================================
 // Router primitives (re-export from @zen/router-core)

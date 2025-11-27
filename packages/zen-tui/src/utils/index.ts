@@ -17,5 +17,14 @@ export {
   clearHitTestLayout,
   type HitTestResult,
 } from './hit-test.js';
-export { terminalWidth } from './terminal-width.js';
+export {
+  terminalWidth,
+  sliceByWidth,
+  sliceFromColumn,
+  charIndexToColumn,
+  columnToCharIndex,
+  getGraphemes,
+  graphemeAt,
+  graphemeWidthAt,
+} from './terminal-width.js';
 export type { MouseEvent } from './mouse-parser.js';

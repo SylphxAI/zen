@@ -58,6 +58,9 @@ export {
   createUniqueId,
 } from '@zen/runtime';
 
+// Re-export types for reactive props
+export type { MaybeReactive, Reactive } from '@zen/runtime';
+
 // ============================================================================
 // Core - Rendering infrastructure
 // ============================================================================
@@ -195,10 +198,24 @@ export {
 } from './chrome/StatusBar.js';
 
 // ============================================================================
-// Hooks - React-like hooks
+// Hooks - React-like hooks (Ink-compatible)
 // ============================================================================
-export { useInput, dispatchInput, type InputHandler, type Key } from './hooks/useInput.js';
+export {
+  useInput,
+  dispatchInput,
+  clearInputHandlers,
+  parseKey,
+  type InputHandler,
+  type Key,
+} from './hooks/useInput.js';
+
+// Re-export platform ops for testing
+export { tuiPlatformOps } from './core/platform-ops.js';
+export { setPlatformOps } from '@zen/runtime';
 export { useApp, type AppContext } from './hooks/useApp.js';
+export { useStdin, type StdinContext } from './hooks/useStdin.js';
+export { useStdout, type StdoutContext } from './hooks/useStdout.js';
+export { useStderr, type StderrContext } from './hooks/useStderr.js';
 export {
   useMouse,
   useMouseClick,
@@ -220,8 +237,9 @@ export {
   FocusProvider,
   useFocusManager,
   useFocus,
-  type FocusManagerValue,
+  type FocusContextValue,
   type FocusableItem,
+  type UseFocusOptions,
 } from './utils/focus.js';
 export {
   hitTest,

@@ -591,12 +591,15 @@ export function TextArea(props: TextAreaProps) {
           return <Text style={{ dim: true }}>{placeholder.slice(0, contentWidth)}</Text>;
         }
 
+        const allVisualLines = visualLines.value;
+
         return displayLines.map((vl, index) => {
           const visualIndex = scrollOffset.value + index;
           // Check if cursor is on this visual line
           // For wrapped lines, cursor at wrap boundary should be on the NEXT visual line
           // Only use <= for the last visual line of a logical row (end of actual line)
-          const nextVl = displayLines[index + 1];
+          // IMPORTANT: Use full visualLines array, not just visible displayLines
+          const nextVl = allVisualLines[visualIndex + 1];
           const isLastVisualOfLogicalRow = !nextVl || nextVl.logicalRow !== vl.logicalRow;
           const isCursorLine =
             vl.logicalRow === cursorRow.value &&

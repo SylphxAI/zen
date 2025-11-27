@@ -369,12 +369,15 @@ function renderNodeToBuffer(
         buffer.writeAt(contentX, contentY, styledText, contentWidth);
       } else if (typeof child === 'object' && child !== null) {
         // Calculate child offset
-        // Children are positioned relative to parent's content area (inside border+padding)
-        // Yoga gives child.layout.x relative to content area, so we need absolute content position
-        const childOffsetX = contentX;
+        // layout.x from extractLayout already includes all ancestor positions
+        // So we only need to ACCUMULATE border+padding offsets (not absolute positions)
+        // This prevents double-counting parent positions
+        const contentOffsetX = borderOffset + paddingX;
+        const contentOffsetY = borderOffset + paddingY;
+        const childOffsetX = offsetX + contentOffsetX;
         const childOffsetY = isScrollBox
-          ? contentY - scrollOffset  // ScrollBox: offset by scroll amount
-          : contentY;
+          ? offsetY + contentOffsetY - scrollOffset // ScrollBox: offset by scroll amount
+          : offsetY + contentOffsetY;
 
         if ('type' in child) {
           const childNode = child as TUINode;

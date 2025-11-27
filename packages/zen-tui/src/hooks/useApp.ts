@@ -37,6 +37,8 @@ export function useApp(): AppContext {
   return {
     exit: (error?: Error) => {
       if (error) {
+        // biome-ignore lint/suspicious/noConsole: required for error reporting
+        console.error(error.message || error);
         process.exit(1);
       } else {
         // Normal exit with code 0

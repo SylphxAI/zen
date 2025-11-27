@@ -264,6 +264,41 @@ describe('TextArea Component', () => {
 
       expect(values[values.length - 1]).toBe('1234567890');
     });
+
+    it('should handle cursor at wrap boundary correctly', async () => {
+      // Regression test: cursor at exactly the wrap position should only appear on one line
+      const values: string[] = [];
+      const value = signal('');
+
+      createRoot(() => {
+        return TextArea({
+          value: () => value.value,
+          cols: 5,
+          wrap: true,
+          onChange: (v) => {
+            value.value = v;
+            values.push(v);
+          },
+          isFocused: true,
+        });
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Type exactly 5 chars (cursor will be at wrap boundary - position 5)
+      for (const char of '12345') {
+        dispatchInput(char);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(values[values.length - 1]).toBe('12345');
+
+      // Type one more char - cursor should move to next visual line
+      dispatchInput('6');
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(values[values.length - 1]).toBe('123456');
+    });
   });
 
   describe('Focus Gate Pattern', () => {

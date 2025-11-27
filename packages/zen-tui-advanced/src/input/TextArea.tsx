@@ -594,10 +594,16 @@ export function TextArea(props: TextAreaProps) {
         return displayLines.map((vl, index) => {
           const visualIndex = scrollOffset.value + index;
           // Check if cursor is on this visual line
+          // For wrapped lines, cursor at wrap boundary should be on the NEXT visual line
+          // Only use <= for the last visual line of a logical row (end of actual line)
+          const nextVl = displayLines[index + 1];
+          const isLastVisualOfLogicalRow = !nextVl || nextVl.logicalRow !== vl.logicalRow;
           const isCursorLine =
             vl.logicalRow === cursorRow.value &&
             cursorCol.value >= vl.startCol &&
-            cursorCol.value <= vl.startCol + vl.text.length;
+            (isLastVisualOfLogicalRow
+              ? cursorCol.value <= vl.startCol + vl.text.length
+              : cursorCol.value < vl.startCol + vl.text.length);
 
           // Line numbers show the logical row number (only on first visual line of each logical line)
           const isFirstVisualLine = vl.startCol === 0;

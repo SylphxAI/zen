@@ -1318,4 +1318,236 @@ describe('TextArea Component', () => {
       expect(values[values.length - 1]).toBe('Hello World');
     });
   });
+
+  // ===========================================================================
+  // Fine-Grained Reactivity Tests
+  // ===========================================================================
+  describe('Fine-Grained Reactivity', () => {
+    it('should support reactive rows prop', async () => {
+      const value = signal('Line 1\nLine 2\nLine 3\nLine 4\nLine 5');
+      const rows = signal(3);
+
+      createRoot(() => {
+        return TextArea({
+          value: () => value.value,
+          rows: () => rows.value,
+          cols: 20,
+          isFocused: true,
+        });
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Initial rows = 3
+      expect(rows.value).toBe(3);
+
+      // Change rows dynamically
+      rows.value = 5;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(rows.value).toBe(5);
+    });
+
+    it('should support reactive cols prop', async () => {
+      const value = signal('Hello world this is a test');
+      const cols = signal(20);
+
+      createRoot(() => {
+        return TextArea({
+          value: () => value.value,
+          cols: () => cols.value,
+          isFocused: true,
+        });
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Change cols dynamically - should affect wrapping
+      cols.value = 10;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(cols.value).toBe(10);
+    });
+
+    it('should support reactive wrap prop', async () => {
+      const value = signal('Hello world this is a very long line that should wrap');
+      const wrap = signal(true);
+
+      createRoot(() => {
+        return TextArea({
+          value: () => value.value,
+          wrap: () => wrap.value,
+          cols: 20,
+          isFocused: true,
+        });
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Initially wrapping enabled
+      expect(wrap.value).toBe(true);
+
+      // Disable wrapping dynamically
+      wrap.value = false;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(wrap.value).toBe(false);
+    });
+
+    it('should support reactive readOnly prop', async () => {
+      const value = signal('Initial text');
+      const readOnly = signal(false);
+      const values: string[] = [];
+
+      createRoot(() => {
+        return TextArea({
+          value: () => value.value,
+          readOnly: () => readOnly.value,
+          onChange: (v) => values.push(v),
+          cols: 20,
+          isFocused: true,
+        });
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Can type when not readOnly
+      dispatchInput('A');
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(values.length).toBeGreaterThan(0);
+
+      const countBefore = values.length;
+
+      // Make readOnly
+      readOnly.value = true;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // Try typing - should be blocked
+      dispatchInput('B');
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // No new values should be added (readOnly blocks input)
+      expect(values.length).toBe(countBefore);
+    });
+
+    it('should support reactive placeholder prop', async () => {
+      const value = signal('');
+      const placeholder = signal('Enter text...');
+
+      createRoot(() => {
+        return TextArea({
+          value: () => value.value,
+          placeholder: () => placeholder.value,
+          cols: 20,
+          isFocused: true,
+        });
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Change placeholder dynamically
+      placeholder.value = 'Type something...';
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(placeholder.value).toBe('Type something...');
+    });
+
+    it('should support reactive border prop', async () => {
+      const value = signal('Test');
+      const border = signal(true);
+
+      createRoot(() => {
+        return TextArea({
+          value: () => value.value,
+          border: () => border.value,
+          cols: 20,
+          isFocused: true,
+        });
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Change border dynamically
+      border.value = false;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(border.value).toBe(false);
+    });
+
+    it('should support reactive showLineNumbers prop', async () => {
+      const value = signal('Line 1\nLine 2\nLine 3');
+      const showLineNumbers = signal(false);
+
+      createRoot(() => {
+        return TextArea({
+          value: () => value.value,
+          showLineNumbers: () => showLineNumbers.value,
+          cols: 30,
+          isFocused: true,
+        });
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Enable line numbers dynamically
+      showLineNumbers.value = true;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(showLineNumbers.value).toBe(true);
+    });
+
+    it('should constrain cursor when external value changes to shorter text', async () => {
+      const value = signal('Hello World This Is Long');
+      const values: string[] = [];
+
+      createRoot(() => {
+        return TextArea({
+          value: () => value.value,
+          onChange: (v) => values.push(v),
+          cols: 50,
+          isFocused: true,
+        });
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Move cursor to end
+      dispatchInput('\x1B[F'); // End key
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // Externally change to shorter text
+      value.value = 'Hi';
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // Type something - cursor should be constrained
+      dispatchInput('!');
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // Value should be Hi! (cursor at end after constraint)
+      expect(values[values.length - 1]).toBe('Hi!');
+    });
+
+    it('should handle multiple reactive props changing simultaneously', async () => {
+      const value = signal('Test content');
+      const cols = signal(20);
+      const rows = signal(5);
+      const wrap = signal(true);
+
+      createRoot(() => {
+        return TextArea({
+          value: () => value.value,
+          cols: () => cols.value,
+          rows: () => rows.value,
+          wrap: () => wrap.value,
+          isFocused: true,
+        });
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Change multiple props at once
+      cols.value = 30;
+      rows.value = 10;
+      wrap.value = false;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(cols.value).toBe(30);
+      expect(rows.value).toBe(10);
+      expect(wrap.value).toBe(false);
+    });
+  });
 });

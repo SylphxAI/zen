@@ -51,23 +51,23 @@ export interface TextAreaProps {
   /** Callback when text changes */
   onChange?: (value: string) => void;
 
-  /** Number of visible rows */
-  rows?: number;
+  /** Number of visible rows - supports MaybeReactive for dynamic resizing */
+  rows?: MaybeReactive<number>;
 
-  /** Number of columns (width) */
-  cols?: number;
+  /** Number of columns (width) - supports MaybeReactive for dynamic resizing */
+  cols?: MaybeReactive<number>;
 
-  /** Placeholder text when empty */
-  placeholder?: string;
+  /** Placeholder text when empty - supports MaybeReactive */
+  placeholder?: MaybeReactive<string>;
 
-  /** Show line numbers */
-  showLineNumbers?: boolean;
+  /** Show line numbers - supports MaybeReactive */
+  showLineNumbers?: MaybeReactive<boolean>;
 
-  /** Enable line wrapping */
-  wrap?: boolean;
+  /** Enable line wrapping - supports MaybeReactive */
+  wrap?: MaybeReactive<boolean>;
 
-  /** Read-only mode */
-  readOnly?: boolean;
+  /** Read-only mode - supports MaybeReactive */
+  readOnly?: MaybeReactive<boolean>;
 
   /**
    * Focus ID for FocusProvider integration (Ink-compatible pattern)
@@ -86,8 +86,8 @@ export interface TextAreaProps {
    */
   isFocused?: MaybeReactive<boolean>;
 
-  /** Border style */
-  border?: boolean;
+  /** Border style - supports MaybeReactive */
+  border?: MaybeReactive<boolean>;
 }
 
 /**
@@ -96,67 +96,66 @@ export interface TextAreaProps {
  * Multi-line text editor for TUI applications.
  */
 export function TextArea(props: TextAreaProps) {
-  const {
-    value: valueProp = '',
-    onChange,
-    rows = 10,
-    cols,
-    placeholder = '',
-    showLineNumbers = false,
-    wrap = true,
-    readOnly = false,
-    focusId,
-    autoFocus = false,
-    isFocused: isFocusedProp,
-    border = true,
-  } = props;
+  // ==========================================================================
+  // Reactive Props Resolution
+  // Do NOT destructure props - resolve them reactively inside computed/effects
+  // ==========================================================================
+
+  const rows$ = computed(() => resolve(props.rows) ?? 10);
+  const cols$ = computed(() => resolve(props.cols));
+  const placeholder$ = computed(() => resolve(props.placeholder) ?? '');
+  const showLineNumbers$ = computed(() => resolve(props.showLineNumbers) ?? false);
+  const wrap$ = computed(() => resolve(props.wrap) ?? true);
+  const readOnly$ = computed(() => resolve(props.readOnly) ?? false);
+  const border$ = computed(() => resolve(props.border) ?? true);
 
   // ==========================================================================
   // Focus Management
   // ==========================================================================
 
-  const focusResult = focusId ? useFocus({ id: focusId, autoFocus }) : null;
+  const focusResult = props.focusId
+    ? useFocus({ id: props.focusId, autoFocus: props.autoFocus })
+    : null;
 
   const effectiveFocused = computed(() => {
-    if (isFocusedProp !== undefined) {
-      const externalActive = resolve(isFocusedProp);
+    if (props.isFocused !== undefined) {
+      const externalActive = resolve(props.isFocused);
       if (!externalActive) return false;
     }
     if (focusResult) {
       return focusResult.isFocused.value;
     }
-    if (isFocusedProp !== undefined) {
-      return resolve(isFocusedProp);
+    if (props.isFocused !== undefined) {
+      return resolve(props.isFocused);
     }
     return true;
   });
 
   // ==========================================================================
-  // Layout Calculations (reactive)
+  // Layout Calculations (fully reactive)
   // ==========================================================================
 
-  const lineNumberWidth = showLineNumbers ? 5 : 0;
-  const borderWidth = border ? 2 : 0;
+  const lineNumberWidth$ = computed(() => (showLineNumbers$.value ? 5 : 0));
+  const borderWidth$ = computed(() => (border$.value ? 2 : 0));
 
-  // contentWidth must be reactive if cols can change
   const contentWidth = computed(() => {
-    const effectiveCols = cols ?? 1000;
-    return Math.max(1, effectiveCols - borderWidth - lineNumberWidth);
+    const effectiveCols = cols$.value ?? 1000;
+    return Math.max(1, effectiveCols - borderWidth$.value - lineNumberWidth$.value);
   });
 
   // ==========================================================================
   // State
   // ==========================================================================
 
-  const externalValue = computed(() => resolve(valueProp));
+  const externalValue = computed(() => resolve(props.value) ?? '');
   const internalValue = signal(externalValue.value);
   const cursorRow = signal(0);
   const cursorCol = signal(0);
   const scrollOffset = signal(0);
 
   const isControlled =
-    typeof valueProp === 'function' ||
-    (valueProp !== null && typeof valueProp === 'object' && '_kind' in valueProp);
+    typeof props.value === 'function' ||
+    (props.value !== null && typeof props.value === 'object' && '_kind' in props.value);
 
   const currentValue = computed(() => (isControlled ? externalValue.value : internalValue.value));
 
@@ -194,7 +193,7 @@ export function TextArea(props: TextAreaProps) {
   const wrapResult = computed(() =>
     wrapText(currentValue.value, {
       contentWidth: contentWidth.value,
-      wordWrap: wrap,
+      wordWrap: wrap$.value,
       reserveCursorSpace: true,
     }),
   );
@@ -216,7 +215,7 @@ export function TextArea(props: TextAreaProps) {
   const visibleVisualLines = computed(() => {
     const all = visualLines.value;
     const start = scrollOffset.value;
-    const end = Math.min(start + rows, all.length);
+    const end = Math.min(start + rows$.value, all.length);
     return all.slice(start, end);
   });
 
@@ -237,8 +236,8 @@ export function TextArea(props: TextAreaProps) {
     const visualRow = cursorVisualRow.value;
     if (visualRow < scrollOffset.value) {
       scrollOffset.value = visualRow;
-    } else if (visualRow >= scrollOffset.value + rows) {
-      scrollOffset.value = visualRow - rows + 1;
+    } else if (visualRow >= scrollOffset.value + rows$.value) {
+      scrollOffset.value = visualRow - rows$.value + 1;
     }
   };
 
@@ -252,12 +251,12 @@ export function TextArea(props: TextAreaProps) {
       if (newRow !== undefined) cursorRow.value = newRow;
       if (newCol !== undefined) cursorCol.value = newCol;
     });
-    onChange?.(newValue);
+    props.onChange?.(newValue);
     constrainCursor();
   };
 
   const insertText = (text: string) => {
-    if (readOnly) return;
+    if (readOnly$.value) return;
     const lines = logicalLines.value;
     const row = cursorRow.value;
     const col = cursorCol.value;
@@ -297,7 +296,7 @@ export function TextArea(props: TextAreaProps) {
   };
 
   const deleteBackward = () => {
-    if (readOnly) return;
+    if (readOnly$.value) return;
     const lines = [...logicalLines.value];
     const row = cursorRow.value;
     const col = cursorCol.value;
@@ -316,7 +315,7 @@ export function TextArea(props: TextAreaProps) {
   };
 
   const deleteForward = () => {
-    if (readOnly) return;
+    if (readOnly$.value) return;
     const lines = [...logicalLines.value];
     const row = cursorRow.value;
     const col = cursorCol.value;
@@ -334,7 +333,7 @@ export function TextArea(props: TextAreaProps) {
   };
 
   const insertNewline = () => {
-    if (readOnly) return;
+    if (readOnly$.value) return;
     const lines = [...logicalLines.value];
     const row = cursorRow.value;
     const col = cursorCol.value;
@@ -411,12 +410,12 @@ export function TextArea(props: TextAreaProps) {
   };
 
   const handlePageUp = () => {
-    cursorRow.value = Math.max(0, cursorRow.value - rows);
+    cursorRow.value = Math.max(0, cursorRow.value - rows$.value);
     constrainCursor();
   };
 
   const handlePageDown = () => {
-    cursorRow.value = Math.min(logicalLines.value.length - 1, cursorRow.value + rows);
+    cursorRow.value = Math.min(logicalLines.value.length - 1, cursorRow.value + rows$.value);
     constrainCursor();
   };
 
@@ -428,56 +427,58 @@ export function TextArea(props: TextAreaProps) {
     cursorCol.value = (logicalLines.value[cursorRow.value] || '').length;
   };
 
+  // Key handler mapping to reduce cognitive complexity
+  type KeyName =
+    | 'upArrow'
+    | 'downArrow'
+    | 'leftArrow'
+    | 'rightArrow'
+    | 'home'
+    | 'end'
+    | 'pageUp'
+    | 'pageDown'
+    | 'backspace'
+    | 'delete'
+    | 'return';
+
+  const keyHandlers: Record<KeyName, () => void> = {
+    upArrow: handleCursorUp,
+    downArrow: handleCursorDown,
+    leftArrow: moveCursorLeft,
+    rightArrow: moveCursorRight,
+    home: handleHome,
+    end: handleEnd,
+    pageUp: handlePageUp,
+    pageDown: handlePageDown,
+    backspace: deleteBackward,
+    delete: deleteForward,
+    return: insertNewline,
+  };
+
+  const keyNames: KeyName[] = [
+    'upArrow',
+    'downArrow',
+    'leftArrow',
+    'rightArrow',
+    'home',
+    'end',
+    'pageUp',
+    'pageDown',
+    'backspace',
+    'delete',
+    'return',
+  ];
+
   useInput(
     (input, key) => {
-      if (!effectiveFocused.value || readOnly) return false;
+      if (!effectiveFocused.value || readOnly$.value) return false;
 
-      // Navigation keys
-      if (key.upArrow) {
-        handleCursorUp();
-        return true;
-      }
-      if (key.downArrow) {
-        handleCursorDown();
-        return true;
-      }
-      if (key.leftArrow) {
-        moveCursorLeft();
-        return true;
-      }
-      if (key.rightArrow) {
-        moveCursorRight();
-        return true;
-      }
-      if (key.home) {
-        handleHome();
-        return true;
-      }
-      if (key.end) {
-        handleEnd();
-        return true;
-      }
-      if (key.pageUp) {
-        handlePageUp();
-        return true;
-      }
-      if (key.pageDown) {
-        handlePageDown();
-        return true;
-      }
-
-      // Editing keys
-      if (key.backspace) {
-        deleteBackward();
-        return true;
-      }
-      if (key.delete) {
-        deleteForward();
-        return true;
-      }
-      if (key.return) {
-        insertNewline();
-        return true;
+      // Check mapped keys
+      for (const keyName of keyNames) {
+        if (key[keyName]) {
+          keyHandlers[keyName]();
+          return true;
+        }
       }
 
       // Text input
@@ -496,7 +497,7 @@ export function TextArea(props: TextAreaProps) {
   // ==========================================================================
 
   const renderLineNumber = (vl: VisualLine) => {
-    if (!showLineNumbers) return null;
+    if (!showLineNumbers$.value) return null;
     const isFirstVisualLine = vl.startCol === 0;
     const lineNum = isFirstVisualLine ? `${`${vl.logicalRow + 1}`.padStart(4, ' ')} ` : '     ';
     return <Text style={{ dim: true }}>{lineNum}</Text>;
@@ -544,15 +545,17 @@ export function TextArea(props: TextAreaProps) {
   // Render
   // ==========================================================================
 
-  const widthStyle = cols !== undefined ? { width: cols } : { flex: 1 };
-
   return (
     <Box
       style={{
         flexDirection: 'column',
-        ...widthStyle,
-        height: rows + (border ? 2 : 0),
-        borderStyle: border ? 'single' : undefined,
+        // Width: reactive - use cols$ or flex
+        width: () => (cols$.value !== undefined ? cols$.value : undefined),
+        flex: () => (cols$.value === undefined ? 1 : undefined),
+        // Height: reactive - includes border if enabled
+        height: () => rows$.value + (border$.value ? 2 : 0),
+        // Border: reactive
+        borderStyle: () => (border$.value ? 'single' : undefined),
         borderColor: () => (effectiveFocused.value ? 'cyan' : 'gray'),
         overflow: 'hidden',
       }}
@@ -560,9 +563,10 @@ export function TextArea(props: TextAreaProps) {
       {() => {
         const displayLines = visibleVisualLines.value;
         const isEmpty = currentValue.value === '';
+        const placeholderText = placeholder$.value;
 
-        if (isEmpty && placeholder) {
-          return <Text style={{ dim: true }}>{placeholder.slice(0, contentWidth.value)}</Text>;
+        if (isEmpty && placeholderText) {
+          return <Text style={{ dim: true }}>{placeholderText.slice(0, contentWidth.value)}</Text>;
         }
 
         const allLines = visualLines.value;

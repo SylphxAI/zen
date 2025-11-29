@@ -655,6 +655,11 @@ export function TextArea(props: TextAreaProps) {
           }
 
           // Non-cursor rows
+          // Skip empty trailing visual lines (they only exist for cursor positioning)
+          if (vl.text === '' && !isCursorLine) {
+            return null;
+          }
+
           return (
             <Text key={visualIndex}>
               {showLineNumbers && <Text style={{ dim: true }}>{lineNumber}</Text>}

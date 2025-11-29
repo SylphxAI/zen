@@ -250,8 +250,9 @@ export function TextArea(props: TextAreaProps) {
           }
         }
 
-        // Handle empty trailing chunk (cursor at end of wrapped line)
-        if (line.length > 0 && startCol === line.length && startVisualCol % contentWidth === 0) {
+        // Always create empty trailing visual line for cursor at end of logical line
+        // This ensures cursor has a place to render when at the very end of text
+        if (line.length > 0) {
           result.push({ text: '', logicalRow, startCol: line.length, startVisualCol });
         }
       }
@@ -632,23 +633,6 @@ export function TextArea(props: TextAreaProps) {
               }
               charIndex += graphemes[i].length;
               graphemeIndex = i + 1;
-            }
-
-            // Check if cursor is at the very end of the visual line
-            const cursorAtEnd = graphemeIndex >= graphemes.length;
-
-            if (cursorAtEnd && graphemes.length > 0) {
-              // Cursor at end of non-empty line: underline last character to indicate cursor position
-              // This avoids adding an extra space that might overflow the display width
-              const beforeLast = graphemes.slice(0, graphemes.length - 1);
-              const lastGrapheme = graphemes[graphemes.length - 1];
-              return (
-                <Text key={visualIndex}>
-                  {showLineNumbers && <Text style={{ dim: true }}>{lineNumber}</Text>}
-                  {beforeLast.join('')}
-                  <Text style={{ inverse: true, underline: true }}>{lastGrapheme}</Text>
-                </Text>
-              );
             }
 
             const beforeGraphemes = graphemes.slice(0, graphemeIndex);

@@ -505,9 +505,6 @@ export function TextArea(props: TextAreaProps) {
   };
 
   const renderTextLine = (vl: VisualLine, visualIndex: number) => {
-    // Skip empty trailing lines (exist only for cursor positioning)
-    if (vl.text === '') return null;
-
     return (
       <Text key={visualIndex}>
         {renderLineNumber(vl)}

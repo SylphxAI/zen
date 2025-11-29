@@ -198,6 +198,44 @@ export function TextArea(props: TextAreaProps) {
     startVisualCol: number; // visual column offset
   }
 
+  // Word-aware slice: find last word boundary that fits within maxWidth
+  // Returns { text, charCount, width } similar to sliceByWidth
+  // When needsCursorSpace is true, reserves 1 column for cursor at end
+  const sliceByWordBoundary = (
+    str: string,
+    maxWidth: number,
+    needsCursorSpace: boolean = false,
+  ): { text: string; charCount: number; width: number } => {
+    const effectiveWidth = needsCursorSpace ? maxWidth - 1 : maxWidth;
+    const charSliced = sliceByWidth(str, effectiveWidth);
+
+    // If the slice ends exactly at string end or at a space, no word breaking needed
+    if (charSliced.charCount >= str.length || str[charSliced.charCount] === ' ') {
+      return charSliced;
+    }
+
+    // If the sliced text ends with a space, it's a clean break
+    if (charSliced.text.endsWith(' ')) {
+      return charSliced;
+    }
+
+    // Find the last space in the sliced portion to break at word boundary
+    const lastSpaceInSlice = charSliced.text.lastIndexOf(' ');
+    if (lastSpaceInSlice > 0) {
+      // Break at the last space (include the space in this line)
+      const text = charSliced.text.slice(0, lastSpaceInSlice + 1);
+      return {
+        text,
+        charCount: lastSpaceInSlice + 1,
+        width: terminalWidth(text),
+      };
+    }
+
+    // No space found - single word longer than line, fall back to character wrap
+    // Use full maxWidth for character wrapping to avoid leaving too much space
+    return sliceByWidth(str, maxWidth);
+  };
+
   const visualLines = computed((): VisualLine[] => {
     const logical = logicalLines.value;
     const result: VisualLine[] = [];
@@ -206,24 +244,21 @@ export function TextArea(props: TextAreaProps) {
       const line = logical[logicalRow];
       const lineWidth = terminalWidth(line);
 
-      if (!wrap || lineWidth <= contentWidth) {
-        // No wrapping needed - single visual line
+      if (!wrap || lineWidth < contentWidth) {
+        // No wrapping needed - single visual line (with room for cursor at end)
         result.push({ text: line, logicalRow, startCol: 0, startVisualCol: 0 });
-        // Add trailing visual line if line fills contentWidth (for cursor at end)
-        // This ensures cursor has a place when positioned after the last character
-        if (wrap && lineWidth >= contentWidth && line.length > 0) {
-          result.push({ text: '', logicalRow, startCol: line.length, startVisualCol: lineWidth });
-        }
       } else {
-        // Wrap long line into multiple visual lines using visual width
+        // Wrap long line into multiple visual lines using word boundaries
         let startCol = 0;
         let startVisualCol = 0;
         const graphemes = getGraphemes(line);
 
         while (startCol < line.length) {
-          // Slice by visual width from current position
+          // Slice by word boundary from current position
           const remaining = line.slice(startCol);
-          const sliced = sliceByWidth(remaining, contentWidth);
+          // Reserve cursor space on the last visual line of this logical line
+          const isLastChunk = terminalWidth(remaining) <= contentWidth;
+          const sliced = sliceByWordBoundary(remaining, contentWidth, isLastChunk);
 
           if (sliced.charCount === 0) {
             // Edge case: single wide character wider than contentWidth
@@ -255,10 +290,13 @@ export function TextArea(props: TextAreaProps) {
           }
         }
 
-        // Always create empty trailing visual line for cursor at end of logical line
-        // This ensures cursor has a place to render when at the very end of text
-        if (line.length > 0) {
-          result.push({ text: '', logicalRow, startCol: line.length, startVisualCol });
+        // Create trailing visual line for cursor only if last line is full
+        // (no room for cursor at end)
+        if (line.length > 0 && result.length > 0) {
+          const lastLine = result[result.length - 1];
+          if (lastLine.logicalRow === logicalRow && terminalWidth(lastLine.text) >= contentWidth) {
+            result.push({ text: '', logicalRow, startCol: line.length, startVisualCol });
+          }
         }
       }
     }

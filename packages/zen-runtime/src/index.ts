@@ -45,6 +45,7 @@ export { mergeProps, splitProps } from './utils/props.js';
 export { selector } from './utils/selector.js';
 export { runWithOwner } from './utils/runWithOwner.js';
 export { children } from './utils/children.js';
+export { resolveChildren, needsResolution } from './utils/resolve-children.js';
 
 // Descriptor Pattern (ADR-011)
 export { isDescriptor, executeDescriptor } from './descriptor.js';

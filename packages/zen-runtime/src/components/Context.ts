@@ -7,11 +7,10 @@
  * Similar to React's Context API and SolidJS's Context API.
  */
 
-import { attachNodeToOwner, getNodeOwner, getOwner } from '@zen/signal';
-import { executeDescriptor, isDescriptor } from '../descriptor.js';
+import { getOwner } from '@zen/signal';
 import { getPlatformOps } from '../platform-ops.js';
-import { executeComponent } from '../reactive-utils.js';
 import { children } from '../utils/children.js';
+import { resolveChildren } from '../utils/resolve-children.js';
 
 /**
  * Context object that holds the default value
@@ -55,6 +54,7 @@ export function createContext<T>(defaultValue: T): Context<T> {
   // Create Provider as a proper component function
   // This allows it to be used with JSX: <Context.Provider value={...}>
   // The descriptor pattern will automatically handle lazy children
+  // biome-ignore lint/suspicious/noExplicitAny: Provider children can be any JSX element type
   const ProviderComponent = (props: { value: T; children?: any | any[] }) => {
     return Provider(context, props);
   };
@@ -67,7 +67,6 @@ export function createContext<T>(defaultValue: T): Context<T> {
   const context: Context<T> = {
     id: Symbol('context'),
     defaultValue,
-    // biome-ignore lint/suspicious/noExplicitAny: Provider children can be any JSX element type
     Provider: ProviderComponent,
   };
   return context;
@@ -198,33 +197,13 @@ export function Provider<T>(context: Context<T>, props: { value: T; children: an
   // Resolve children lazily with new owner context
   // This ensures children can find the context we just set
   // The c() call will trigger the getter AFTER context is set
-  let resolved = c();
-
-  // Handle descriptor pattern (ADR-011)
-  // With descriptors, children are { _jsx: true, type, props }
-  // Execute descriptor to get the actual component
-  if (isDescriptor(resolved)) {
-    resolved = executeDescriptor(resolved);
-  }
-
-  // Handle array of descriptors
-  if (Array.isArray(resolved)) {
-    resolved = resolved.map((child) => (isDescriptor(child) ? executeDescriptor(child) : child));
-  }
-
-  // If children is a function (lazy children pattern), call it with proper owner context
-  // This handles the runtime-first pattern: <Provider>{() => <Child />}</Provider>
-  if (typeof resolved === 'function') {
-    resolved = executeComponent(
-      resolved,
-      // biome-ignore lint/suspicious/noExplicitAny: Generic node from framework
-      (node: any, childOwner: any) => {
-        if (!Array.isArray(node)) {
-          attachNodeToOwner(node, childOwner);
-        }
-      },
-    );
-  }
+  //
+  // resolveChildren handles ALL forms uniformly:
+  // - Functions: () => <Component /> (lazy children pattern)
+  // - Descriptors: { _jsx: true, type, props } (deferred components)
+  // - Arrays: [child1, child2] (multiple children)
+  // - Nested combinations of the above
+  const resolved = resolveChildren(c());
 
   const childArray = Array.isArray(resolved) ? resolved : [resolved];
 

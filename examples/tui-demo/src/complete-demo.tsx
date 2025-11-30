@@ -10,7 +10,7 @@
  */
 
 import {
-  Box, Button, Checkbox, FocusProvider, SelectInput, Text, TextInput, dispatchInput, signal, useFocusManager, useInput, renderApp} from '@zen/tui';
+  Box, Button, Checkbox, FocusProvider, FullscreenLayout, SelectInput, Text, TextInput, signal, useFocusManager, useInput, render } from '@zen/tui';
 
 // State
 const name = signal('');
@@ -148,10 +148,14 @@ function AppContent() {
 }
 
 function App() {
-  return <FocusProvider>{() => <AppContent />}</FocusProvider>;
+  return (
+    <FullscreenLayout>
+      <FocusProvider>
+        <AppContent />
+      </FocusProvider>
+    </FullscreenLayout>
+  );
 }
 
 // Render
-// Note: renderToTerminalReactive already handles Ctrl+C and dispatches to useInput handlers
-const _cleanup = await renderApp(() => App(), {
-  fps: 30});
+await render(App);

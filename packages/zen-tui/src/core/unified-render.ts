@@ -164,20 +164,6 @@ export async function render(createApp: () => unknown): Promise<() => void> {
   // Track actual content height for inline mode cursor management
   let actualContentHeight = 0;
 
-  // Track maximum content height ever rendered (for cleanup)
-  // WHY THIS IS NEEDED:
-  // When content exceeds terminal height, the terminal scrolls. The escape sequence
-  // \x1b[nA (move up) CANNOT move cursor into scrollback - it stops at the top of
-  // the visible area. This means if we try to clear extra lines during render when
-  // content shrinks, the scrolling corrupts our cursor position. All subsequent
-  // renders then start from the wrong position.
-  //
-  // The fix: Track the maximum height ever rendered, and only clear the extra lines
-  // during CLEANUP (not during render). At cleanup time, we immediately follow with
-  // the exit cursor movement, so the relative positioning works regardless of any
-  // scrolling that may have occurred.
-  let maxContentHeight = 0;
-
   // Create component tree with settings provider
   const node = createRoot(() => {
     const app = createApp();
@@ -267,7 +253,6 @@ export async function render(createApp: () => unknown): Promise<() => void> {
       lastMode = currentMode;
       // Reset height tracking - new mode means fresh start
       actualContentHeight = 0;
-      maxContentHeight = 0;
     }
 
     // Phase 1: Layout (recompute if dirty)
@@ -335,45 +320,69 @@ export async function render(createApp: () => unknown): Promise<() => void> {
         }
       } else {
         // ====================================================================
-        // INLINE MODE: Clear and rewrite
+        // INLINE MODE: Fine-grained diff updates with relative positioning
         // ====================================================================
-        // Clear previous content using PREVIOUS height (not new height)
-        // This ensures we clear all old content when content shrinks
-        if (previousContentHeight > 0) {
-          process.stdout.write('\r');
-          for (let i = 0; i < previousContentHeight; i++) {
-            process.stdout.write('\x1b[2K');
-            if (i < previousContentHeight - 1) {
-              process.stdout.write('\x1b[1B\r');
+        // Unlike fullscreen mode which uses absolute positioning (\x1b[row;1H),
+        // inline mode uses relative positioning because content can start at
+        // any terminal row depending on previous output.
+        //
+        // Strategy:
+        // 1. Update only changed lines (using diff)
+        // 2. Clear extra lines if content shrank
+        // 3. Cursor always returns to line 0 (relative to our content)
+
+        // Track current cursor position (relative to content start)
+        let cursorLine = 0;
+
+        // Update changed lines
+        for (const change of changes) {
+          // Only update lines within new content height
+          if (change.y < newOutputHeight) {
+            // Move to the target line
+            if (change.y > cursorLine) {
+              process.stdout.write(`\x1b[${change.y - cursorLine}B`);
+            } else if (change.y < cursorLine) {
+              process.stdout.write(`\x1b[${cursorLine - change.y}A`);
             }
+            cursorLine = change.y;
+
+            // Clear line and write new content
+            process.stdout.write(`\r\x1b[2K${change.line}`);
           }
-          // Move back to top
-          if (previousContentHeight > 1) {
-            process.stdout.write(`\x1b[${previousContentHeight - 1}A`);
-          }
-          process.stdout.write('\r');
         }
 
-        // Write new output
-        process.stdout.write(output);
+        // If content shrank, clear the extra lines
+        if (previousContentHeight > newOutputHeight) {
+          // Move to first extra line
+          const firstExtraLine = newOutputHeight;
+          if (firstExtraLine > cursorLine) {
+            process.stdout.write(`\x1b[${firstExtraLine - cursorLine}B`);
+          } else if (firstExtraLine < cursorLine) {
+            process.stdout.write(`\x1b[${cursorLine - firstExtraLine}A`);
+          }
+          cursorLine = firstExtraLine;
 
-        // Move cursor back to top for next render
-        // NOTE: We do NOT try to clear extra lines here when content shrinks.
-        // Doing so can cause terminal scrolling which corrupts cursor position.
-        // Extra lines are cleared during cleanup using maxContentHeight.
-        if (newLines.length > 1) {
-          process.stdout.write(`\x1b[${newLines.length - 1}A`);
+          // Clear each extra line
+          for (let i = newOutputHeight; i < previousContentHeight; i++) {
+            process.stdout.write('\r\x1b[2K');
+            if (i < previousContentHeight - 1) {
+              process.stdout.write('\x1b[1B');
+              cursorLine++;
+            }
+          }
+        }
+
+        // Move cursor back to line 0
+        if (cursorLine > 0) {
+          process.stdout.write(`\x1b[${cursorLine}A`);
         }
         process.stdout.write('\r');
       }
     }
 
-    // Always update actualContentHeight and maxContentHeight for inline mode
+    // Always update actualContentHeight for inline mode
     if (!inFullscreen) {
       actualContentHeight = newOutputHeight;
-      if (newOutputHeight > maxContentHeight) {
-        maxContentHeight = newOutputHeight;
-      }
     }
 
     // Phase 5: Update diff buffer
@@ -519,27 +528,9 @@ export async function render(createApp: () => unknown): Promise<() => void> {
     process.stdout.write('\x1b[?25h');
 
     // Move cursor below content (inline mode only)
+    // Extra lines are already cleared during render (diff-based updates),
+    // so we just need to position cursor at the bottom of current content.
     if (!isFullscreenActive() && actualContentHeight > 0) {
-      // If content shrank during the session, clear the extra lines now.
-      // This is done at cleanup (not during render) because:
-      // 1. Clearing during render can cause scrolling that corrupts cursor position
-      // 2. At cleanup, we immediately follow with exit movement, so relative
-      //    positioning works regardless of any scrolling
-      if (maxContentHeight > actualContentHeight) {
-        // Move to first extra line (line after current content)
-        process.stdout.write(`\x1b[${actualContentHeight}B`);
-        // Clear lines from actualContentHeight to maxContentHeight-1
-        for (let i = actualContentHeight; i < maxContentHeight; i++) {
-          process.stdout.write('\x1b[2K');
-          if (i < maxContentHeight - 1) {
-            process.stdout.write('\x1b[1B');
-          }
-        }
-        // Move back to line 0
-        process.stdout.write(`\x1b[${maxContentHeight - 1}A\r`);
-      }
-
-      // Move to bottom of current content
       if (actualContentHeight > 1) {
         process.stdout.write(`\x1b[${actualContentHeight - 1}B`);
       }

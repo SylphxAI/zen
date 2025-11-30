@@ -1,11 +1,46 @@
 /**
- * Layout-based Renderer
+ * Layout-based Renderer (ADR-014 Fine-Grained Reactivity)
  *
  * Renders TUI nodes to TerminalBuffer using Yoga layout positions.
+ *
+ * ## Fine-Grained Rendering
+ *
+ * This renderer supports two modes:
+ *
+ * 1. **Full Render** (fullRender=true, default):
+ *    - Clears buffer and renders entire tree
+ *    - Used for initial render and after layout changes
+ *
+ * 2. **Incremental Render** (fullRender=false):
+ *    - Does NOT clear buffer (preserves unchanged content)
+ *    - Only renders nodes with _dirty flag set
+ *    - Skips non-dirty subtrees entirely (big performance win)
+ *    - Used for signal/content updates
+ *
+ * ## How Incremental Render Works
+ *
+ * ```
+ * renderToBuffer(root, buffer, layoutMap, false)  // incremental
+ *   │
+ *   ├─ Don't clear buffer (previous frame preserved)
+ *   │
+ *   └─ renderNodeToBuffer() for each node:
+ *       ├─ If node._dirty: render this node to buffer, clear flag
+ *       └─ If not dirty: recurse into children (they might be dirty)
+ *                        but skip this node's own buffer writes
+ * ```
+ *
+ * ## Why This Works
+ *
+ * - Buffer positions are stable (from cached layout)
+ * - Non-dirty content hasn't changed
+ * - Only dirty nodes need buffer updates
+ * - Terminal diff handles the rest
  */
 
-import chalk from 'chalk';
 import cliBoxes from 'cli-boxes';
+import stripAnsi from 'strip-ansi';
+import { terminalWidth } from '../utils/terminal-width.js';
 import type { TerminalBuffer } from './terminal-buffer.js';
 import type { TUINode, TUIStyle } from './types.js';
 import type { LayoutMap } from './yoga-layout.js';
@@ -168,6 +203,28 @@ function renderBorder(
 
 /**
  * Render a single node to buffer using layout position
+ *
+ * ## Fine-Grained Rendering
+ *
+ * When fullRender=false (incremental mode):
+ * - Skip buffer writes for non-dirty nodes
+ * - Still recurse into children (they might be dirty)
+ * - Clear _dirty flag after rendering
+ *
+ * This allows us to update only changed content while preserving
+ * unchanged content in the buffer.
+ *
+ * @param node - The TUINode to render
+ * @param buffer - Target buffer
+ * @param layoutMap - Precomputed layout positions
+ * @param offsetX - X offset (for scroll)
+ * @param offsetY - Y offset (for scroll)
+ * @param clipMinY - Viewport clipping min Y
+ * @param clipMaxY - Viewport clipping max Y
+ * @param skipAbsolute - Skip absolute positioned nodes
+ * @param clipMinX - Viewport clipping min X
+ * @param clipMaxX - Viewport clipping max X
+ * @param fullRender - If false, skip non-dirty nodes (incremental mode)
  */
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: rendering logic requires handling many cases
 function renderNodeToBuffer(
@@ -176,11 +233,12 @@ function renderNodeToBuffer(
   layoutMap: LayoutMap,
   offsetX = 0,
   offsetY = 0,
-  clipMinY?: number, // Optional viewport clipping (min Y)
-  clipMaxY?: number, // Optional viewport clipping (max Y)
-  skipAbsolute = false, // Skip absolute positioned nodes (rendered separately for zIndex)
-  clipMinX?: number, // Optional viewport clipping (min X)
-  clipMaxX?: number, // Optional viewport clipping (max X)
+  clipMinY?: number,
+  clipMaxY?: number,
+  skipAbsolute = false,
+  clipMinX?: number,
+  clipMaxX?: number,
+  fullRender = true,
 ): void {
   // Get style (resolve functions)
   const preStyle = typeof node.style === 'function' ? node.style() : node.style || {};
@@ -204,24 +262,50 @@ function renderNodeToBuffer(
   // Get style (resolve functions)
   const style = typeof node.style === 'function' ? node.style() : node.style || {};
 
-  // Render border if specified (also fills background to clear previous content)
-  if (style.borderStyle && style.borderStyle !== 'none') {
-    const borderStyle =
-      typeof style.borderStyle === 'function' ? style.borderStyle() : style.borderStyle;
-    const borderColor =
-      typeof style.borderColor === 'function' ? style.borderColor() : style.borderColor;
-    const backgroundColor =
-      typeof style.backgroundColor === 'function' ? style.backgroundColor() : style.backgroundColor;
+  // ============================================================================
+  // Fine-Grained Rendering: Check if node is dirty
+  // ============================================================================
+  // In incremental mode (fullRender=false), we only render dirty nodes.
+  // Non-dirty nodes keep their previous buffer content (it hasn't changed).
+  //
+  // IMPORTANT: We still recurse into children even if this node is not dirty,
+  // because children might be dirty (e.g., a Box containing a dirty Text).
+  //
+  // The dirty flag is checked BEFORE rendering and cleared AFTER.
+  const isDirty = node._dirty === true;
+  const shouldRenderThisNode = fullRender || isDirty;
 
-    if (borderStyle && borderStyle !== 'none') {
-      renderBorder(buffer, x, y, width, height, borderStyle, borderColor, backgroundColor);
-    }
-  } else if (style.backgroundColor) {
-    // Fill background even without border
-    const backgroundColor =
-      typeof style.backgroundColor === 'function' ? style.backgroundColor() : style.backgroundColor;
-    if (backgroundColor) {
-      fillArea(buffer, x, y, width, height, backgroundColor);
+  // Clear dirty flag now (before any early returns)
+  // This ensures it's cleared even if we return early due to clipping
+  if (isDirty) {
+    node._dirty = false;
+  }
+
+  // Render border if specified (also fills background to clear previous content)
+  // Only render if this node is dirty or in full render mode
+  if (shouldRenderThisNode) {
+    if (style.borderStyle && style.borderStyle !== 'none') {
+      const borderStyle =
+        typeof style.borderStyle === 'function' ? style.borderStyle() : style.borderStyle;
+      const borderColor =
+        typeof style.borderColor === 'function' ? style.borderColor() : style.borderColor;
+      const backgroundColor =
+        typeof style.backgroundColor === 'function'
+          ? style.backgroundColor()
+          : style.backgroundColor;
+
+      if (borderStyle && borderStyle !== 'none') {
+        renderBorder(buffer, x, y, width, height, borderStyle, borderColor, backgroundColor);
+      }
+    } else if (style.backgroundColor) {
+      // Fill background even without border
+      const backgroundColor =
+        typeof style.backgroundColor === 'function'
+          ? style.backgroundColor()
+          : style.backgroundColor;
+      if (backgroundColor) {
+        fillArea(buffer, x, y, width, height, backgroundColor);
+      }
     }
   }
 
@@ -277,13 +361,26 @@ function renderNodeToBuffer(
     }
   }
 
+  // ============================================================================
   // Render text node
+  // ============================================================================
+  // Text nodes are leaf nodes - they write styled text to the buffer.
+  // In incremental mode, skip buffer writes if not dirty.
   if (node.type === 'text') {
     // Skip if text would be rendered outside clip bounds (Y axis)
     if (clipMinY !== undefined && clipMaxY !== undefined) {
       if (contentY < clipMinY || contentY >= clipMaxY) {
         return; // Text line is outside visible area
       }
+    }
+
+    // ========================================================================
+    // Fine-Grained Rendering: Skip text write if not dirty
+    // ========================================================================
+    // In incremental mode, if this text node hasn't changed, its previous
+    // content is still in the buffer. Skip the write to avoid unnecessary work.
+    if (!shouldRenderThisNode) {
+      return; // Text unchanged, buffer already has correct content
     }
 
     // Collect styled text from all children including nested Text nodes
@@ -332,17 +429,47 @@ function renderNodeToBuffer(
       effectiveWidth = Math.min(contentWidth, clipMaxX - contentX);
     }
 
-    buffer.writeAt(effectiveX, contentY, styledText, effectiveWidth);
+    // ========================================================================
+    // CRITICAL: Pad text with spaces to clear old content
+    // ========================================================================
+    // In incremental render mode, if text shrinks (e.g., "Hello World" → "Hi"),
+    // we need to clear the old characters. We do this by padding the text with
+    // spaces to fill the entire effectiveWidth.
+    //
+    // This ensures that when content shrinks, old characters are overwritten
+    // with spaces rather than remaining in the buffer.
+    const textVisualWidth = terminalWidth(stripAnsi(styledText));
+    const paddingNeeded = Math.max(0, effectiveWidth - textVisualWidth);
+    const paddedText = paddingNeeded > 0 ? styledText + ' '.repeat(paddingNeeded) : styledText;
+
+    buffer.writeAt(effectiveX, contentY, paddedText, effectiveWidth);
     return;
   }
 
-  // Render fragment node - transparent container, just render children
+  // ============================================================================
+  // Render fragment node - transparent container
+  // ============================================================================
+  // Fragments are like React.Fragment - they group children without adding
+  // a container element. We render their children directly.
+  //
+  // Fine-Grained: Fragment itself doesn't write to buffer, but we still
+  // need to check shouldRenderThisNode for direct text children.
+  // Child nodes will check their own dirty flags.
   if (node.type === 'fragment') {
     for (const child of node.children) {
       if (typeof child === 'string') {
-        const styledText = applyTextStyle(child, style);
-        buffer.writeAt(contentX, contentY, styledText, contentWidth);
+        // Direct text child of fragment - only render if fragment is dirty
+        if (shouldRenderThisNode) {
+          const styledText = applyTextStyle(child, style);
+          // Pad with spaces to clear old content (same as text nodes)
+          const textVisualWidth = terminalWidth(stripAnsi(styledText));
+          const paddingNeeded = Math.max(0, contentWidth - textVisualWidth);
+          const paddedText =
+            paddingNeeded > 0 ? styledText + ' '.repeat(paddingNeeded) : styledText;
+          buffer.writeAt(contentX, contentY, paddedText, contentWidth);
+        }
       } else if (typeof child === 'object' && child !== null && 'type' in child) {
+        // Recurse into child node - it will check its own dirty flag
         renderNodeToBuffer(
           child as TUINode,
           buffer,
@@ -354,19 +481,37 @@ function renderNodeToBuffer(
           skipAbsolute,
           clipMinX,
           clipMaxX,
+          fullRender, // Pass through full render mode
         );
       }
     }
     return;
   }
 
+  // ============================================================================
   // Render children
+  // ============================================================================
+  // Iterate through all children and render them.
+  //
+  // Fine-Grained Rendering:
+  // - Plain text children: only render if THIS node is dirty
+  // - Child nodes: recurse and let them check their own dirty flags
+  // - Always recurse into children even if this node is not dirty,
+  //   because descendants might be dirty
   if (node.children) {
     for (const child of node.children) {
       if (typeof child === 'string') {
-        // Plain text child
-        const styledText = applyTextStyle(child, style);
-        buffer.writeAt(contentX, contentY, styledText, contentWidth);
+        // Plain text child - only render if this node is dirty
+        // In incremental mode, unchanged text is already in the buffer
+        if (shouldRenderThisNode) {
+          const styledText = applyTextStyle(child, style);
+          // Pad with spaces to clear old content when text shrinks
+          const textVisualWidth = terminalWidth(stripAnsi(styledText));
+          const paddingNeeded = Math.max(0, contentWidth - textVisualWidth);
+          const paddedText =
+            paddingNeeded > 0 ? styledText + ' '.repeat(paddingNeeded) : styledText;
+          buffer.writeAt(contentX, contentY, paddedText, contentWidth);
+        }
       } else if (typeof child === 'object' && child !== null) {
         // Calculate child offset
         // Yoga's getComputedLeft() already includes parent's border/padding
@@ -380,15 +525,33 @@ function renderNodeToBuffer(
 
           // Fragment nodes are transparent - render their children directly
           if (childNode.type === 'fragment') {
+            // Check if fragment itself is dirty (for its text children)
+            const fragmentIsDirty = childNode._dirty === true;
+            const shouldRenderFragment = fullRender || fragmentIsDirty;
+
+            // Clear fragment's dirty flag
+            if (fragmentIsDirty) {
+              childNode._dirty = false;
+            }
+
             for (const fragmentChild of childNode.children) {
               if (typeof fragmentChild === 'string') {
-                const styledText = applyTextStyle(fragmentChild, style);
-                buffer.writeAt(contentX, contentY, styledText, contentWidth);
+                // Fragment's direct text child - only render if fragment is dirty
+                if (shouldRenderFragment) {
+                  const styledText = applyTextStyle(fragmentChild, style);
+                  // Pad with spaces to clear old content when text shrinks
+                  const textVisualWidth = terminalWidth(stripAnsi(styledText));
+                  const paddingNeeded = Math.max(0, contentWidth - textVisualWidth);
+                  const paddedText =
+                    paddingNeeded > 0 ? styledText + ' '.repeat(paddingNeeded) : styledText;
+                  buffer.writeAt(contentX, contentY, paddedText, contentWidth);
+                }
               } else if (
                 typeof fragmentChild === 'object' &&
                 fragmentChild !== null &&
                 'type' in fragmentChild
               ) {
+                // Fragment's node child - recurse and let it check its dirty flag
                 renderNodeToBuffer(
                   fragmentChild as TUINode,
                   buffer,
@@ -400,11 +563,12 @@ function renderNodeToBuffer(
                   skipAbsolute,
                   childClipMinX,
                   childClipMaxX,
+                  fullRender, // Pass through full render mode
                 );
               }
             }
           } else {
-            // Regular TUINode
+            // Regular TUINode - recurse and let it check its own dirty flag
             renderNodeToBuffer(
               childNode,
               buffer,
@@ -416,6 +580,7 @@ function renderNodeToBuffer(
               skipAbsolute,
               childClipMinX,
               childClipMaxX,
+              fullRender, // Pass through full render mode
             );
           }
         }
@@ -426,23 +591,61 @@ function renderNodeToBuffer(
 
 /**
  * Render TUI tree to TerminalBuffer using layout
- * Handles zIndex ordering for absolute positioned elements
+ *
+ * ## Fine-Grained Rendering Modes
+ *
+ * This function supports two rendering modes controlled by the `fullRender` parameter:
+ *
+ * **fullRender=true (default)**: Full render mode
+ * - Clears the entire buffer first
+ * - Renders all nodes regardless of dirty state
+ * - Used for: initial render, terminal resize, layout changes
+ *
+ * **fullRender=false**: Incremental render mode
+ * - Does NOT clear the buffer (preserves unchanged content)
+ * - Only renders nodes with _dirty flag set
+ * - Skips buffer writes for non-dirty nodes
+ * - Used for: signal updates, content changes without layout change
+ *
+ * ## Performance Benefits
+ *
+ * In incremental mode:
+ * - Buffer writes are O(dirty nodes) instead of O(all nodes)
+ * - Combined with terminal diff, only changed lines are output
+ * - Yoga layout is skipped (cached positions reused)
+ *
+ * @param node - Root TUINode to render
+ * @param buffer - Target TerminalBuffer
+ * @param layoutMap - Precomputed layout positions from Yoga
+ * @param fullRender - If true, clear buffer and render all; if false, render only dirty nodes
  */
-export function renderToBuffer(node: TUINode, buffer: TerminalBuffer, layoutMap: LayoutMap): void {
-  buffer.clear();
+export function renderToBuffer(
+  node: TUINode,
+  buffer: TerminalBuffer,
+  layoutMap: LayoutMap,
+  fullRender = true,
+): void {
+  // ============================================================================
+  // Buffer Clear: Only in full render mode
+  // ============================================================================
+  // In incremental mode, we preserve existing buffer content.
+  // Non-dirty nodes haven't changed, so their previous buffer content is still valid.
+  if (fullRender) {
+    buffer.clear();
+  }
 
-  // First pass: render all nodes without zIndex awareness (for relative elements)
-  // Then sort absolute-positioned elements by zIndex
-
-  // For simplicity and correctness, we collect all absolute positioned nodes,
-  // render normal flow first, then render absolute positioned in zIndex order
+  // ============================================================================
+  // First pass: Collect absolute positioned nodes
+  // ============================================================================
+  // We need to handle zIndex ordering for absolute positioned elements.
+  // These are rendered after normal flow to ensure correct layering.
   const absoluteNodes: Array<{
     node: TUINode;
     parentLayout: { x: number; y: number };
     zIndex: number;
   }> = [];
 
-  // Recursive function to find absolute nodes
+  // Recursive function to find absolute nodes in the tree
   // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Recursive tree traversal requires complex conditionals
   function findAbsoluteNodes(
     n: TUINode,
@@ -471,34 +674,44 @@ export function renderToBuffer(node: TUINode, buffer: TerminalBuffer, layoutMap:
   // Collect all absolute positioned nodes
   findAbsoluteNodes(node);
 
-  // Render normal flow first (no clip bounds at root level)
+  // ============================================================================
+  // Second pass: Render normal flow
+  // ============================================================================
+  // Render all nodes in normal document flow (position: relative/static).
+  // In incremental mode, only dirty nodes will actually write to buffer.
   renderNodeToBuffer(
     node,
     buffer,
     layoutMap,
-    0,
-    0,
-    undefined,
-    undefined,
-    true,
-    undefined,
-    undefined,
+    0, // offsetX
+    0, // offsetY
+    undefined, // clipMinY
+    undefined, // clipMaxY
+    true, // skipAbsolute - don't render absolute nodes in this pass
+    undefined, // clipMinX
+    undefined, // clipMaxX
+    fullRender, // Pass through render mode
   );
 
-  // Sort absolute nodes by zIndex and render them
+  // ============================================================================
+  // Third pass: Render absolute positioned nodes by zIndex
+  // ============================================================================
+  // Absolute nodes are rendered in zIndex order to ensure correct layering.
+  // In incremental mode, only dirty absolute nodes will write to buffer.
   absoluteNodes.sort((a, b) => a.zIndex - b.zIndex);
   for (const { node: absNode } of absoluteNodes) {
     renderNodeToBuffer(
       absNode,
       buffer,
       layoutMap,
-      0,
-      0,
-      undefined,
-      undefined,
-      false,
-      undefined,
-      undefined,
+      0, // offsetX
+      0, // offsetY
+      undefined, // clipMinY
+      undefined, // clipMaxY
+      false, // skipAbsolute - render this absolute node
+      undefined, // clipMinX
+      undefined, // clipMaxX
+      fullRender, // Pass through render mode
     );
   }
 }

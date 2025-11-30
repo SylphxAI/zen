@@ -11,6 +11,17 @@ import initYoga, { type Yoga } from 'yoga-wasm-web';
 import { terminalWidth } from '../utils/terminal-width.js';
 import type { TUINode, TUIStyle } from './types.js';
 
+/**
+ * Get text dimensions: max line width and line count.
+ * For yoga layout, we need both to properly size text nodes.
+ */
+function getTextDimensions(text: string): { width: number; height: number } {
+  const lines = text.split('\n');
+  const height = lines.length;
+  const width = lines.length > 0 ? Math.max(...lines.map((line) => terminalWidth(line))) : 0;
+  return { width, height };
+}
+
 // Initialize Yoga WASM once
 let yogaInstance: Yoga | null = null;
 let yogaInitPromise: Promise<Yoga> | null = null;
@@ -243,29 +254,45 @@ function buildYogaTree(tuiNode: TUINode, yogaNodeMap: Map<TUINode, any>, Yoga: a
   const style = typeof tuiNode.style === 'function' ? tuiNode.style() : tuiNode.style || {};
   applyStylesToYogaNode(yogaNode, style, Yoga);
 
-  // Calculate total content width for text nodes
-  // Helper to recursively collect text width from all children (including nested Text nodes)
-  const collectTextWidth = (children: (string | TUINode)[]): number => {
+  // Calculate total content dimensions for text nodes
+  // Helper to recursively collect text dimensions from all children (including nested Text/Fragment nodes)
+  const collectTextDimensions = (
+    children: (string | TUINode)[],
+  ): { width: number; height: number } => {
     let width = 0;
+    let height = 1;
     for (const child of children) {
       if (typeof child === 'string') {
-        width += terminalWidth(child);
+        const dims = getTextDimensions(child);
+        width += dims.width;
+        height = Math.max(height, dims.height);
       } else if (typeof child === 'object' && child !== null && 'type' in child) {
         const childNode = child as TUINode;
-        // For nested Text nodes, recursively collect their text width
+        // For nested Text nodes, recursively collect their dimensions
         if (childNode.type === 'text' && childNode.children) {
-          width += collectTextWidth(childNode.children);
+          const dims = collectTextDimensions(childNode.children);
+          width += dims.width;
+          height = Math.max(height, dims.height);
         }
-        // For fragments, also collect their children's width
+        // For fragments, also collect their children's dimensions
         if (childNode.type === 'fragment' && childNode.children) {
-          width += collectTextWidth(childNode.children);
+          const dims = collectTextDimensions(childNode.children);
+          width += dims.width;
+          height = Math.max(height, dims.height);
         }
       }
     }
-    return width;
+    return { width, height };
   };
 
+  // Legacy helper for backward compatibility
+  const collectTextWidth = (children: (string | TUINode)[]): number => {
+    return collectTextDimensions(children).width;
+  };
+
+  // Track text content for implicit sizing
   let totalTextWidth = 0;
+  let maxTextHeight = 1;
   let hasStringChildren = false;
 
   // Handle children
@@ -273,11 +300,13 @@ function buildYogaTree(tuiNode: TUINode, yogaNodeMap: Map<TUINode, any>, Yoga: a
     for (const child of tuiNode.children) {
       if (typeof child === 'string') {
         hasStringChildren = true;
-        totalTextWidth += terminalWidth(child);
-        // Text leaf - create a sized yoga node based on visual width
+        const dims = getTextDimensions(child);
+        totalTextWidth += dims.width;
+        maxTextHeight = Math.max(maxTextHeight, dims.height);
+        // Text leaf - create a sized yoga node based on visual dimensions
         const textYogaNode = Yoga.Node.create();
-        textYogaNode.setWidth(terminalWidth(child));
-        textYogaNode.setHeight(1);
+        textYogaNode.setWidth(dims.width);
+        textYogaNode.setHeight(dims.height);
         yogaNode.insertChild(textYogaNode, yogaNode.getChildCount());
       } else if (typeof child === 'object' && child !== null) {
         // For nested Text nodes within a parent Text, count their width
@@ -286,6 +315,13 @@ function buildYogaTree(tuiNode: TUINode, yogaNodeMap: Map<TUINode, any>, Yoga: a
           if (childNode.type === 'text' && childNode.children) {
             hasStringChildren = true;
             totalTextWidth += collectTextWidth(childNode.children);
+          }
+          // For fragments (reactive children), also count their text dimensions
+          if (childNode.type === 'fragment' && childNode.children) {
+            hasStringChildren = true;
+            const fragmentDims = collectTextDimensions(childNode.children);
+            totalTextWidth += fragmentDims.width;
+            maxTextHeight = Math.max(maxTextHeight, fragmentDims.height);
           }
         }
         if ('type' in child) {
@@ -299,16 +335,6 @@ function buildYogaTree(tuiNode: TUINode, yogaNodeMap: Map<TUINode, any>, Yoga: a
             // Get fragment's own style if available
             const fragmentStyle =
               typeof childNode.style === 'function' ? childNode.style() : childNode.style || {};
-
-            // Apply fragment's flex settings if specified, otherwise use defaults
-            const fragmentFlex =
-              typeof fragmentStyle.flex === 'function' ? fragmentStyle.flex() : fragmentStyle.flex;
-            if (typeof fragmentFlex === 'number') {
-              fragmentYogaNode.setFlex(fragmentFlex);
-            } else {
-              fragmentYogaNode.setFlexGrow(1);
-              fragmentYogaNode.setFlexShrink(1);
-            }
 
             // CRITICAL: Fragment must have proper flexDirection for layout
             // Use fragment's own style if set, otherwise inherit from parent
@@ -324,12 +350,21 @@ function buildYogaTree(tuiNode: TUINode, yogaNodeMap: Map<TUINode, any>, Yoga: a
             }
             yogaNodeMap.set(childNode, fragmentYogaNode);
 
+            // Track fragment content dimensions
+            let fragmentContentWidth = 0;
+            let fragmentContentHeight = 0;
+            let hasTextContent = false;
+
             // Process fragment's children
             for (const fragmentChild of childNode.children) {
               if (typeof fragmentChild === 'string') {
+                hasTextContent = true;
+                const textDims = getTextDimensions(fragmentChild);
+                fragmentContentWidth = Math.max(fragmentContentWidth, textDims.width);
+                fragmentContentHeight = Math.max(fragmentContentHeight, textDims.height);
                 const textYogaNode = Yoga.Node.create();
-                textYogaNode.setWidth(terminalWidth(fragmentChild));
-                textYogaNode.setHeight(1);
+                textYogaNode.setWidth(textDims.width);
+                textYogaNode.setHeight(textDims.height);
                 fragmentYogaNode.insertChild(textYogaNode, fragmentYogaNode.getChildCount());
               } else if (
                 typeof fragmentChild === 'object' &&
@@ -338,6 +373,32 @@ function buildYogaTree(tuiNode: TUINode, yogaNodeMap: Map<TUINode, any>, Yoga: a
               ) {
                 const childYogaNode = buildYogaTree(fragmentChild as TUINode, yogaNodeMap, Yoga);
                 fragmentYogaNode.insertChild(childYogaNode, fragmentYogaNode.getChildCount());
+              }
+            }
+
+            // For fragments with text content, set explicit dimensions
+            // This ensures parent nodes size correctly to fit the fragment
+            if (hasTextContent && fragmentContentWidth > 0) {
+              fragmentYogaNode.setWidth(fragmentContentWidth);
+              fragmentYogaNode.setHeight(fragmentContentHeight);
+            } else if (childNode.children.length === 0) {
+              // CRITICAL: Empty fragments (from conditionals returning null)
+              // should take NO space in the layout
+              fragmentYogaNode.setWidth(0);
+              fragmentYogaNode.setHeight(0);
+              fragmentYogaNode.setFlexGrow(0);
+              fragmentYogaNode.setFlexShrink(0);
+            } else {
+              // For non-text fragments with children, use flex to fill available space
+              const fragmentFlex =
+                typeof fragmentStyle.flex === 'function'
+                  ? fragmentStyle.flex()
+                  : fragmentStyle.flex;
+              if (typeof fragmentFlex === 'number') {
+                fragmentYogaNode.setFlex(fragmentFlex);
+              } else {
+                fragmentYogaNode.setFlexGrow(1);
+                fragmentYogaNode.setFlexShrink(1);
               }
             }
 
@@ -365,8 +426,8 @@ function buildYogaTree(tuiNode: TUINode, yogaNodeMap: Map<TUINode, any>, Yoga: a
     }
 
     if (!hasExplicitHeight) {
-      // Text nodes are always 1 line tall
-      yogaNode.setHeight(1);
+      // Set height to max text height (handles multiline text)
+      yogaNode.setHeight(maxTextHeight);
     }
   }
 
@@ -376,9 +437,9 @@ function buildYogaTree(tuiNode: TUINode, yogaNodeMap: Map<TUINode, any>, Yoga: a
 /**
  * Extract layout results from computed Yoga tree
  */
-// biome-ignore lint/suspicious/noExplicitAny: yoga-wasm-web doesn't provide types
 function extractLayout(
   tuiNode: TUINode,
+  // biome-ignore lint/suspicious/noExplicitAny: yoga-wasm-web doesn't provide types
   yogaNodeMap: Map<TUINode, any>,
   layoutMap: LayoutMap,
   offsetX = 0,

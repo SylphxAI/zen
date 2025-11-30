@@ -9,8 +9,8 @@
  * - Rapid batched updates
  */
 
-import { describe, expect, it, beforeEach, afterEach } from 'bun:test';
-import { signal, batch, effect } from '@zen/signal';
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import { batch, effect, signal } from '@zen/signal';
 import { terminalWidth } from '../utils/terminal-width.js';
 
 describe('terminalWidth utility', () => {
@@ -42,7 +42,7 @@ describe('terminalWidth utility', () => {
 describe('signal width tracking', () => {
   it('detects width change from single to double digit', () => {
     const s = signal(9);
-    let prevWidth = terminalWidth(String(s.value));
+    const prevWidth = terminalWidth(String(s.value));
 
     s.value = 10;
     const newWidth = terminalWidth(String(s.value));
@@ -54,7 +54,7 @@ describe('signal width tracking', () => {
 
   it('detects no width change for same length values', () => {
     const s = signal(1);
-    let prevWidth = terminalWidth(String(s.value));
+    const prevWidth = terminalWidth(String(s.value));
 
     s.value = 2;
     const newWidth = terminalWidth(String(s.value));
@@ -66,7 +66,7 @@ describe('signal width tracking', () => {
 
   it('detects width change from double to triple digit', () => {
     const s = signal(99);
-    let prevWidth = terminalWidth(String(s.value));
+    const prevWidth = terminalWidth(String(s.value));
 
     s.value = 100;
     const newWidth = terminalWidth(String(s.value));
@@ -77,7 +77,7 @@ describe('signal width tracking', () => {
 
   it('detects width change for shrinking text', () => {
     const s = signal('Hello World');
-    let prevWidth = terminalWidth(String(s.value));
+    const prevWidth = terminalWidth(String(s.value));
 
     s.value = 'Hi';
     const newWidth = terminalWidth(String(s.value));
@@ -88,7 +88,7 @@ describe('signal width tracking', () => {
 
   it('detects width change for growing text', () => {
     const s = signal('Hi');
-    let prevWidth = terminalWidth(String(s.value));
+    const prevWidth = terminalWidth(String(s.value));
 
     s.value = 'Hello World';
     const newWidth = terminalWidth(String(s.value));
@@ -99,7 +99,7 @@ describe('signal width tracking', () => {
 
   it('detects width change from empty to non-empty', () => {
     const s = signal('');
-    let prevWidth = terminalWidth(String(s.value));
+    const prevWidth = terminalWidth(String(s.value));
 
     s.value = 'Hello';
     const newWidth = terminalWidth(String(s.value));
@@ -110,7 +110,7 @@ describe('signal width tracking', () => {
 
   it('detects width change from non-empty to empty', () => {
     const s = signal('Hello');
-    let prevWidth = terminalWidth(String(s.value));
+    const prevWidth = terminalWidth(String(s.value));
 
     s.value = '';
     const newWidth = terminalWidth(String(s.value));
@@ -358,7 +358,7 @@ describe('multiline text dimension tracking', () => {
 
   it('two lines has height 2', () => {
     const dims = getTextDimensions('Hello\nWorld');
-    expect(dims.width).toBe(5);  // max(5, 5) = 5
+    expect(dims.width).toBe(5); // max(5, 5) = 5
     expect(dims.height).toBe(2);
   });
 
@@ -380,9 +380,9 @@ describe('multiline text dimension tracking', () => {
 
   it('detects height change with same max line width', () => {
     // Crafted to have same max width but different heights
-    const text1 = 'ABCDE';           // width=5, height=1
-    const text2 = 'ABC\nDE';          // width=3, height=2
-    const text3 = 'ABCDE\nFGHIJ';     // width=5, height=2
+    const text1 = 'ABCDE'; // width=5, height=1
+    const _text2 = 'ABC\nDE'; // width=3, height=2
+    const text3 = 'ABCDE\nFGHIJ'; // width=5, height=2
 
     const dims1 = getTextDimensions(text1);
     const dims3 = getTextDimensions(text3);
@@ -457,37 +457,37 @@ describe('multiline text dimension tracking', () => {
   });
 
   it('handles empty lines correctly', () => {
-    const text1 = 'A\n\nB';  // Empty line in middle
+    const text1 = 'A\n\nB'; // Empty line in middle
     const dims = getTextDimensions(text1);
     expect(dims.height).toBe(3);
     expect(dims.width).toBe(1); // max of 'A', '', 'B' = 1
   });
 
   it('handles trailing newline', () => {
-    const text1 = 'Hello\n';  // Trailing newline
+    const text1 = 'Hello\n'; // Trailing newline
     const dims = getTextDimensions(text1);
-    expect(dims.height).toBe(2);  // 'Hello' and ''
+    expect(dims.height).toBe(2); // 'Hello' and ''
     expect(dims.width).toBe(5);
   });
 
   it('handles multiple trailing newlines', () => {
-    const text1 = 'Hello\n\n\n';  // Multiple trailing newlines
+    const text1 = 'Hello\n\n\n'; // Multiple trailing newlines
     const dims = getTextDimensions(text1);
-    expect(dims.height).toBe(4);  // 'Hello', '', '', ''
+    expect(dims.height).toBe(4); // 'Hello', '', '', ''
     expect(dims.width).toBe(5);
   });
 
   it('handles CJK in multiline text', () => {
     const text = '中文\nHello';
     const dims = getTextDimensions(text);
-    expect(dims.width).toBe(5);  // max(4, 5) = 5
+    expect(dims.width).toBe(5); // max(4, 5) = 5
     expect(dims.height).toBe(2);
   });
 
   it('handles varying line widths', () => {
     const text = 'A\nABC\nABCDE\nAB';
     const dims = getTextDimensions(text);
-    expect(dims.width).toBe(5);  // max of all lines
+    expect(dims.width).toBe(5); // max of all lines
     expect(dims.height).toBe(4);
   });
 });
@@ -520,9 +520,9 @@ describe('stress tests', () => {
 
     // Alternating between 1-digit and 2-digit
     s.value = 10; // width 2
-    s.value = 5;  // width 1
+    s.value = 5; // width 1
     s.value = 15; // width 2
-    s.value = 8;  // width 1
+    s.value = 8; // width 1
     s.value = 99; // width 2
 
     expect(widthHistory).toEqual([1, 2, 1, 2, 1, 2]);

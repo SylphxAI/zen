@@ -21,9 +21,14 @@ export interface TerminalSize {
   height: number;
 }
 
-// Global terminal size signals (shared across all hooks)
-const terminalWidth = signal(process.stdout.columns || 80);
-const terminalHeight = signal(process.stdout.rows || 24);
+// Global terminal size signals (shared across all hooks and render system)
+// These are the single source of truth for terminal dimensions
+export const terminalWidthSignal = signal(process.stdout.columns || 80);
+export const terminalHeightSignal = signal(process.stdout.rows || 24);
+
+// Legacy aliases for internal use
+const terminalWidth = terminalWidthSignal;
+const terminalHeight = terminalHeightSignal;
 
 // Track if resize listener is set up
 let resizeListenerActive = false;

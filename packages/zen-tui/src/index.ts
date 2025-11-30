@@ -16,6 +16,7 @@ setPlatformOps(tuiPlatformOps);
 
 // Force chalk color level (Bun workaround)
 import chalk from 'chalk';
+// biome-ignore lint/suspicious/noExplicitAny: Bun workaround to force chalk color level
 (chalk as any).level = 3;
 
 // ============================================================================
@@ -64,7 +65,9 @@ export type { MaybeReactive, Reactive } from '@zen/runtime';
 // ============================================================================
 // Core - Rendering infrastructure
 // ============================================================================
-export { renderApp } from './core/unified-render.js';
+export { render, registerMouseInterest } from './core/unified-render.js';
+/** @deprecated Use `render` instead */
+export { render as renderApp } from './core/unified-render.js';
 export { Fragment } from './core/jsx-runtime.js';
 export type { TUINode, TUIStyle, RenderOutput, MouseClickEvent } from './core/types.js';
 
@@ -222,6 +225,7 @@ export {
   useMouseScroll,
   useMouseDrag,
   dispatchMouseEvent,
+  type UseMouseOptions,
 } from './hooks/useMouse.js';
 export {
   useTerminalSize,

@@ -56,26 +56,37 @@ describe('FullscreenLayout', () => {
       expect(result.style?.flexDirection).toBe('column');
     });
 
-    it('should have width based on terminal columns', () => {
+    it('should have reactive width based on terminal columns', () => {
       const result = FullscreenLayout({});
 
+      // Width is now a reactive function for resize support
       expect(result.style?.width).toBeDefined();
-      expect(typeof result.style?.width).toBe('number');
+      expect(typeof result.style?.width).toBe('function');
+      // When called, should return a number
+      const widthFn = result.style?.width as () => number;
+      expect(typeof widthFn()).toBe('number');
     });
 
-    it('should have height based on terminal rows', () => {
+    it('should have reactive height based on terminal rows', () => {
       const result = FullscreenLayout({});
 
+      // Height is now a reactive function for resize support
       expect(result.style?.height).toBeDefined();
-      expect(typeof result.style?.height).toBe('number');
+      expect(typeof result.style?.height).toBe('function');
+      // When called, should return a number
+      const heightFn = result.style?.height as () => number;
+      expect(typeof heightFn()).toBe('number');
     });
 
     it('should use terminal size or fallback', () => {
       const result = FullscreenLayout({});
 
+      // Width/height are reactive functions - call them to get values
+      const widthFn = result.style?.width as () => number;
+      const heightFn = result.style?.height as () => number;
       // Should use process.stdout.columns/rows or fallback to 80x24
-      expect(result.style?.width).toBeGreaterThanOrEqual(80);
-      expect(result.style?.height).toBeGreaterThanOrEqual(24);
+      expect(widthFn()).toBeGreaterThanOrEqual(80);
+      expect(heightFn()).toBeGreaterThanOrEqual(24);
     });
   });
 

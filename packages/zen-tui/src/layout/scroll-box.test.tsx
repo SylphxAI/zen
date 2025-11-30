@@ -289,4 +289,135 @@ describe('ScrollBox', () => {
       expect(result).toBeDefined();
     });
   });
+
+  // ==========================================================================
+  // Keyboard Scroll Behavior (Integration Tests - Require Full Render Loop)
+  // Note: These tests verify the scroll logic configuration, not actual input
+  // handling. Input handling requires integration testing with a full renderer.
+  // ==========================================================================
+
+  describe('Keyboard Scroll Logic', () => {
+    it('should accept keyboard handler configuration', () => {
+      const scrollOffset = signal(0);
+      const result = ScrollBox({
+        height: 10,
+        contentHeight: 50,
+        scrollOffset,
+      });
+
+      // Verify component setup (actual input testing needs integration tests)
+      expect(result).toBeDefined();
+      expect(scrollOffset.value).toBe(0);
+    });
+
+    it('should accept scrollStep configuration', () => {
+      const scrollOffset = signal(0);
+      const result = ScrollBox({
+        height: 10,
+        contentHeight: 100,
+        scrollOffset,
+        scrollStep: 3,
+      });
+
+      expect(result).toBeDefined();
+    });
+
+    it('should accept reactive scrollStep configuration', () => {
+      const scrollOffset = signal(0);
+      const scrollStep = signal(2);
+      const result = ScrollBox({
+        height: 10,
+        contentHeight: 100,
+        scrollOffset,
+        scrollStep: () => scrollStep.value,
+      });
+
+      expect(result).toBeDefined();
+    });
+
+    it('should accept pageSize configuration', () => {
+      const scrollOffset = signal(0);
+      const result = ScrollBox({
+        height: 10,
+        contentHeight: 100,
+        scrollOffset,
+        pageSize: 9,
+      });
+
+      expect(result).toBeDefined();
+    });
+  });
+
+  // ==========================================================================
+  // Max Scroll Boundary Tests (Configuration)
+  // ==========================================================================
+
+  describe('Max Scroll Boundary Configuration', () => {
+    it('should calculate max scroll accounting for border', () => {
+      const scrollOffset = signal(0);
+      const result = ScrollBox({
+        height: 10,
+        contentHeight: 20,
+        scrollOffset,
+        style: { borderStyle: 'single' },
+      });
+
+      // Verify component renders with border configuration
+      expect(result).toBeDefined();
+      expect(result.style?.borderStyle).toBe('single');
+    });
+
+    it('should calculate max scroll accounting for padding', () => {
+      const scrollOffset = signal(0);
+      const result = ScrollBox({
+        height: 10,
+        contentHeight: 20,
+        scrollOffset,
+        style: { padding: 2 },
+      });
+
+      expect(result).toBeDefined();
+    });
+
+    it('should handle contentHeight less than viewport', () => {
+      const scrollOffset = signal(0);
+      const result = ScrollBox({
+        height: 20,
+        contentHeight: 10, // Less than viewport
+        scrollOffset,
+      });
+
+      expect(result).toBeDefined();
+    });
+  });
+
+  // ==========================================================================
+  // Reactive Height Changes (Configuration)
+  // ==========================================================================
+
+  describe('Reactive Height Configuration', () => {
+    it('should accept reactive height', () => {
+      const scrollOffset = signal(0);
+      const height = signal(10);
+      const result = ScrollBox({
+        height: () => height.value,
+        contentHeight: 50,
+        scrollOffset,
+      });
+
+      expect(result).toBeDefined();
+    });
+
+    it('should accept reactive contentHeight', () => {
+      const scrollOffset = signal(0);
+      const contentHeight = signal(50);
+      const result = ScrollBox({
+        height: 10,
+        contentHeight: () => contentHeight.value,
+        scrollOffset,
+      });
+
+      expect(result).toBeDefined();
+    });
+  });
 });

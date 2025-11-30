@@ -1,7 +1,33 @@
 /**
- * Terminal Screen Buffer
+ * Terminal Screen Buffer (ADR-014 Fine-Grained Reactivity)
  *
  * Maintains a line-based representation of the terminal screen with ANSI codes preserved.
+ *
+ * ## Role in Fine-Grained Reactivity
+ *
+ * This buffer is central to efficient terminal updates:
+ *
+ * 1. **Persistent Buffer**: Content persists between frames. When only some nodes
+ *    are dirty, unchanged content remains in the buffer without re-rendering.
+ *
+ * 2. **Line-Based Diffing**: The diff() method compares buffers line-by-line,
+ *    returning only changed lines. This enables minimal terminal output.
+ *
+ * 3. **Incremental Updates**: The setLine() method allows efficient updates
+ *    to the diff buffer after rendering, copying only changed lines.
+ *
+ * ## Buffer Pattern for Fine-Grained Updates
+ *
+ * ```
+ * renderBuffer: Current frame, updated incrementally (dirty nodes only)
+ * diffBuffer: Previous frame copy, used for comparison
+ *
+ * On update:
+ * 1. Render dirty nodes to renderBuffer (unchanged areas preserved)
+ * 2. diff(renderBuffer, diffBuffer) → only changed lines
+ * 3. Output changed lines to terminal
+ * 4. Copy changed lines from renderBuffer to diffBuffer
+ * ```
  */
 
 import stripAnsi from 'strip-ansi';
@@ -339,6 +365,51 @@ export class TerminalBuffer {
         }
       }
       return line;
+    }
+    return '';
+  }
+
+  /**
+   * Set a line directly (for efficient diff buffer updates)
+   *
+   * ## Fine-Grained Reactivity Usage
+   *
+   * After diffing and outputting changed lines, use this to update
+   * the diff buffer with only the changed lines:
+   *
+   * ```typescript
+   * const changes = renderBuffer.diff(diffBuffer);
+   * // ... output changes to terminal ...
+   * for (const change of changes) {
+   *   diffBuffer.setLine(change.y, change.line);
+   * }
+   * ```
+   *
+   * This is more efficient than copying the entire buffer because
+   * we only update the lines that actually changed.
+   *
+   * @param y - Line index (0-based)
+   * @param line - Line content (raw, without reset codes added by getLine)
+   */
+  setLine(y: number, line: string): void {
+    if (y >= 0 && y < this.height) {
+      // Store raw line - getLine() will add reset codes when reading
+      // Note: The line from diff() includes reset codes from getLine(),
+      // but storing them is fine - they won't be duplicated on output
+      this.buffer[y] = line;
+    }
+  }
+
+  /**
+   * Get the raw line content without reset codes
+   * Used internally and for efficient buffer operations
+   *
+   * @param y - Line index (0-based)
+   * @returns Raw line content
+   */
+  getRawLine(y: number): string {
+    if (y >= 0 && y < this.height) {
+      return this.buffer[y];
     }
     return '';
   }

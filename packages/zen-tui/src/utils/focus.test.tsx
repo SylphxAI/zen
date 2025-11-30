@@ -63,3 +63,59 @@ describe('Focus Management', () => {
     expect(testComplete).toBe(true);
   });
 });
+
+describe('Lazy Children Pattern', () => {
+  it('should support function children: {() => <Component />}', () => {
+    let childrenExecuted = false;
+    let contextAvailable = false;
+
+    createRoot(() => {
+      // This tests the lazy children pattern: <FocusProvider>{() => <Child />}</FocusProvider>
+      // The function should be executed and the component should be rendered
+      FocusProvider({
+        children: () => {
+          childrenExecuted = true;
+          // Try to access the context - should work because we're inside the Provider
+          try {
+            const manager = useFocusManager();
+            contextAvailable = typeof manager.focus === 'function';
+          } catch {
+            contextAvailable = false;
+          }
+          return Text({ children: 'lazy child' });
+        },
+      });
+    });
+
+    expect(childrenExecuted).toBe(true);
+    expect(contextAvailable).toBe(true);
+  });
+
+  it('should execute descriptor returned from function children', () => {
+    let componentCreated = false;
+
+    // Custom component that sets a flag when created
+    function ChildComponent() {
+      componentCreated = true;
+      return Text({ children: 'child' });
+    }
+
+    createRoot(() => {
+      // The function returns a descriptor { _jsx: true, type: ChildComponent, props: {} }
+      // This descriptor should be executed by Context.Provider
+      FocusProvider({
+        children: () => {
+          // Simulating what JSX does: jsx(ChildComponent, {})
+          // returns { _jsx: true, type: ChildComponent, props: {} }
+          return {
+            _jsx: true,
+            type: ChildComponent,
+            props: {},
+          };
+        },
+      });
+    });
+
+    expect(componentCreated).toBe(true);
+  });
+});

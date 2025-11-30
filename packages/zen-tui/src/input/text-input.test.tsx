@@ -8,8 +8,8 @@ describe('TextInput', () => {
     const node = TextInput({ value });
 
     expect(node.type).toBe('box');
-    // Width is now a reactive function
-    expect(typeof node.style?.width).toBe('function');
+    // Without explicit width, uses alignSelf: stretch to fill parent
+    expect(node.style?.alignSelf).toBe('stretch');
   });
 
   it('should accept initial value as string', () => {
@@ -25,22 +25,23 @@ describe('TextInput', () => {
     expect(node).toBeTruthy();
   });
 
-  it('should use default width if not specified', () => {
+  it('should use alignSelf stretch when width not specified', () => {
     const node = TextInput({ value: signal('') });
 
-    // Width is now a reactive function that returns the width
-    const widthFn = node.style?.width as () => number;
-    expect(typeof widthFn).toBe('function');
-    expect(widthFn()).toBe(40);
+    // Without explicit width, TextInput uses alignSelf: 'stretch' to fill parent
+    expect(node.style?.alignSelf).toBe('stretch');
+    expect(node.style?.width).toBeUndefined();
   });
 
   it('should use custom width when specified', () => {
     const node = TextInput({ value: signal(''), width: 60 });
 
-    // Width is now a reactive function that returns the width
+    // Width is a reactive function when explicitly specified
     const widthFn = node.style?.width as () => number;
     expect(typeof widthFn).toBe('function');
     expect(widthFn()).toBe(60);
+    // alignSelf should NOT be set when width is explicit
+    expect(node.style?.alignSelf).toBeUndefined();
   });
 
   it('should have round border when focused', () => {

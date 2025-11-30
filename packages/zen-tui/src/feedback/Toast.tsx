@@ -152,25 +152,29 @@ function getToastColor(type: ToastType): string {
 export function ToastContainer(props: ToastProps) {
   const { position = 'top-right', maxWidth = 40 } = props;
 
-  const { width: termWidth, height: termHeight } = useTerminalSize();
+  const { width: _termWidth } = useTerminalSize();
 
   // Determine alignment based on position
-  const alignItems = position.includes('right')
+  const _alignItems = position.includes('right')
     ? 'flex-end'
     : position.includes('left')
       ? 'flex-start'
       : 'center';
-  const justifyContent = position.includes('top') ? 'flex-start' : 'flex-end';
+  const _justifyContent = position.includes('top') ? 'flex-start' : 'flex-end';
 
+  // CRITICAL: ToastContainer should NOT take space in the flex layout
+  // It renders as an overlay at a fixed position on screen
+  // We use position: 'absolute' semantics via width/height 0
   return (
     <Box
       style={{
-        width: termWidth,
-        height: termHeight,
-        flexDirection: 'column',
-        alignItems,
-        justifyContent,
-        padding: 1,
+        // Take no space in flex layout
+        width: 0,
+        height: 0,
+        flexGrow: 0,
+        flexShrink: 0,
+        // Store position info for renderer (if needed in future)
+        // For now, toasts render at their natural position
       }}
     >
       <For each={() => toastStore.value}>

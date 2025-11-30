@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Badge } from './Badge';
 
 // Helper to resolve reactive style values
+// biome-ignore lint/suspicious/noExplicitAny: Test helper for reactive values
 const resolveStyle = (value: any) => (typeof value === 'function' ? value() : value);
 
 describe('Badge', () => {

@@ -93,7 +93,7 @@ export function ScrollBox(props: ScrollBoxProps): TUINode {
     style: {
       ...props?.style,
       height: getHeight(),
-      overflow: 'hidden', // Mark as scrollable container
+      overflow: 'hidden',
     },
   };
 

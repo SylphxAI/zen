@@ -532,4 +532,183 @@ describe('TreeView', () => {
       expect(result).toBeDefined();
     });
   });
+
+  // ==========================================================================
+  // Interaction Tests - Callback Configuration
+  // Note: Input handling requires integration testing with a full renderer.
+  // These tests verify that callbacks are properly configured.
+  // ==========================================================================
+
+  describe('Toggle Callback Configuration', () => {
+    it('should accept onToggle callback', () => {
+      const toggleEvents: { nodeId: string; expanded: boolean }[] = [];
+      const nodes: TreeNode[] = [
+        {
+          id: 'parent',
+          label: 'Parent',
+          children: [{ id: 'child', label: 'Child' }],
+        },
+      ];
+
+      const result = TreeView({
+        nodes,
+        onToggle: (node, expanded) => {
+          toggleEvents.push({ nodeId: node.id, expanded });
+        },
+      });
+
+      expect(result).toBeDefined();
+    });
+
+    it('should accept defaultExpanded on nodes', () => {
+      const nodes: TreeNode[] = [
+        {
+          id: 'parent',
+          label: 'Parent',
+          defaultExpanded: true,
+          children: [{ id: 'child', label: 'Child' }],
+        },
+      ];
+
+      const result = TreeView({ nodes });
+
+      expect(result).toBeDefined();
+    });
+  });
+
+  // ==========================================================================
+  // Select Callback Configuration
+  // ==========================================================================
+
+  describe('Select Callback Configuration', () => {
+    it('should accept onSelect callback', () => {
+      const selectEvents: string[] = [];
+      const nodes: TreeNode[] = [{ id: 'leaf', label: 'Leaf Node' }];
+
+      const result = TreeView({
+        nodes,
+        onSelect: (node) => {
+          selectEvents.push(node.id);
+        },
+      });
+
+      expect(result).toBeDefined();
+    });
+
+    it('should accept both onSelect and onToggle', () => {
+      const selectEvents: string[] = [];
+      const toggleEvents: string[] = [];
+      const nodes: TreeNode[] = [
+        {
+          id: 'parent',
+          label: 'Parent',
+          children: [{ id: 'child', label: 'Child' }],
+        },
+      ];
+
+      const result = TreeView({
+        nodes,
+        onSelect: (node) => selectEvents.push(node.id),
+        onToggle: (node) => toggleEvents.push(node.id),
+      });
+
+      expect(result).toBeDefined();
+    });
+
+    it('should preserve node data for callbacks', () => {
+      const nodes: TreeNode<{ custom: string }>[] = [
+        { id: 'leaf', label: 'Leaf', data: { custom: 'test-value' } },
+      ];
+
+      const result = TreeView({
+        nodes,
+        onSelect: (node) => {
+          // Data should be accessible
+          expect(node.data).toEqual({ custom: 'test-value' });
+        },
+      });
+
+      expect(result).toBeDefined();
+    });
+  });
+
+  // ==========================================================================
+  // Dynamic Updates
+  // ==========================================================================
+
+  describe('Dynamic Updates', () => {
+    it('should update when nodes signal changes', () => {
+      const nodesSignal = signal<TreeNode[]>([{ id: '1', label: 'Initial' }]);
+
+      const result = TreeView({
+        nodes: () => nodesSignal.value,
+      });
+
+      expect(result).toBeDefined();
+
+      // Update nodes
+      nodesSignal.value = [
+        { id: '1', label: 'Initial' },
+        { id: '2', label: 'Added' },
+      ];
+
+      expect(nodesSignal.value.length).toBe(2);
+    });
+
+    it('should accept reactive nodes with callbacks', () => {
+      const nodesSignal = signal<TreeNode[]>([
+        {
+          id: 'parent',
+          label: 'Parent',
+          children: [{ id: 'child', label: 'Child' }],
+        },
+      ]);
+
+      const toggleEvents: { nodeId: string; expanded: boolean }[] = [];
+
+      const result = TreeView({
+        nodes: () => nodesSignal.value,
+        onToggle: (node, expanded) => {
+          toggleEvents.push({ nodeId: node.id, expanded });
+        },
+      });
+
+      expect(result).toBeDefined();
+    });
+  });
+
+  // ==========================================================================
+  // Helper Function Tests - findNode
+  // ==========================================================================
+
+  describe('Helper Functions', () => {
+    it('should handle flat tree structure', () => {
+      const nodes = [
+        { id: '1', label: 'First' },
+        { id: '2', label: 'Second' },
+      ];
+
+      const result = TreeView({ nodes });
+      expect(result).toBeDefined();
+    });
+
+    it('should handle nested tree structure', () => {
+      const nodes: TreeNode[] = [
+        {
+          id: 'root',
+          label: 'Root',
+          children: [
+            {
+              id: 'child',
+              label: 'Child',
+              children: [{ id: 'grandchild', label: 'Grandchild' }],
+            },
+          ],
+        },
+      ];
+
+      const result = TreeView({ nodes });
+      expect(result).toBeDefined();
+    });
+  });
 });

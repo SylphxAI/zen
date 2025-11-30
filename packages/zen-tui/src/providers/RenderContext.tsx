@@ -1,8 +1,10 @@
 /**
  * Render Context
  *
- * Internal context for tracking render settings (fullscreen, mouse, etc.)
- * Used by FullscreenLayout and MouseProvider to communicate with renderer.
+ * Internal context for tracking render settings (fullscreen, etc.)
+ * Used by FullscreenLayout to communicate with renderer.
+ *
+ * Note: Mouse is handled via registerMouseInterest() in unified-render.ts
  */
 
 import { createContext, signal, useContext } from '@zen/runtime';
@@ -10,8 +12,6 @@ import { createContext, signal, useContext } from '@zen/runtime';
 export interface RenderSettings {
   /** Whether fullscreen mode is active */
   fullscreen: ReturnType<typeof signal<boolean>>;
-  /** Whether mouse tracking is enabled */
-  mouse: ReturnType<typeof signal<boolean>>;
 }
 
 const RenderSettingsContext = createContext<RenderSettings | null>(null);
@@ -22,7 +22,6 @@ const RenderSettingsContext = createContext<RenderSettings | null>(null);
 export function RenderSettingsProvider(props: { children: unknown }): unknown {
   const settings: RenderSettings = {
     fullscreen: signal(false),
-    mouse: signal(false),
   };
 
   return RenderSettingsContext.Provider({

@@ -89,6 +89,44 @@ export interface TUINode {
   children: Array<TUINode | string>;
   parentNode?: TUINode;
   style?: TUIStyle;
+
+  // ============================================================================
+  // Fine-Grained Reactivity Fields (ADR-014)
+  // ============================================================================
+  // These fields enable incremental updates without full tree re-rendering.
+  // When a signal changes, only the affected node is marked dirty, and only
+  // dirty nodes are re-rendered to the terminal buffer.
+
+  /**
+   * Content dirty flag - set when node's content/children change.
+   * When true, this node needs to be re-rendered to the buffer.
+   * Cleared after rendering.
+   *
+   * @example
+   * ```tsx
+   * // In jsx-runtime effect:
+   * textNode.children[0] = newValue;
+   * textNode._dirty = true;  // Mark for re-render
+   * scheduleNodeUpdate(textNode);
+   * ```
+   */
+  _dirty?: boolean;
+
+  /**
+   * Layout dirty flag - set when node's size/position might change.
+   * When true, Yoga layout needs to be recomputed for this subtree.
+   * This is more expensive than content-only updates.
+   *
+   * Layout is dirty when:
+   * - Node is added/removed
+   * - width/height/flex properties change
+   * - Text content changes length significantly
+   *
+   * Layout is NOT dirty when:
+   * - Only color/style changes
+   * - Text content changes but fits in same space
+   */
+  _layoutDirty?: boolean;
 }
 
 export interface RenderOutput {

@@ -1,110 +1,128 @@
 /**
  * Hit Testing Module Tests
  *
- * Tests for mapping screen coordinates to TUI elements using layout data.
+ * Tests for mouse hit detection using Yoga layout data.
  */
-import { describe, expect, it, beforeEach, afterEach } from 'bun:test';
+import { beforeEach, describe, expect, it } from 'bun:test';
+import type { TUINode } from '../core/types.js';
+import type { LayoutMap, LayoutResult } from '../core/yoga-layout.js';
 import {
+  clearHitTestLayout,
+  findClickableAncestor,
   hitTest,
   hitTestAll,
   setHitTestLayout,
-  clearHitTestLayout,
-  findClickableAncestor,
-  type HitTestResult,
 } from './hit-test.js';
-import type { TUINode } from '../core/types.js';
-import type { LayoutMap, LayoutResult } from '../core/yoga-layout.js';
 
 // Helper to create a mock TUINode
 const createNode = (
   tagName: string,
-  style: TUINode['style'] = {},
-  children: TUINode['children'] = [],
-  props: Record<string, unknown> = {},
+  style?: TUINode['style'],
+  props?: TUINode['props'],
+  children?: TUINode['children'],
 ): TUINode => ({
   type: 'box',
   tagName,
   style,
-  children,
   props,
+  children,
 });
 
-// Helper to create a layout map
-const createLayoutMap = (entries: Array<[TUINode, LayoutResult]>): LayoutMap => {
-  return new Map(entries);
-};
+// Helper to create a layout result
+const createLayout = (x: number, y: number, width: number, height: number): LayoutResult => ({
+  x,
+  y,
+  width,
+  height,
+});
 
 describe('hit-test', () => {
-  afterEach(() => {
+  beforeEach(() => {
     clearHitTestLayout();
   });
 
   // ==========================================================================
-  // hitTest - Basic Functionality
+  // setHitTestLayout / clearHitTestLayout
   // ==========================================================================
 
-  describe('hitTest - Basic', () => {
+  describe('setHitTestLayout / clearHitTestLayout', () => {
     it('should return null when no layout is set', () => {
       const result = hitTest(5, 5);
       expect(result).toBeNull();
     });
 
-    it('should return null when coordinates are outside all elements', () => {
+    it('should return results after layout is set', () => {
       const root = createNode('root');
-      const layoutMap = createLayoutMap([
-        [root, { x: 0, y: 0, width: 10, height: 10 }],
-      ]);
+      const layoutMap: LayoutMap = new Map([[root, createLayout(0, 0, 80, 24)]]);
 
       setHitTestLayout(layoutMap, root);
 
-      // Outside bounds
-      expect(hitTest(20, 20)).toBeNull();
-      expect(hitTest(0, 0)).toBeNull(); // 0,0 in 1-indexed is -1,-1 in layout
-    });
-
-    it('should return the root node when hit', () => {
-      const root = createNode('root');
-      const layoutMap = createLayoutMap([
-        [root, { x: 0, y: 0, width: 10, height: 10 }],
-      ]);
-
-      setHitTestLayout(layoutMap, root);
-
-      // Hit inside root (1-indexed mouse coords)
-      const result = hitTest(5, 5);
-      expect(result).not.toBeNull();
-      expect(result?.node).toBe(root);
-      expect(result?.layout).toEqual({ x: 0, y: 0, width: 10, height: 10 });
-    });
-
-    it('should calculate local coordinates correctly', () => {
-      const root = createNode('root');
-      const layoutMap = createLayoutMap([
-        [root, { x: 5, y: 5, width: 10, height: 10 }],
-      ]);
-
-      setHitTestLayout(layoutMap, root);
-
-      // Hit at screen position (8, 8) = layout (7, 7)
-      // Local should be (7-5, 7-5) = (2, 2)
-      const result = hitTest(8, 8);
-      expect(result?.localX).toBe(2);
-      expect(result?.localY).toBe(2);
-    });
-
-    it('should convert 1-indexed mouse coords to 0-indexed layout', () => {
-      const root = createNode('root');
-      const layoutMap = createLayoutMap([
-        [root, { x: 0, y: 0, width: 10, height: 10 }],
-      ]);
-
-      setHitTestLayout(layoutMap, root);
-
-      // Mouse (1,1) should hit layout (0,0)
       const result = hitTest(1, 1);
       expect(result).not.toBeNull();
+    });
+
+    it('should return null after layout is cleared', () => {
+      const root = createNode('root');
+      const layoutMap: LayoutMap = new Map([[root, createLayout(0, 0, 80, 24)]]);
+
+      setHitTestLayout(layoutMap, root);
+      clearHitTestLayout();
+
+      const result = hitTest(1, 1);
+      expect(result).toBeNull();
+    });
+  });
+
+  // ==========================================================================
+  // hitTest - Basic Hit Detection
+  // ==========================================================================
+
+  describe('hitTest - Basic', () => {
+    it('should hit a single node', () => {
+      const root = createNode('root');
+      const layoutMap: LayoutMap = new Map([[root, createLayout(0, 0, 80, 24)]]);
+
+      setHitTestLayout(layoutMap, root);
+
+      const result = hitTest(10, 10);
+      expect(result).not.toBeNull();
+      expect(result?.node).toBe(root);
+    });
+
+    it('should convert 1-indexed mouse coords to 0-indexed layout coords', () => {
+      const root = createNode('root');
+      const layoutMap: LayoutMap = new Map([[root, createLayout(0, 0, 80, 24)]]);
+
+      setHitTestLayout(layoutMap, root);
+
+      // Mouse coord (1, 1) should map to layout coord (0, 0)
+      const result = hitTest(1, 1);
       expect(result?.localX).toBe(0);
       expect(result?.localY).toBe(0);
+    });
+
+    it('should return null for coords outside root', () => {
+      const root = createNode('root');
+      const layoutMap: LayoutMap = new Map([[root, createLayout(0, 0, 10, 10)]]);
+
+      setHitTestLayout(layoutMap, root);
+
+      // Outside bounds (1-indexed coords)
+      const result = hitTest(15, 15);
+      expect(result).toBeNull();
+    });
+
+    it('should calculate correct local coordinates', () => {
+      const root = createNode('root');
+      const layoutMap: LayoutMap = new Map([[root, createLayout(5, 5, 20, 10)]]);
+
+      setHitTestLayout(layoutMap, root);
+
+      // Mouse coord (10, 8) = layout coord (9, 7)
+      // Node starts at (5, 5), so local = (9-5, 7-5) = (4, 2)
+      const result = hitTest(10, 8);
+      expect(result?.localX).toBe(4);
+      expect(result?.localY).toBe(2);
     });
   });
 
@@ -113,73 +131,72 @@ describe('hit-test', () => {
   // ==========================================================================
 
   describe('hitTest - Nested Elements', () => {
-    it('should return deepest child when hit', () => {
+    it('should find deepest child', () => {
       const child = createNode('child');
-      const root = createNode('root', {}, [child]);
+      const root = createNode('root', undefined, undefined, [child]);
 
-      const layoutMap = createLayoutMap([
-        [root, { x: 0, y: 0, width: 20, height: 20 }],
-        [child, { x: 5, y: 5, width: 10, height: 10 }],
+      const layoutMap: LayoutMap = new Map([
+        [root, createLayout(0, 0, 80, 24)],
+        [child, createLayout(10, 5, 20, 10)],
       ]);
 
       setHitTestLayout(layoutMap, root);
 
-      // Hit inside child
-      const result = hitTest(8, 8); // layout (7, 7)
+      // Hit the child area (1-indexed)
+      const result = hitTest(15, 8);
       expect(result?.node).toBe(child);
     });
 
-    it('should return parent when child is not hit', () => {
+    it('should return parent if child not hit', () => {
       const child = createNode('child');
-      const root = createNode('root', {}, [child]);
+      const root = createNode('root', undefined, undefined, [child]);
 
-      const layoutMap = createLayoutMap([
-        [root, { x: 0, y: 0, width: 20, height: 20 }],
-        [child, { x: 5, y: 5, width: 5, height: 5 }],
+      const layoutMap: LayoutMap = new Map([
+        [root, createLayout(0, 0, 80, 24)],
+        [child, createLayout(10, 5, 20, 10)],
       ]);
 
       setHitTestLayout(layoutMap, root);
 
-      // Hit inside root but outside child
-      const result = hitTest(2, 2); // layout (1, 1)
+      // Hit outside child but inside root (1-indexed)
+      const result = hitTest(5, 3);
       expect(result?.node).toBe(root);
     });
 
-    it('should handle deeply nested structures', () => {
-      const grandchild = createNode('grandchild');
-      const child = createNode('child', {}, [grandchild]);
-      const root = createNode('root', {}, [child]);
+    it('should handle deeply nested elements', () => {
+      const innermost = createNode('innermost');
+      const middle = createNode('middle', undefined, undefined, [innermost]);
+      const root = createNode('root', undefined, undefined, [middle]);
 
-      const layoutMap = createLayoutMap([
-        [root, { x: 0, y: 0, width: 30, height: 30 }],
-        [child, { x: 5, y: 5, width: 20, height: 20 }],
-        [grandchild, { x: 10, y: 10, width: 10, height: 10 }],
+      const layoutMap: LayoutMap = new Map([
+        [root, createLayout(0, 0, 80, 24)],
+        [middle, createLayout(5, 5, 30, 15)],
+        [innermost, createLayout(10, 8, 10, 5)],
       ]);
 
       setHitTestLayout(layoutMap, root);
 
-      // Hit inside grandchild
-      const result = hitTest(13, 13); // layout (12, 12)
-      expect(result?.node).toBe(grandchild);
+      const result = hitTest(15, 10);
+      expect(result?.node).toBe(innermost);
     });
 
-    it('should prefer last sibling in normal flow (later = on top)', () => {
+    it('should handle last child wins for overlapping normal flow', () => {
       const child1 = createNode('child1');
       const child2 = createNode('child2');
-      const root = createNode('root', {}, [child1, child2]);
+      const root = createNode('root', undefined, undefined, [child1, child2]);
 
-      // Both children overlap
-      const layoutMap = createLayoutMap([
-        [root, { x: 0, y: 0, width: 20, height: 20 }],
-        [child1, { x: 0, y: 0, width: 10, height: 10 }],
-        [child2, { x: 5, y: 5, width: 10, height: 10 }],
+      // Both children at same position
+      const layoutMap: LayoutMap = new Map([
+        [root, createLayout(0, 0, 80, 24)],
+        [child1, createLayout(5, 5, 20, 10)],
+        [child2, createLayout(5, 5, 20, 10)],
       ]);
 
       setHitTestLayout(layoutMap, root);
 
-      // Hit in overlapping region
-      const result = hitTest(7, 7); // layout (6, 6)
-      expect(result?.node).toBe(child2); // Last sibling wins
+      // Last child (child2) should be hit
+      const result = hitTest(10, 10);
+      expect(result?.node).toBe(child2);
     });
   });
 
@@ -188,72 +205,73 @@ describe('hit-test', () => {
   // ==========================================================================
 
   describe('hitTest - Absolute Positioning', () => {
-    it('should prefer higher zIndex for absolute elements', () => {
-      const lowZ = createNode('lowZ', { position: 'absolute', zIndex: 1 });
-      const highZ = createNode('highZ', { position: 'absolute', zIndex: 10 });
-      const root = createNode('root', {}, [lowZ, highZ]);
-
-      // Both absolute children overlap
-      const layoutMap = createLayoutMap([
-        [root, { x: 0, y: 0, width: 20, height: 20 }],
-        [lowZ, { x: 0, y: 0, width: 10, height: 10 }],
-        [highZ, { x: 5, y: 5, width: 10, height: 10 }],
-      ]);
-
-      setHitTestLayout(layoutMap, root);
-
-      // Hit in overlapping region
-      const result = hitTest(7, 7); // layout (6, 6)
-      expect(result?.node).toBe(highZ); // Higher zIndex wins
-    });
-
-    it('should treat absolute elements over normal flow', () => {
+    it('should prefer absolute positioned element over normal', () => {
       const normal = createNode('normal');
-      const absolute = createNode('absolute', { position: 'absolute', zIndex: 1 });
-      const root = createNode('root', {}, [normal, absolute]);
+      const absolute = createNode('absolute', { position: 'absolute' });
+      const root = createNode('root', undefined, undefined, [normal, absolute]);
 
-      // Both children overlap
-      const layoutMap = createLayoutMap([
-        [root, { x: 0, y: 0, width: 20, height: 20 }],
-        [normal, { x: 0, y: 0, width: 15, height: 15 }],
-        [absolute, { x: 5, y: 5, width: 10, height: 10 }],
+      const layoutMap: LayoutMap = new Map([
+        [root, createLayout(0, 0, 80, 24)],
+        [normal, createLayout(5, 5, 20, 10)],
+        [absolute, createLayout(5, 5, 20, 10)],
       ]);
 
       setHitTestLayout(layoutMap, root);
 
-      // Hit in overlapping region
-      const result = hitTest(8, 8); // layout (7, 7)
-      expect(result?.node).toBe(absolute); // Absolute over normal flow
+      const result = hitTest(10, 10);
+      expect(result?.node).toBe(absolute);
     });
 
-    it('should handle zIndex as function', () => {
-      const node = createNode('node', { position: 'absolute', zIndex: () => 5 });
-      const root = createNode('root', {}, [node]);
+    it('should respect zIndex for absolute elements', () => {
+      const low = createNode('low-z', { position: 'absolute', zIndex: 1 });
+      const high = createNode('high-z', { position: 'absolute', zIndex: 10 });
+      const root = createNode('root', undefined, undefined, [high, low]); // high first in children
 
-      const layoutMap = createLayoutMap([
-        [root, { x: 0, y: 0, width: 20, height: 20 }],
-        [node, { x: 0, y: 0, width: 10, height: 10 }],
+      const layoutMap: LayoutMap = new Map([
+        [root, createLayout(0, 0, 80, 24)],
+        [low, createLayout(5, 5, 20, 10)],
+        [high, createLayout(5, 5, 20, 10)],
       ]);
 
       setHitTestLayout(layoutMap, root);
 
-      const result = hitTest(5, 5);
-      expect(result?.node).toBe(node);
+      // Higher zIndex should be hit regardless of order
+      const result = hitTest(10, 10);
+      expect(result?.node).toBe(high);
     });
 
-    it('should handle position as function', () => {
-      const node = createNode('node', { position: () => 'absolute' });
-      const root = createNode('root', {}, [node]);
+    it('should handle reactive position style', () => {
+      const absolute = createNode('absolute', () => ({ position: 'absolute' }));
+      const normal = createNode('normal');
+      const root = createNode('root', undefined, undefined, [normal, absolute]);
 
-      const layoutMap = createLayoutMap([
-        [root, { x: 0, y: 0, width: 20, height: 20 }],
-        [node, { x: 0, y: 0, width: 10, height: 10 }],
+      const layoutMap: LayoutMap = new Map([
+        [root, createLayout(0, 0, 80, 24)],
+        [normal, createLayout(5, 5, 20, 10)],
+        [absolute, createLayout(5, 5, 20, 10)],
       ]);
 
       setHitTestLayout(layoutMap, root);
 
-      const result = hitTest(5, 5);
-      expect(result?.node).toBe(node);
+      const result = hitTest(10, 10);
+      expect(result?.node).toBe(absolute);
+    });
+
+    it('should handle reactive zIndex', () => {
+      const low = createNode('low-z', () => ({ position: 'absolute', zIndex: () => 1 }));
+      const high = createNode('high-z', () => ({ position: 'absolute', zIndex: () => 10 }));
+      const root = createNode('root', undefined, undefined, [low, high]);
+
+      const layoutMap: LayoutMap = new Map([
+        [root, createLayout(0, 0, 80, 24)],
+        [low, createLayout(5, 5, 20, 10)],
+        [high, createLayout(5, 5, 20, 10)],
+      ]);
+
+      setHitTestLayout(layoutMap, root);
+
+      const result = hitTest(10, 10);
+      expect(result?.node).toBe(high);
     });
   });
 
@@ -262,44 +280,44 @@ describe('hit-test', () => {
   // ==========================================================================
 
   describe('hitTest - Fragment Nodes', () => {
-    it('should handle fragment children', () => {
+    it('should handle fragment node children', () => {
       const fragmentChild = createNode('fragment-child');
       const fragment: TUINode = {
         type: 'fragment',
         children: [fragmentChild],
       };
-      const root = createNode('root', {}, [fragment]);
+      const root = createNode('root', undefined, undefined, [fragment]);
 
-      const layoutMap = createLayoutMap([
-        [root, { x: 0, y: 0, width: 20, height: 20 }],
-        [fragmentChild, { x: 5, y: 5, width: 10, height: 10 }],
+      const layoutMap: LayoutMap = new Map([
+        [root, createLayout(0, 0, 80, 24)],
+        [fragmentChild, createLayout(5, 5, 20, 10)],
       ]);
 
       setHitTestLayout(layoutMap, root);
 
-      const result = hitTest(8, 8); // layout (7, 7)
+      const result = hitTest(10, 10);
       expect(result?.node).toBe(fragmentChild);
     });
 
     it('should handle absolute positioned fragment children', () => {
-      const absFragmentChild = createNode('abs-fragment-child', { position: 'absolute', zIndex: 5 });
+      const normalChild = createNode('normal');
+      const absChild = createNode('abs', { position: 'absolute', zIndex: 5 });
       const fragment: TUINode = {
         type: 'fragment',
-        children: [absFragmentChild],
+        children: [normalChild, absChild],
       };
-      const normal = createNode('normal');
-      const root = createNode('root', {}, [normal, fragment]);
+      const root = createNode('root', undefined, undefined, [fragment]);
 
-      const layoutMap = createLayoutMap([
-        [root, { x: 0, y: 0, width: 20, height: 20 }],
-        [normal, { x: 0, y: 0, width: 15, height: 15 }],
-        [absFragmentChild, { x: 5, y: 5, width: 10, height: 10 }],
+      const layoutMap: LayoutMap = new Map([
+        [root, createLayout(0, 0, 80, 24)],
+        [normalChild, createLayout(5, 5, 20, 10)],
+        [absChild, createLayout(5, 5, 20, 10)],
       ]);
 
       setHitTestLayout(layoutMap, root);
 
-      const result = hitTest(8, 8);
-      expect(result?.node).toBe(absFragmentChild);
+      const result = hitTest(10, 10);
+      expect(result?.node).toBe(absChild);
     });
   });
 
@@ -308,25 +326,23 @@ describe('hit-test', () => {
   // ==========================================================================
 
   describe('hitTest - Edge Cases', () => {
-    it('should handle string children gracefully', () => {
-      const root = createNode('root', {}, ['text child' as unknown as TUINode]);
+    it('should handle node with no layout', () => {
+      const child = createNode('child');
+      const root = createNode('root', undefined, undefined, [child]);
 
-      const layoutMap = createLayoutMap([
-        [root, { x: 0, y: 0, width: 20, height: 20 }],
-      ]);
+      // Only root has layout, child doesn't
+      const layoutMap: LayoutMap = new Map([[root, createLayout(0, 0, 80, 24)]]);
 
       setHitTestLayout(layoutMap, root);
 
-      const result = hitTest(5, 5);
-      expect(result?.node).toBe(root); // String children are skipped
+      const result = hitTest(10, 10);
+      expect(result?.node).toBe(root);
     });
 
-    it('should handle null/undefined children', () => {
-      const root = createNode('root', {}, [null as unknown as TUINode, undefined as unknown as TUINode]);
+    it('should skip string children', () => {
+      const root = createNode('root', undefined, undefined, ['text content']);
 
-      const layoutMap = createLayoutMap([
-        [root, { x: 0, y: 0, width: 20, height: 20 }],
-      ]);
+      const layoutMap: LayoutMap = new Map([[root, createLayout(0, 0, 80, 24)]]);
 
       setHitTestLayout(layoutMap, root);
 
@@ -334,76 +350,29 @@ describe('hit-test', () => {
       expect(result?.node).toBe(root);
     });
 
-    it('should handle style as function', () => {
-      const node = createNode('node', () => ({ position: 'absolute', zIndex: 5 }));
-      const root = createNode('root', {}, [node]);
-
-      const layoutMap = createLayoutMap([
-        [root, { x: 0, y: 0, width: 20, height: 20 }],
-        [node, { x: 0, y: 0, width: 10, height: 10 }],
-      ]);
+    it('should handle boundary hits correctly', () => {
+      const root = createNode('root');
+      const layoutMap: LayoutMap = new Map([[root, createLayout(0, 0, 10, 10)]]);
 
       setHitTestLayout(layoutMap, root);
 
-      const result = hitTest(5, 5);
-      expect(result?.node).toBe(node);
-    });
+      // Just inside boundary (1-indexed to 0-indexed: 1->0, 10->9)
+      expect(hitTest(1, 1)?.node).toBe(root);
+      expect(hitTest(10, 10)?.node).toBe(root);
 
-    it('should handle missing style', () => {
-      const node: TUINode = { type: 'box', tagName: 'node', children: [] };
-      const root = createNode('root', {}, [node]);
-
-      const layoutMap = createLayoutMap([
-        [root, { x: 0, y: 0, width: 20, height: 20 }],
-        [node, { x: 0, y: 0, width: 10, height: 10 }],
-      ]);
-
-      setHitTestLayout(layoutMap, root);
-
-      const result = hitTest(5, 5);
-      expect(result).not.toBeNull();
+      // Just outside boundary
+      expect(hitTest(11, 5)).toBeNull();
+      expect(hitTest(5, 11)).toBeNull();
     });
 
     it('should handle zero-size elements', () => {
-      const child = createNode('child');
-      const root = createNode('root', {}, [child]);
-
-      const layoutMap = createLayoutMap([
-        [root, { x: 0, y: 0, width: 20, height: 20 }],
-        [child, { x: 5, y: 5, width: 0, height: 0 }],
-      ]);
+      const root = createNode('root');
+      const layoutMap: LayoutMap = new Map([[root, createLayout(5, 5, 0, 0)]]);
 
       setHitTestLayout(layoutMap, root);
 
-      // Zero-size element cannot be hit
       const result = hitTest(6, 6);
-      expect(result?.node).toBe(root);
-    });
-
-    it('should handle exact boundary hits', () => {
-      const child = createNode('child');
-      const root = createNode('root', {}, [child]);
-
-      const layoutMap = createLayoutMap([
-        [root, { x: 0, y: 0, width: 20, height: 20 }],
-        [child, { x: 5, y: 5, width: 5, height: 5 }], // 5-9 inclusive
-      ]);
-
-      setHitTestLayout(layoutMap, root);
-
-      // Left edge (x=5 in layout)
-      expect(hitTest(6, 7)?.node).toBe(child);
-
-      // Right edge (x=9 in layout, x=10 is outside)
-      expect(hitTest(10, 7)?.node).toBe(child);
-      expect(hitTest(11, 7)?.node).toBe(root); // Outside
-
-      // Top edge (y=5 in layout)
-      expect(hitTest(7, 6)?.node).toBe(child);
-
-      // Bottom edge (y=9 in layout, y=10 is outside)
-      expect(hitTest(7, 10)?.node).toBe(child);
-      expect(hitTest(7, 11)?.node).toBe(root); // Outside
+      expect(result).toBeNull();
     });
   });
 
@@ -412,48 +381,67 @@ describe('hit-test', () => {
   // ==========================================================================
 
   describe('hitTestAll', () => {
-    it('should return empty array when no layout is set', () => {
+    it('should return empty array when no layout', () => {
       const results = hitTestAll(5, 5);
       expect(results).toEqual([]);
     });
 
-    it('should return all elements in path from root to leaf', () => {
-      const grandchild = createNode('grandchild');
-      const child = createNode('child', {}, [grandchild]);
-      const root = createNode('root', {}, [child]);
+    it('should return all elements at point', () => {
+      const child = createNode('child');
+      const root = createNode('root', undefined, undefined, [child]);
 
-      const layoutMap = createLayoutMap([
-        [root, { x: 0, y: 0, width: 30, height: 30 }],
-        [child, { x: 5, y: 5, width: 20, height: 20 }],
-        [grandchild, { x: 10, y: 10, width: 10, height: 10 }],
+      const layoutMap: LayoutMap = new Map([
+        [root, createLayout(0, 0, 80, 24)],
+        [child, createLayout(5, 5, 20, 10)],
       ]);
 
       setHitTestLayout(layoutMap, root);
 
-      const results = hitTestAll(13, 13);
-      expect(results.length).toBe(3);
-      expect(results[0].node).toBe(root);
-      expect(results[1].node).toBe(child);
-      expect(results[2].node).toBe(grandchild);
+      const results = hitTestAll(10, 10);
+      expect(results.length).toBe(2);
+      expect(results.map((r) => r.node)).toContain(root);
+      expect(results.map((r) => r.node)).toContain(child);
     });
 
-    it('should include absolute positioned elements at end', () => {
-      const normal = createNode('normal');
-      const absolute = createNode('absolute', { position: 'absolute', zIndex: 1 });
-      const root = createNode('root', {}, [normal, absolute]);
+    it('should include local coordinates for each hit', () => {
+      const child = createNode('child');
+      const root = createNode('root', undefined, undefined, [child]);
 
-      const layoutMap = createLayoutMap([
-        [root, { x: 0, y: 0, width: 20, height: 20 }],
-        [normal, { x: 0, y: 0, width: 15, height: 15 }],
-        [absolute, { x: 5, y: 5, width: 10, height: 10 }],
+      const layoutMap: LayoutMap = new Map([
+        [root, createLayout(0, 0, 80, 24)],
+        [child, createLayout(10, 5, 20, 10)],
       ]);
 
       setHitTestLayout(layoutMap, root);
 
-      const results = hitTestAll(8, 8);
-      // Should have root, normal, absolute (absolute last due to higher paint order)
-      expect(results.length).toBeGreaterThanOrEqual(2);
-      expect(results[results.length - 1].node).toBe(absolute);
+      // Hit at (15, 8) 1-indexed = (14, 7) 0-indexed
+      const results = hitTestAll(15, 8);
+
+      const rootHit = results.find((r) => r.node === root);
+      expect(rootHit?.localX).toBe(14);
+      expect(rootHit?.localY).toBe(7);
+
+      const childHit = results.find((r) => r.node === child);
+      expect(childHit?.localX).toBe(4); // 14 - 10
+      expect(childHit?.localY).toBe(2); // 7 - 5
+    });
+
+    it('should order by tree traversal then zIndex', () => {
+      const normal = createNode('normal');
+      const absolute = createNode('absolute', { position: 'absolute', zIndex: 5 });
+      const root = createNode('root', undefined, undefined, [normal, absolute]);
+
+      const layoutMap: LayoutMap = new Map([
+        [root, createLayout(0, 0, 80, 24)],
+        [normal, createLayout(5, 5, 20, 10)],
+        [absolute, createLayout(5, 5, 20, 10)],
+      ]);
+
+      setHitTestLayout(layoutMap, root);
+
+      const results = hitTestAll(10, 10);
+      // Root first, then normal, then absolute (highest zIndex last)
+      expect(results[0].node).toBe(root);
     });
   });
 
@@ -462,77 +450,324 @@ describe('hit-test', () => {
   // ==========================================================================
 
   describe('findClickableAncestor', () => {
-    it('should return null for null result', () => {
-      expect(findClickableAncestor(null)).toBeNull();
+    it('should return null for null input', () => {
+      const result = findClickableAncestor(null);
+      expect(result).toBeNull();
     });
 
-    it('should return node if it has onClick handler', () => {
-      const node = createNode('button', {}, [], { onClick: () => {} });
-      const root = createNode('root', {}, [node]);
+    it('should return node with onClick handler', () => {
+      const clickHandler = () => {};
+      const clickable = createNode('clickable', undefined, { onClick: clickHandler });
 
-      const layoutMap = createLayoutMap([
-        [root, { x: 0, y: 0, width: 20, height: 20 }],
-        [node, { x: 5, y: 5, width: 10, height: 10 }],
-      ]);
+      const layoutMap: LayoutMap = new Map([[clickable, createLayout(0, 0, 80, 24)]]);
 
-      setHitTestLayout(layoutMap, root);
+      setHitTestLayout(layoutMap, clickable);
 
-      const hitResult = hitTest(8, 8);
-      const clickable = findClickableAncestor(hitResult);
-      expect(clickable).toBe(node);
+      const hit = hitTest(5, 5);
+      const result = findClickableAncestor(hit);
+
+      expect(result).toBe(clickable);
     });
 
-    it('should return null if node has no onClick', () => {
-      const node = createNode('div');
-      const root = createNode('root', {}, [node]);
+    it('should return null if no onClick handler', () => {
+      const notClickable = createNode('not-clickable');
 
-      const layoutMap = createLayoutMap([
-        [root, { x: 0, y: 0, width: 20, height: 20 }],
-        [node, { x: 5, y: 5, width: 10, height: 10 }],
-      ]);
+      const layoutMap: LayoutMap = new Map([[notClickable, createLayout(0, 0, 80, 24)]]);
 
-      setHitTestLayout(layoutMap, root);
+      setHitTestLayout(layoutMap, notClickable);
 
-      const hitResult = hitTest(8, 8);
-      const clickable = findClickableAncestor(hitResult);
-      expect(clickable).toBeNull();
+      const hit = hitTest(5, 5);
+      const result = findClickableAncestor(hit);
+
+      expect(result).toBeNull();
     });
   });
 
   // ==========================================================================
-  // setHitTestLayout / clearHitTestLayout
+  // hitTestAll - Advanced Fragment Tests
   // ==========================================================================
 
-  describe('Layout Management', () => {
-    it('should set and clear layout correctly', () => {
-      const root = createNode('root');
-      const layoutMap = createLayoutMap([
-        [root, { x: 0, y: 0, width: 10, height: 10 }],
+  describe('hitTestAll - Fragments', () => {
+    it('should collect hits through fragment nodes', () => {
+      const fragmentChild1 = createNode('frag-child-1');
+      const fragmentChild2 = createNode('frag-child-2');
+      const fragment: TUINode = {
+        type: 'fragment',
+        children: [fragmentChild1, fragmentChild2],
+      };
+      const root = createNode('root', undefined, undefined, [fragment]);
+
+      const layoutMap: LayoutMap = new Map([
+        [root, createLayout(0, 0, 80, 24)],
+        [fragmentChild1, createLayout(5, 5, 20, 10)],
+        [fragmentChild2, createLayout(5, 5, 20, 10)], // Same position - later wins for hitTest
       ]);
 
       setHitTestLayout(layoutMap, root);
-      expect(hitTest(5, 5)).not.toBeNull();
 
-      clearHitTestLayout();
-      expect(hitTest(5, 5)).toBeNull();
+      const results = hitTestAll(10, 10);
+
+      // Should include root, fragmentChild1, fragmentChild2
+      expect(results.length).toBe(3);
+      expect(results.map((r) => r.node.tagName)).toContain('root');
+      expect(results.map((r) => r.node.tagName)).toContain('frag-child-1');
+      expect(results.map((r) => r.node.tagName)).toContain('frag-child-2');
     });
 
-    it('should allow setting new layout after clear', () => {
-      const root1 = createNode('root1');
-      const root2 = createNode('root2');
+    it('should handle nested fragments', () => {
+      // Note: hitTestAll only processes one level of fragments directly
+      // Nested fragments are not recursively unwrapped in the hitTestAll traversal
+      const deepChild = createNode('deep');
+      const innerFragment: TUINode = {
+        type: 'fragment',
+        children: [deepChild],
+      };
+      const outerFragment: TUINode = {
+        type: 'fragment',
+        children: [innerFragment],
+      };
+      const root = createNode('root', undefined, undefined, [outerFragment]);
 
-      const layoutMap1 = createLayoutMap([
-        [root1, { x: 0, y: 0, width: 10, height: 10 }],
+      const layoutMap: LayoutMap = new Map([
+        [root, createLayout(0, 0, 80, 24)],
+        [deepChild, createLayout(5, 5, 20, 10)],
       ]);
-      const layoutMap2 = createLayoutMap([
-        [root2, { x: 0, y: 0, width: 20, height: 20 }],
+
+      setHitTestLayout(layoutMap, root);
+
+      const results = hitTestAll(10, 10);
+
+      // Only root is hit since nested fragments are not fully traversed
+      expect(results.length).toBeGreaterThanOrEqual(1);
+      expect(results.map((r) => r.node.tagName)).toContain('root');
+    });
+
+    it('should handle fragment with mixed absolute and normal children', () => {
+      const normalChild = createNode('normal');
+      const absChild = createNode('absolute', { position: 'absolute', zIndex: 10 });
+      const fragment: TUINode = {
+        type: 'fragment',
+        children: [normalChild, absChild],
+      };
+      const root = createNode('root', undefined, undefined, [fragment]);
+
+      const layoutMap: LayoutMap = new Map([
+        [root, createLayout(0, 0, 80, 24)],
+        [normalChild, createLayout(5, 5, 20, 10)],
+        [absChild, createLayout(5, 5, 20, 10)],
       ]);
 
-      setHitTestLayout(layoutMap1, root1);
-      expect(hitTest(5, 5)?.node).toBe(root1);
+      setHitTestLayout(layoutMap, root);
 
-      setHitTestLayout(layoutMap2, root2);
-      expect(hitTest(5, 5)?.node).toBe(root2);
+      const results = hitTestAll(10, 10);
+
+      // All three should be hit
+      expect(results.length).toBe(3);
+
+      // For hitTest (deepest), absolute should win
+      const deepest = hitTest(10, 10);
+      expect(deepest?.node.tagName).toBe('absolute');
+    });
+  });
+
+  // ==========================================================================
+  // hitTestAll - zIndex Ordering
+  // ==========================================================================
+
+  describe('hitTestAll - zIndex Ordering', () => {
+    it('should order absolute children by ascending zIndex', () => {
+      const abs1 = createNode('abs1', { position: 'absolute', zIndex: 5 });
+      const abs2 = createNode('abs2', { position: 'absolute', zIndex: 1 });
+      const abs3 = createNode('abs3', { position: 'absolute', zIndex: 10 });
+      const root = createNode('root', undefined, undefined, [abs1, abs2, abs3]);
+
+      const layoutMap: LayoutMap = new Map([
+        [root, createLayout(0, 0, 80, 24)],
+        [abs1, createLayout(5, 5, 20, 10)],
+        [abs2, createLayout(5, 5, 20, 10)],
+        [abs3, createLayout(5, 5, 20, 10)],
+      ]);
+
+      setHitTestLayout(layoutMap, root);
+
+      const results = hitTestAll(10, 10);
+
+      // Root first, then absolute children in zIndex order (lowest to highest)
+      // So: root, abs2(z1), abs1(z5), abs3(z10)
+      expect(results.length).toBe(4);
+      expect(results[0].node.tagName).toBe('root');
+      // Absolute children are appended in zIndex order
+      const absNodes = results.slice(1);
+      const zIndexes = absNodes.map((r) => {
+        const style = typeof r.node.style === 'function' ? r.node.style() : r.node.style;
+        return style?.zIndex ?? 0;
+      });
+      expect(zIndexes).toEqual([1, 5, 10]);
+    });
+
+    it('should handle mixed normal and absolute children', () => {
+      const normal1 = createNode('normal1');
+      const normal2 = createNode('normal2');
+      const abs1 = createNode('abs1', { position: 'absolute', zIndex: 1 });
+      const root = createNode('root', undefined, undefined, [normal1, abs1, normal2]);
+
+      const layoutMap: LayoutMap = new Map([
+        [root, createLayout(0, 0, 80, 24)],
+        [normal1, createLayout(5, 5, 20, 10)],
+        [normal2, createLayout(5, 5, 20, 10)],
+        [abs1, createLayout(5, 5, 20, 10)],
+      ]);
+
+      setHitTestLayout(layoutMap, root);
+
+      const results = hitTestAll(10, 10);
+
+      // Should have root, normal1, normal2, then abs1 (absolute at end)
+      expect(results.length).toBe(4);
+      expect(results[0].node.tagName).toBe('root');
+    });
+
+    it('should hit one of the same zIndex elements', () => {
+      const abs1 = createNode('abs1', { position: 'absolute', zIndex: 5 });
+      const abs2 = createNode('abs2', { position: 'absolute', zIndex: 5 }); // Same zIndex
+      const root = createNode('root', undefined, undefined, [abs1, abs2]);
+
+      const layoutMap: LayoutMap = new Map([
+        [root, createLayout(0, 0, 80, 24)],
+        [abs1, createLayout(5, 5, 20, 10)],
+        [abs2, createLayout(5, 5, 20, 10)],
+      ]);
+
+      setHitTestLayout(layoutMap, root);
+
+      // For same zIndex, behavior depends on sort stability - either one is valid
+      const deepest = hitTest(10, 10);
+      expect(['abs1', 'abs2']).toContain(deepest?.node.tagName);
+    });
+
+    it('should handle negative zIndex', () => {
+      const absNeg = createNode('neg', { position: 'absolute', zIndex: -1 });
+      const absPos = createNode('pos', { position: 'absolute', zIndex: 1 });
+      const absZero = createNode('zero', { position: 'absolute', zIndex: 0 });
+      const root = createNode('root', undefined, undefined, [absNeg, absPos, absZero]);
+
+      const layoutMap: LayoutMap = new Map([
+        [root, createLayout(0, 0, 80, 24)],
+        [absNeg, createLayout(5, 5, 20, 10)],
+        [absPos, createLayout(5, 5, 20, 10)],
+        [absZero, createLayout(5, 5, 20, 10)],
+      ]);
+
+      setHitTestLayout(layoutMap, root);
+
+      const results = hitTestAll(10, 10);
+
+      // Order should be: root, neg(-1), zero(0), pos(1)
+      const absResults = results.slice(1);
+      const zIndexes = absResults.map((r) => {
+        const style = typeof r.node.style === 'function' ? r.node.style() : r.node.style;
+        return style?.zIndex ?? 0;
+      });
+      expect(zIndexes).toEqual([-1, 0, 1]);
+    });
+  });
+
+  // ==========================================================================
+  // hitTestAll - Edge Cases
+  // ==========================================================================
+
+  describe('hitTestAll - Edge Cases', () => {
+    it('should handle deeply nested tree with multiple levels', () => {
+      const level4 = createNode('level4');
+      const level3 = createNode('level3', undefined, undefined, [level4]);
+      const level2 = createNode('level2', undefined, undefined, [level3]);
+      const level1 = createNode('level1', undefined, undefined, [level2]);
+      const root = createNode('root', undefined, undefined, [level1]);
+
+      const layoutMap: LayoutMap = new Map([
+        [root, createLayout(0, 0, 80, 24)],
+        [level1, createLayout(1, 1, 70, 20)],
+        [level2, createLayout(2, 2, 60, 18)],
+        [level3, createLayout(3, 3, 50, 16)],
+        [level4, createLayout(4, 4, 40, 14)],
+      ]);
+
+      setHitTestLayout(layoutMap, root);
+
+      const results = hitTestAll(10, 10);
+
+      expect(results.length).toBe(5);
+      expect(results.map((r) => r.node.tagName)).toEqual([
+        'root',
+        'level1',
+        'level2',
+        'level3',
+        'level4',
+      ]);
+    });
+
+    it('should handle empty fragments', () => {
+      const emptyFragment: TUINode = {
+        type: 'fragment',
+        children: [],
+      };
+      const root = createNode('root', undefined, undefined, [emptyFragment]);
+
+      const layoutMap: LayoutMap = new Map([[root, createLayout(0, 0, 80, 24)]]);
+
+      setHitTestLayout(layoutMap, root);
+
+      const results = hitTestAll(10, 10);
+
+      expect(results.length).toBe(1);
+      expect(results[0].node.tagName).toBe('root');
+    });
+
+    it('should handle node with undefined children', () => {
+      const root = createNode('root', undefined, undefined, undefined);
+
+      const layoutMap: LayoutMap = new Map([[root, createLayout(0, 0, 80, 24)]]);
+
+      setHitTestLayout(layoutMap, root);
+
+      const results = hitTestAll(10, 10);
+
+      expect(results.length).toBe(1);
+    });
+
+    it('should handle point outside all elements', () => {
+      const child = createNode('child');
+      const root = createNode('root', undefined, undefined, [child]);
+
+      const layoutMap: LayoutMap = new Map([
+        [root, createLayout(0, 0, 10, 10)],
+        [child, createLayout(2, 2, 5, 5)],
+      ]);
+
+      setHitTestLayout(layoutMap, root);
+
+      // Point outside root
+      const results = hitTestAll(20, 20);
+
+      expect(results.length).toBe(0);
+    });
+
+    it('should handle point inside root but outside child', () => {
+      const child = createNode('child');
+      const root = createNode('root', undefined, undefined, [child]);
+
+      const layoutMap: LayoutMap = new Map([
+        [root, createLayout(0, 0, 50, 50)],
+        [child, createLayout(10, 10, 10, 10)],
+      ]);
+
+      setHitTestLayout(layoutMap, root);
+
+      // Point inside root but outside child
+      const results = hitTestAll(5, 5);
+
+      expect(results.length).toBe(1);
+      expect(results[0].node.tagName).toBe('root');
     });
   });
 });

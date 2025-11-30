@@ -17,6 +17,7 @@
 import { onCleanup, onMount } from '@zen/runtime';
 import { appendChild } from '../core/jsx-runtime.js';
 import type { TUINode } from '../core/types.js';
+import { terminalHeightSignal, terminalWidthSignal } from '../hooks/useTerminalSize.js';
 
 export interface FullscreenLayoutProps {
   children?: unknown;
@@ -44,18 +45,16 @@ export function FullscreenLayout(props: FullscreenLayoutProps): TUINode {
   });
 
   // Create a box that fills the terminal
-  // Use direct values initially, then reactive updates via effect
-  const terminalWidth = process.stdout.columns || 80;
-  const terminalHeight = process.stdout.rows || 24;
-
+  // Use reactive functions so layout updates on terminal resize
   const node: TUINode = {
     type: 'box',
     tagName: 'fullscreen-layout',
     props: {}, // Don't spread props - it includes children!
     children: [],
     style: {
-      width: terminalWidth,
-      height: terminalHeight,
+      // Reactive width/height - triggers layout recalc on resize
+      width: () => terminalWidthSignal.value,
+      height: () => terminalHeightSignal.value,
       flexDirection: 'column',
     },
   };

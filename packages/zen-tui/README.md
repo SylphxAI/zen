@@ -25,7 +25,7 @@ bun add @zen/tui @zen/signal
 ## Quick Start
 
 ```tsx
-import { renderApp, Box, Text, signal } from '@zen/tui';
+import { render, Box, Text, signal } from '@zen/tui';
 
 function App() {
   const count = signal(0);
@@ -40,7 +40,7 @@ function App() {
   );
 }
 
-renderApp(App);
+render(App);
 ```
 
 ## Component Library
@@ -264,7 +264,7 @@ render(<App />);
 **After (Zen TUI):**
 ```tsx
 import { signal } from '@zen/signal';
-import { renderApp, Box, Text } from '@zen/tui';
+import { render, Box, Text } from '@zen/tui';
 
 function App() {
   const count = signal(0);
@@ -276,7 +276,7 @@ function App() {
   );
 }
 
-renderApp(App);
+render(App);
 ```
 
 See [INK-COMPATIBILITY.md](./INK-COMPATIBILITY.md) for full migration guide.
@@ -288,7 +288,7 @@ See [INK-COMPATIBILITY.md](./INK-COMPATIBILITY.md) for full migration guide.
 Take over the entire terminal with alternate screen buffer.
 
 ```tsx
-import { renderApp, FullscreenLayout, Box, Text } from '@zen/tui';
+import { render, FullscreenLayout, Box, Text } from '@zen/tui';
 
 function App() {
   return (
@@ -300,7 +300,7 @@ function App() {
   );
 }
 
-renderApp(App);
+render(App);
 ```
 
 ### Mouse Support

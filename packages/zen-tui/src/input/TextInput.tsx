@@ -165,7 +165,9 @@ export function TextInput(props: TextInputProps): TUINode {
     }
   });
 
-  const getWidth = () => resolve(props.width) || 40;
+  // If width is specified, use it. Otherwise, use flex: 1 to fill available space
+  const hasExplicitWidth = props.width !== undefined;
+  const getWidth = () => (hasExplicitWidth ? resolve(props.width) : undefined);
   const getPlaceholder = () => resolve(props.placeholder);
   const suggestionsPosition = props.suggestionsPosition || 'below';
 
@@ -259,10 +261,12 @@ export function TextInput(props: TextInputProps): TUINode {
     });
 
   // Container box with input and suggestions
+  // Use alignSelf: 'stretch' to fill horizontal space when no explicit width
+  // (flex: 1 would grow vertically in column layouts, which is not desired)
   return Box({
     style: {
       flexDirection: 'column',
-      width: () => getWidth(),
+      ...(hasExplicitWidth ? { width: () => getWidth() } : { alignSelf: 'stretch' }),
     },
     children: () =>
       suggestionsPosition === 'above'

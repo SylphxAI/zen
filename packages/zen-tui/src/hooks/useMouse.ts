@@ -3,9 +3,13 @@
  *
  * React Ink compatible mouse event handling.
  * Hooks into the global mouse dispatcher.
+ *
+ * Note: For new code, prefer MouseProvider + Pressable/Draggable/Hoverable.
+ * These hooks are maintained for backward compatibility.
  */
 
-import { onCleanup } from '@zen/signal';
+import { createUniqueId, onCleanup } from '@zen/runtime';
+import { registerMouseInterest } from '../core/unified-render.js';
 import type { MouseEvent } from '../utils/mouse-parser.js';
 
 // Global mouse event listeners
@@ -29,21 +33,44 @@ export function clearMouseListeners(): void {
   mouseListeners.clear();
 }
 
+export interface UseMouseOptions {
+  /**
+   * Automatically enable mouse tracking when this hook is used.
+   * Set to true if using useMouse without MouseProvider.
+   * @default false
+   */
+  enableMouse?: boolean;
+}
+
 /**
  * Hook for handling mouse events
  *
  * @example
+ * // With MouseProvider (recommended)
  * useMouse((event) => {
  *   if (event.button === 'left') {
  *     console.log(`Clicked at ${event.x}, ${event.y}`);
  *   }
  * });
+ *
+ * // Standalone (auto-enables mouse tracking)
+ * useMouse((event) => {
+ *   console.log(`Mouse at ${event.x}, ${event.y}`);
+ * }, { enableMouse: true });
  */
-export function useMouse(handler: (event: MouseEvent) => void): void {
+export function useMouse(handler: (event: MouseEvent) => void, options?: UseMouseOptions): void {
   mouseListeners.add(handler);
+
+  // Optionally register mouse interest for standalone usage
+  let mouseCleanup: (() => void) | null = null;
+  if (options?.enableMouse) {
+    const hookId = createUniqueId();
+    mouseCleanup = registerMouseInterest(`use-mouse-${hookId}`);
+  }
 
   onCleanup(() => {
     mouseListeners.delete(handler);
+    mouseCleanup?.();
   });
 }
 
@@ -62,6 +89,7 @@ export function useMouseClick(
     button: 'left' | 'middle' | 'right',
     modifiers?: { ctrl?: boolean; shift?: boolean; meta?: boolean },
   ) => void,
+  options?: UseMouseOptions,
 ): void {
   useMouse((event) => {
     // mouseup = click complete (button released)
@@ -76,7 +104,7 @@ export function useMouseClick(
         meta,
       });
     }
-  });
+  }, options);
 }
 
 /**
@@ -90,13 +118,14 @@ export function useMouseClick(
  */
 export function useMouseScroll(
   handler: (direction: 'up' | 'down', x: number, y: number) => void,
+  options?: UseMouseOptions,
 ): void {
   useMouse((event) => {
     if (event.type === 'scroll') {
       const direction = event.button === 'scroll-up' ? 'up' : 'down';
       handler(direction, event.x, event.y);
     }
-  });
+  }, options);
 }
 
 /**
@@ -109,11 +138,18 @@ export function useMouseScroll(
  *   onDragEnd: (x, y) => { endDrag(); },
  * });
  */
-export function useMouseDrag(handlers: {
-  onDragStart?: (x: number, y: number, button: 'left' | 'middle' | 'right') => boolean | undefined;
-  onDragMove?: (x: number, y: number, startX: number, startY: number) => void;
-  onDragEnd?: (x: number, y: number) => void;
-}): void {
+export function useMouseDrag(
+  handlers: {
+    onDragStart?: (
+      x: number,
+      y: number,
+      button: 'left' | 'middle' | 'right',
+    ) => boolean | undefined;
+    onDragMove?: (x: number, y: number, startX: number, startY: number) => void;
+    onDragEnd?: (x: number, y: number) => void;
+  },
+  options?: UseMouseOptions,
+): void {
   let isDragging = false;
   let startX = 0;
   let startY = 0;
@@ -135,5 +171,5 @@ export function useMouseDrag(handlers: {
       isDragging = false;
       handlers.onDragEnd?.(event.x, event.y);
     }
-  });
+  }, options);
 }

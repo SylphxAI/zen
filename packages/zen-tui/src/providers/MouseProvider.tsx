@@ -19,9 +19,18 @@
  * ```
  */
 
-import { createContext, effect, onCleanup, onMount, signal, useContext } from '@zen/runtime';
+import {
+  createContext,
+  createUniqueId,
+  effect,
+  onCleanup,
+  onMount,
+  signal,
+  useContext,
+} from '@zen/runtime';
 import { appendChild } from '../core/jsx-runtime.js';
-import type { MouseClickEvent, TUINode } from '../core/types.js';
+import type { TUINode } from '../core/types.js';
+import { registerMouseInterest } from '../core/unified-render.js';
 import type { MouseEvent } from '../utils/mouse-parser.js';
 
 // ============================================================================
@@ -106,28 +115,25 @@ export interface MouseProviderProps {
   enabled?: boolean | (() => boolean);
 }
 
-// Track mouse state globally
-let mouseActive = false;
-
 export function MouseProvider(props: MouseProviderProps): TUINode {
   const enabled = signal(true);
+  const providerId = createUniqueId();
+  let mouseCleanup: (() => void) | null = null;
 
-  // Enable mouse tracking directly
+  // Register mouse interest with renderer (reference counting)
   onMount(() => {
     const updateEnabled = () => {
       const isEnabled =
         typeof props.enabled === 'function' ? props.enabled() : props.enabled !== false;
       enabled.value = isEnabled;
 
-      // Enable/disable mouse tracking
-      if (isEnabled && !mouseActive) {
-        process.stdout.write('\x1b[?1000h'); // Enable mouse tracking
-        process.stdout.write('\x1b[?1006h'); // Enable SGR extended mode
-        mouseActive = true;
-      } else if (!isEnabled && mouseActive) {
-        process.stdout.write('\x1b[?1006l'); // Disable SGR extended mode
-        process.stdout.write('\x1b[?1000l'); // Disable mouse tracking
-        mouseActive = false;
+      if (isEnabled && !mouseCleanup) {
+        // Register interest - renderer will enable mouse if this is first consumer
+        mouseCleanup = registerMouseInterest(`mouse-provider-${providerId}`);
+      } else if (!isEnabled && mouseCleanup) {
+        // Unregister - renderer will disable mouse if this was last consumer
+        mouseCleanup();
+        mouseCleanup = null;
       }
     };
 
@@ -142,10 +148,10 @@ export function MouseProvider(props: MouseProviderProps): TUINode {
   });
 
   onCleanup(() => {
-    if (mouseActive) {
-      process.stdout.write('\x1b[?1006l');
-      process.stdout.write('\x1b[?1000l');
-      mouseActive = false;
+    // Unregister on cleanup
+    if (mouseCleanup) {
+      mouseCleanup();
+      mouseCleanup = null;
     }
   });
 

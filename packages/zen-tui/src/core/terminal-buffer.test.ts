@@ -454,6 +454,104 @@ describe('TerminalBuffer', () => {
       const changes = buffer1.diff(buffer2);
       expect(changes).toEqual([]);
     });
+
+    it('should return correct line content in changes', () => {
+      const current = new TerminalBuffer(20, 3);
+      const previous = new TerminalBuffer(20, 3);
+
+      current.writeAt(0, 0, 'New Content');
+      previous.writeAt(0, 0, 'Old Content');
+
+      const changes = current.diff(previous);
+      expect(changes.length).toBe(1);
+      expect(changes[0].line).toBe('New Content');
+    });
+
+    it('should detect changes with ANSI codes', () => {
+      const current = new TerminalBuffer(30, 3);
+      const previous = new TerminalBuffer(30, 3);
+
+      current.writeAt(0, 0, '\x1b[31mRed\x1b[0m');
+      previous.writeAt(0, 0, '\x1b[32mGreen\x1b[0m');
+
+      const changes = current.diff(previous);
+      expect(changes.length).toBe(1);
+      expect(changes[0].line).toContain('\x1b[31m');
+    });
+
+    it('should handle empty lines correctly', () => {
+      const current = new TerminalBuffer(20, 5);
+      const previous = new TerminalBuffer(20, 5);
+
+      // Only line 2 has content
+      current.writeAt(0, 2, 'Content');
+      previous.writeAt(0, 2, 'Content');
+
+      const changes = current.diff(previous);
+      expect(changes).toEqual([]);
+    });
+
+    it('should detect change when line becomes empty', () => {
+      const current = new TerminalBuffer(20, 3);
+      const previous = new TerminalBuffer(20, 3);
+
+      // Current has empty line 0, previous has content
+      previous.writeAt(0, 0, 'Removed');
+
+      const changes = current.diff(previous);
+      expect(changes.length).toBe(1);
+      expect(changes[0].y).toBe(0);
+      expect(changes[0].line.trim()).toBe('');
+    });
+
+    it('should detect partial line changes', () => {
+      const current = new TerminalBuffer(30, 3);
+      const previous = new TerminalBuffer(30, 3);
+
+      current.writeAt(0, 0, 'Hello World');
+      current.writeAt(15, 0, '!!!');
+      previous.writeAt(0, 0, 'Hello World');
+      previous.writeAt(15, 0, '???');
+
+      const changes = current.diff(previous);
+      expect(changes.length).toBe(1);
+      expect(changes[0].line).toContain('!!!');
+    });
+
+    it('should return y coordinates in order', () => {
+      const current = new TerminalBuffer(20, 10);
+      const previous = new TerminalBuffer(20, 10);
+
+      // Changes on lines 2, 5, 8
+      current.writeAt(0, 2, 'A');
+      current.writeAt(0, 5, 'B');
+      current.writeAt(0, 8, 'C');
+
+      const changes = current.diff(previous);
+      expect(changes.length).toBe(3);
+      expect(changes[0].y).toBe(2);
+      expect(changes[1].y).toBe(5);
+      expect(changes[2].y).toBe(8);
+    });
+
+    it('should handle rapid updates to same buffer', () => {
+      const current = new TerminalBuffer(20, 3);
+      const previous = new TerminalBuffer(20, 3);
+
+      // Simulate rapid counter updates
+      previous.writeAt(0, 0, 'Counter: 0');
+      current.writeAt(0, 0, 'Counter: 1');
+
+      let changes = current.diff(previous);
+      expect(changes.length).toBe(1);
+
+      // Update again
+      const next = current.clone();
+      next.writeAt(0, 0, 'Counter: 2');
+      changes = next.diff(current);
+      expect(changes.length).toBe(1);
+      expect(changes[0].line).toBe('Counter: 2');
+    });
   });
 
   // ==========================================================================

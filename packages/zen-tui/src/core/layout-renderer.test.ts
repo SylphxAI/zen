@@ -571,4 +571,214 @@ describe('Layout Renderer', () => {
       }
     });
   });
+
+  // ==========================================================================
+  // Incremental Render Tests (Fine-Grained Reactivity)
+  // ==========================================================================
+
+  describe('Incremental Render (fullRender=false)', () => {
+    it('should skip non-dirty nodes when fullRender=false', async () => {
+      const text1 = createText('Static');
+      const text2 = createText('Changed');
+      const root = createBox(
+        { width: 30, height: 3, flexDirection: 'column' },
+        [text1, text2],
+      );
+
+      const buffer = new TerminalBuffer(30, 3);
+      const layoutMap = await computeLayout(root, 30, 3);
+
+      // First render: full render
+      renderToBuffer(root, buffer, layoutMap, true);
+      expect(getBufferLines(buffer, 3)[0]).toContain('Static');
+      expect(getBufferLines(buffer, 3)[1]).toContain('Changed');
+
+      // Modify buffer to track which lines are re-rendered
+      buffer.writeAt(0, 0, 'MARKER_STATIC');
+      buffer.writeAt(0, 1, 'MARKER_CHANGED');
+
+      // Mark only text2 as dirty
+      text2._dirty = true;
+
+      // Incremental render
+      renderToBuffer(root, buffer, layoutMap, false);
+
+      // text1 should NOT be re-rendered (marker preserved)
+      expect(getBufferLines(buffer, 3)[0]).toContain('MARKER_STATIC');
+      // text2 should be re-rendered (marker replaced)
+      expect(getBufferLines(buffer, 3)[1]).toContain('Changed');
+    });
+
+    it('should render dirty nodes even when parent is not dirty', async () => {
+      const text = createText('Updated');
+      const root = createBox(
+        { width: 30, height: 2, flexDirection: 'column' },
+        [text],
+      );
+
+      const buffer = new TerminalBuffer(30, 2);
+      const layoutMap = await computeLayout(root, 30, 2);
+
+      // First render
+      renderToBuffer(root, buffer, layoutMap, true);
+
+      // Mark text as dirty (parent box is NOT dirty)
+      text._dirty = true;
+
+      // Clear buffer to verify re-render
+      buffer.writeAt(0, 0, '                    ');
+
+      // Incremental render
+      renderToBuffer(root, buffer, layoutMap, false);
+
+      // Text should be re-rendered
+      expect(getBufferLines(buffer, 2)[0]).toContain('Updated');
+    });
+
+    it('should preserve non-dirty content in buffer', async () => {
+      const text1 = createText('Line1');
+      const text2 = createText('Line2');
+      const text3 = createText('Line3');
+      const root = createBox(
+        { width: 30, height: 4, flexDirection: 'column' },
+        [text1, text2, text3],
+      );
+
+      const buffer = new TerminalBuffer(30, 4);
+      const layoutMap = await computeLayout(root, 30, 4);
+
+      // Full render
+      renderToBuffer(root, buffer, layoutMap, true);
+
+      // Verify initial state
+      const initialLines = getBufferLines(buffer, 4);
+      expect(initialLines[0]).toContain('Line1');
+      expect(initialLines[1]).toContain('Line2');
+      expect(initialLines[2]).toContain('Line3');
+
+      // Only mark middle line dirty
+      text2._dirty = true;
+      text2.children = ['NEW'];
+
+      // Incremental render
+      renderToBuffer(root, buffer, layoutMap, false);
+
+      const lines = getBufferLines(buffer, 4);
+      // First and third lines should be unchanged
+      expect(lines[0]).toContain('Line1');
+      expect(lines[2]).toContain('Line3');
+      // Second line should be updated
+      expect(lines[1]).toContain('NEW');
+    });
+
+    it('should handle nested dirty nodes', async () => {
+      const innerText = createText('Inner');
+      const innerBox = createBox(
+        { flexDirection: 'column' },
+        [innerText],
+      );
+      const root = createBox(
+        { width: 30, height: 3, flexDirection: 'column' },
+        [innerBox],
+      );
+
+      const buffer = new TerminalBuffer(30, 3);
+      const layoutMap = await computeLayout(root, 30, 3);
+
+      // Full render
+      renderToBuffer(root, buffer, layoutMap, true);
+      expect(getBufferLines(buffer, 3)[0]).toContain('Inner');
+
+      // Mark nested text as dirty
+      innerText._dirty = true;
+      innerText.children = ['NEW'];
+
+      // Incremental render
+      renderToBuffer(root, buffer, layoutMap, false);
+
+      expect(getBufferLines(buffer, 3)[0]).toContain('NEW');
+    });
+
+    it('should handle dirty box with clean children', async () => {
+      const text = createText('Child');
+      const box = createBox(
+        { borderStyle: 'single', width: 15, height: 3 },
+        [text],
+      );
+      const root = createBox(
+        { width: 20, height: 5 },
+        [box],
+      );
+
+      const buffer = new TerminalBuffer(20, 5);
+      const layoutMap = await computeLayout(root, 20, 5);
+
+      // Full render
+      renderToBuffer(root, buffer, layoutMap, true);
+
+      // Mark parent box dirty but NOT child
+      box._dirty = true;
+
+      // Incremental render
+      renderToBuffer(root, buffer, layoutMap, false);
+
+      // Both box and child should still be visible
+      const lines = getBufferLines(buffer, 5);
+      const hasContent = lines.some(line => line.includes('Child'));
+      expect(hasContent).toBe(true);
+    });
+
+    it('should handle layoutDirty flag', async () => {
+      const text = createText('Layout');
+      const root = createBox(
+        { width: 20, height: 2 },
+        [text],
+      );
+
+      const buffer = new TerminalBuffer(20, 2);
+      const layoutMap = await computeLayout(root, 20, 2);
+
+      // Full render
+      renderToBuffer(root, buffer, layoutMap, true);
+
+      // Mark as layout dirty (should trigger re-render)
+      text._layoutDirty = true;
+      text._dirty = true;
+
+      // Clear buffer
+      buffer.writeAt(0, 0, '                    ');
+
+      // Incremental render
+      renderToBuffer(root, buffer, layoutMap, false);
+
+      expect(getBufferLines(buffer, 2)[0]).toContain('Layout');
+    });
+
+    it('should clear text overhang when text shrinks', async () => {
+      const text = createText('Hello World Long Text');
+      const root = createBox(
+        { width: 30, height: 2 },
+        [text],
+      );
+
+      const buffer = new TerminalBuffer(30, 2);
+      const layoutMap = await computeLayout(root, 30, 2);
+
+      // Full render with long text
+      renderToBuffer(root, buffer, layoutMap, true);
+      expect(getBufferLines(buffer, 2)[0]).toContain('Hello World Long Text');
+
+      // Change to shorter text and mark dirty
+      text._dirty = true;
+      text.children = ['Hi'];
+
+      // Incremental render
+      renderToBuffer(root, buffer, layoutMap, false);
+
+      const line = getBufferLines(buffer, 2)[0];
+      expect(line).toContain('Hi');
+      // Old text should be cleared (no "World" remnants)
+      expect(line).not.toContain('World');
+    });
+  });
 });

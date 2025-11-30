@@ -310,18 +310,32 @@ export async function render(createApp: () => unknown): Promise<() => void> {
     // ========================================================================
     // Compare current buffer with previous buffer.
     // Only output lines that actually changed.
-    const output = currentBuffer.renderFull();
-    const newLines = output.split('\n');
+    let output = currentBuffer.renderFull();
+    let newLines = output.split('\n');
+
+    // In inline mode, trim trailing empty lines to avoid filling the terminal
+    // This is the key difference between inline and fullscreen mode:
+    // - Fullscreen: Uses full terminal height (alternate screen buffer)
+    // - Inline: Only uses lines with actual content
+    const inFullscreen = isFullscreenActive();
+    if (!inFullscreen) {
+      // Find the last non-empty line
+      let lastContentLine = newLines.length - 1;
+      while (lastContentLine >= 0 && newLines[lastContentLine].trim() === '') {
+        lastContentLine--;
+      }
+      // Keep at least one line
+      const contentHeight = Math.max(1, lastContentLine + 1);
+      newLines = newLines.slice(0, contentHeight);
+      output = newLines.join('\n');
+    }
+
     const newOutputHeight = newLines.length;
 
     // Diff buffers to find changed lines
     const changes = currentBuffer.diff(previousBuffer);
 
     if (changes.length > 0 || lastOutputHeight !== newOutputHeight) {
-      // Check actual fullscreen state from FullscreenLayout component
-      // This is the single source of truth for fullscreen mode
-      const inFullscreen = isFullscreenActive();
-
       if (inFullscreen) {
         // ========================================================================
         // FULLSCREEN MODE: Fine-grained line updates

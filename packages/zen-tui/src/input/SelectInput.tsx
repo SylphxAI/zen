@@ -76,10 +76,10 @@ export function SelectInput<T = string>(props: SelectInputProps<T>): TUINode {
   });
 
   // Handle keyboard input
-  useInput((input, _key) => {
+  useInput((input, key) => {
     if (!isFocused.value) return;
 
-    handleSelectInput(isOpen, highlightedIndex, valueSignal, getOptions(), input, props.onChange);
+    handleSelectInput(isOpen, highlightedIndex, valueSignal, getOptions(), key, props.onChange);
   });
 
   // Use reactive functions for rendering
@@ -157,17 +157,25 @@ export function SelectInput<T = string>(props: SelectInputProps<T>): TUINode {
 /**
  * Input handler for SelectInput
  * Call this from the app's key handler
+ *
+ * @param isOpen - Signal controlling dropdown open state
+ * @param highlightedIndex - Signal controlling highlighted option index
+ * @param valueSignal - Signal controlling selected value
+ * @param options - Array of options to select from
+ * @param key - Parsed Key object from useInput
+ * @param onChange - Optional callback when value changes
+ * @returns true if the key was handled, false otherwise
  */
 export function handleSelectInput<T>(
   isOpen: Signal<boolean>,
   highlightedIndex: Signal<number>,
   valueSignal: Signal<T>,
   options: SelectOption<T>[],
-  key: string,
+  key: import('../hooks/useInput.js').Key,
   onChange?: (value: T) => void,
 ): boolean {
   // Enter/Space: toggle dropdown or select option
-  if (key === '\r' || key === '\n' || key === ' ') {
+  if (key.return || key.space) {
     if (!isOpen.value) {
       isOpen.value = true;
     } else {
@@ -183,28 +191,25 @@ export function handleSelectInput<T>(
   }
 
   // Escape: close dropdown
-  if (key === '\x1b') {
+  if (key.escape) {
     isOpen.value = false;
     return true;
   }
 
   // Arrow keys: navigate options (only when open)
   if (isOpen.value) {
-    if (key === '\x1b[A') {
-      // Up arrow
+    if (key.upArrow) {
       highlightedIndex.value = Math.max(0, highlightedIndex.value - 1);
       return true;
     }
 
-    if (key === '\x1b[B') {
-      // Down arrow
+    if (key.downArrow) {
       highlightedIndex.value = Math.min(options.length - 1, highlightedIndex.value + 1);
       return true;
     }
   } else {
     // When closed, up/down arrows change selection directly
-    if (key === '\x1b[A') {
-      // Up arrow
+    if (key.upArrow) {
       const currentIndex = options.findIndex((opt) => opt.value === valueSignal.value);
       const newIndex = Math.max(0, currentIndex - 1);
       valueSignal.value = options[newIndex].value;
@@ -212,8 +217,7 @@ export function handleSelectInput<T>(
       return true;
     }
 
-    if (key === '\x1b[B') {
-      // Down arrow
+    if (key.downArrow) {
       const currentIndex = options.findIndex((opt) => opt.value === valueSignal.value);
       const newIndex = Math.min(options.length - 1, currentIndex + 1);
       valueSignal.value = options[newIndex].value;

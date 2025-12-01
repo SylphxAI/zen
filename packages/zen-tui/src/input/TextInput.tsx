@@ -161,7 +161,7 @@ export function TextInput(props: TextInputProps): TUINode {
       return;
     }
 
-    if (handleTextInput(valueSignal, cursorPos, input)) {
+    if (handleTextInput(valueSignal, cursorPos, key, input)) {
       props.onChange?.(valueSignal.value);
       // Update suggestions after input change
       updateSuggestions();
@@ -281,62 +281,75 @@ export function TextInput(props: TextInputProps): TUINode {
 /**
  * Input handler for TextInput
  * Call this from the app's key handler
+ *
+ * @param valueSignal - Signal controlling the text value
+ * @param cursorPos - Signal controlling cursor position
+ * @param key - Parsed Key object from useInput
+ * @param input - Raw input string for character input
+ * @returns true if the key was handled, false otherwise
  */
 export function handleTextInput(
   valueSignal: Signal<string>,
   cursorPos: Signal<number>,
-  key: string,
+  key: import('../hooks/useInput.js').Key,
+  input: string,
 ): boolean {
   const value = valueSignal.value;
   const pos = cursorPos.value;
 
   // Character input (printable characters)
-  if (key.length === 1 && key >= ' ' && key <= '~') {
+  // Use input string for actual typed characters
+  if (input.length === 1 && input >= ' ' && input <= '~') {
     // Insert character at cursor
-    valueSignal.value = value.slice(0, pos) + key + value.slice(pos);
+    valueSignal.value = value.slice(0, pos) + input + value.slice(pos);
     cursorPos.value = pos + 1;
     return true;
   }
 
-  // Special keys
-  switch (key) {
-    case '\x7F': // Backspace
-    case '\b':
-      if (pos > 0) {
-        valueSignal.value = value.slice(0, pos - 1) + value.slice(pos);
-        cursorPos.value = pos - 1;
-      }
-      return true;
-
-    case '\x1b[3~': // Delete
-      if (pos < value.length) {
-        valueSignal.value = value.slice(0, pos) + value.slice(pos + 1);
-      }
-      return true;
-
-    case '\x1b[D': // Left arrow
-      if (pos > 0) {
-        cursorPos.value = pos - 1;
-      }
-      return true;
-
-    case '\x1b[C': // Right arrow
-      if (pos < value.length) {
-        cursorPos.value = pos + 1;
-      }
-      return true;
-
-    case '\x1b[H': // Home
-    case '\x01': // Ctrl+A
-      cursorPos.value = 0;
-      return true;
-
-    case '\x1b[F': // End
-    case '\x05': // Ctrl+E
-      cursorPos.value = value.length;
-      return true;
-
-    default:
-      return false;
+  // Backspace
+  if (key.backspace) {
+    if (pos > 0) {
+      valueSignal.value = value.slice(0, pos - 1) + value.slice(pos);
+      cursorPos.value = pos - 1;
+    }
+    return true;
   }
+
+  // Delete
+  if (key.delete) {
+    if (pos < value.length) {
+      valueSignal.value = value.slice(0, pos) + value.slice(pos + 1);
+    }
+    return true;
+  }
+
+  // Left arrow
+  if (key.leftArrow) {
+    if (pos > 0) {
+      cursorPos.value = pos - 1;
+    }
+    return true;
+  }
+
+  // Right arrow
+  if (key.rightArrow) {
+    if (pos < value.length) {
+      cursorPos.value = pos + 1;
+    }
+    return true;
+  }
+
+  // Home or Ctrl+A
+  if (key.home || (key.ctrl && input === 'a')) {
+    cursorPos.value = 0;
+    return true;
+  }
+
+  // End or Ctrl+E
+  if (key.end || (key.ctrl && input === 'e')) {
+    cursorPos.value = value.length;
+    return true;
+  }
+
+  return false;
 }

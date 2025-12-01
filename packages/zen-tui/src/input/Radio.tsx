@@ -53,10 +53,10 @@ export function Radio<T = string>(props: RadioProps<T>): TUINode {
   const { isFocused } = useFocus({ id, autoFocus: props.autoFocus });
 
   // Handle keyboard input
-  useInput((input, _key) => {
+  useInput((input, key) => {
     if (!isFocused.value) return;
 
-    handleRadioInput(input, highlightedIndex, valueSignal, getOptions(), props.onChange);
+    handleRadioInput(key, input, highlightedIndex, valueSignal, getOptions(), props.onChange);
   });
 
   return Box({
@@ -93,9 +93,18 @@ export function Radio<T = string>(props: RadioProps<T>): TUINode {
 
 /**
  * Input handler for Radio
+ *
+ * @param key - Parsed Key object from useInput
+ * @param input - Raw input string for vim-style navigation (j/k)
+ * @param highlightedIndex - Signal controlling highlighted option index
+ * @param valueSignal - Signal controlling selected value
+ * @param options - Array of options to select from
+ * @param onChange - Optional callback when value changes
+ * @returns true if the key was handled, false otherwise
  */
 export function handleRadioInput<T>(
-  key: string,
+  key: import('../hooks/useInput.js').Key,
+  input: string,
   highlightedIndex: Signal<number>,
   valueSignal: Signal<T | undefined>,
   options: RadioOption<T>[],
@@ -103,33 +112,31 @@ export function handleRadioInput<T>(
 ): boolean {
   const currentIndex = highlightedIndex.value;
 
-  switch (key) {
-    case '\x1b[A': // Up arrow
-    case 'k':
-      if (currentIndex > 0) {
-        highlightedIndex.value = currentIndex - 1;
-      }
-      return true;
-
-    case '\x1b[B': // Down arrow
-    case 'j':
-      if (currentIndex < options.length - 1) {
-        highlightedIndex.value = currentIndex + 1;
-      }
-      return true;
-
-    case '\r': // Enter
-    case ' ': {
-      // Space
-      const selected = options[currentIndex];
-      if (selected) {
-        valueSignal.value = selected.value;
-        onChange?.(selected.value);
-      }
-      return true;
+  // Up arrow or vim 'k'
+  if (key.upArrow || input === 'k') {
+    if (currentIndex > 0) {
+      highlightedIndex.value = currentIndex - 1;
     }
-
-    default:
-      return false;
+    return true;
   }
+
+  // Down arrow or vim 'j'
+  if (key.downArrow || input === 'j') {
+    if (currentIndex < options.length - 1) {
+      highlightedIndex.value = currentIndex + 1;
+    }
+    return true;
+  }
+
+  // Enter or Space: select option
+  if (key.return || key.space) {
+    const selected = options[currentIndex];
+    if (selected) {
+      valueSignal.value = selected.value;
+      onChange?.(selected.value);
+    }
+    return true;
+  }
+
+  return false;
 }

@@ -76,7 +76,7 @@ export function Button(props: ButtonProps): TUINode {
     if (!isFocused.value || disabled) return;
 
     // Enter or Space to activate
-    if (key.return || input === ' ') {
+    if (key.return || key.space) {
       // Visual feedback: press and release
       isPressed.value = true;
       if (pressTimeout !== null) {
@@ -179,6 +179,10 @@ export function Button(props: ButtonProps): TUINode {
  * Handle button keyboard input
  * Call this from your app's onKeyPress handler for the focused button
  *
+ * @param isPressed - Signal controlling visual pressed state
+ * @param disabled - Whether the button is disabled
+ * @param key - Parsed Key object from useInput
+ * @param onClick - Optional callback when button is activated
  * @returns Object with `handled` boolean and optional `cleanup` function.
  *          Call `cleanup()` if you need to cancel the press animation early.
  *
@@ -194,13 +198,13 @@ export function Button(props: ButtonProps): TUINode {
 export function handleButton(
   isPressed: Signal<boolean>,
   disabled: boolean,
-  key: string,
+  key: import('../hooks/useInput.js').Key,
   onClick?: () => void,
 ): { handled: boolean; cleanup?: () => void } {
   if (disabled) return { handled: false };
 
   // Enter or Space to activate
-  if (key === '\r' || key === '\n' || key === ' ') {
+  if (key.return || key.space) {
     // Visual feedback: press and release
     isPressed.value = true;
     const timeoutId = setTimeout(() => {

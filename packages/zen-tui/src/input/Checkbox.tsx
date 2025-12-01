@@ -42,10 +42,10 @@ export function Checkbox(props: CheckboxProps): TUINode {
   const { isFocused } = useFocus({ id, autoFocus: props.autoFocus });
 
   // Handle keyboard input
-  useInput((input, _key) => {
+  useInput((input, key) => {
     if (!isFocused.value) return;
 
-    handleCheckbox(checkedSignal, input, props.onChange);
+    handleCheckbox(checkedSignal, key, props.onChange);
   });
 
   // Helper to get label (uses resolve for MaybeReactive)
@@ -71,14 +71,19 @@ export function Checkbox(props: CheckboxProps): TUINode {
 /**
  * Input handler for Checkbox
  * Call this from the app's key handler
+ *
+ * @param checkedSignal - Signal controlling checked state
+ * @param key - Parsed Key object from useInput
+ * @param onChange - Optional callback when value changes
+ * @returns true if the key was handled, false otherwise
  */
 export function handleCheckbox(
   checkedSignal: Signal<boolean>,
-  key: string,
+  key: import('../hooks/useInput.js').Key,
   onChange?: (checked: boolean) => void,
 ): boolean {
   // Space or Enter: toggle checkbox
-  if (key === ' ' || key === '\r' || key === '\n') {
+  if (key.space || key.return) {
     const newValue = !checkedSignal.value;
     checkedSignal.value = newValue;
     onChange?.(newValue);

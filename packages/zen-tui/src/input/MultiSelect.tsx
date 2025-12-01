@@ -75,17 +75,18 @@ export function MultiSelect<T = string>(props: MultiSelectProps<T>): TUINode {
   });
 
   // Handle keyboard input
-  useInput((input, _key) => {
+  useInput((input, key) => {
     if (!isFocused.value) return;
 
     const items = getItems();
     const limit = getLimit();
     handleMultiSelectInput(
+      key,
+      input,
       highlightedIndex,
       selectedSignal,
       scrollOffset,
       items,
-      input,
       limit,
       props.onSubmit,
     );
@@ -140,21 +141,32 @@ export function MultiSelect<T = string>(props: MultiSelectProps<T>): TUINode {
 /**
  * Input handler for MultiSelect
  * Handles navigation, selection toggle, and submit
+ *
+ * @param key - Parsed Key object from useInput
+ * @param input - Raw input string for vim-style navigation (j/k) and shortcuts (a/c)
+ * @param highlightedIndex - Signal controlling highlighted option index
+ * @param selectedSignal - Signal controlling selected values
+ * @param scrollOffset - Signal controlling scroll position
+ * @param items - Array of items to select from
+ * @param limit - Max visible items (for scrolling)
+ * @param onSubmit - Optional callback when selection is submitted
+ * @returns true if the key was handled, false otherwise
  */
 export function handleMultiSelectInput<T>(
+  key: import('../hooks/useInput.js').Key,
+  input: string,
   highlightedIndex: Signal<number>,
   selectedSignal: Signal<T[]>,
   scrollOffset: Signal<number>,
   items: MultiSelectOption<T>[],
-  key: string,
   limit = items.length,
   onSubmit?: (selected: T[]) => void,
 ): boolean {
   const currentIndex = highlightedIndex.value;
   const currentSelected = selectedSignal.value;
 
-  // Arrow Up: Move highlight up
-  if (key === 'up' || key === 'k') {
+  // Arrow Up or vim 'k': Move highlight up
+  if (key.upArrow || input === 'k') {
     if (currentIndex > 0) {
       highlightedIndex.value = currentIndex - 1;
 
@@ -166,8 +178,8 @@ export function handleMultiSelectInput<T>(
     return true;
   }
 
-  // Arrow Down: Move highlight down
-  if (key === 'down' || key === 'j') {
+  // Arrow Down or vim 'j': Move highlight down
+  if (key.downArrow || input === 'j') {
     if (currentIndex < items.length - 1) {
       highlightedIndex.value = currentIndex + 1;
 
@@ -180,7 +192,7 @@ export function handleMultiSelectInput<T>(
   }
 
   // Space: Toggle selection
-  if (key === ' ' || key === 'space') {
+  if (key.space) {
     const item = items[currentIndex];
     if (!item) return false;
 
@@ -197,19 +209,19 @@ export function handleMultiSelectInput<T>(
   }
 
   // Enter/Return: Submit selection
-  if (key === 'return' || key === 'enter') {
+  if (key.return) {
     onSubmit?.(selectedSignal.value);
     return true;
   }
 
   // 'a': Select all
-  if (key === 'a') {
+  if (input === 'a') {
     selectedSignal.value = items.map((item) => item.value);
     return true;
   }
 
   // 'c': Clear all selections
-  if (key === 'c') {
+  if (input === 'c') {
     selectedSignal.value = [];
     return true;
   }

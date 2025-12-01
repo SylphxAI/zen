@@ -114,7 +114,11 @@
   }
 
   .card-hover {
-    @apply hover:border-primary/50 hover:shadow-lg hover:-translate-y-1;
+    @apply hover:shadow-lg hover:-translate-y-1;
+  }
+
+  .card-hover:hover {
+    border-color: rgba(99, 102, 241, 0.5);
   }
 
   /* Button styles */
@@ -123,7 +127,8 @@
   }
 
   .btn-primary {
-    @apply bg-primary hover:bg-primary-dark text-white shadow-lg shadow-primary/25;
+    @apply bg-primary hover:bg-primary-dark text-white shadow-lg;
+    --tw-shadow-color: rgba(99, 102, 241, 0.25);
   }
 
   .btn-secondary {
@@ -140,11 +145,15 @@
   }
 
   .badge-primary {
-    @apply bg-primary/10 text-primary border border-primary/20;
+    @apply text-primary border;
+    background-color: rgba(99, 102, 241, 0.1);
+    border-color: rgba(99, 102, 241, 0.2);
   }
 
   .badge-success {
-    @apply bg-success/10 text-success border border-success/20;
+    @apply text-success border;
+    background-color: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.2);
   }
 
   /* Code block styles */

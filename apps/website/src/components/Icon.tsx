@@ -9,14 +9,43 @@
  */
 
 import IconHeroiconsUser from '~icons/heroicons/user?raw';
+import IconLucideAtom from '~icons/lucide/atom?raw';
+import IconLucideBarChart from '~icons/lucide/bar-chart?raw';
+import IconLucideBell from '~icons/lucide/bell?raw';
+import IconLucideBookOpen from '~icons/lucide/book-open?raw';
+import IconLucideBox from '~icons/lucide/box?raw';
+import IconLucideBrain from '~icons/lucide/brain?raw';
+import IconLucideCheck from '~icons/lucide/check?raw';
+import IconLucideCheckSquare from '~icons/lucide/check-square?raw';
+import IconLucideCircleDot from '~icons/lucide/circle-dot?raw';
+import IconLucideComponent from '~icons/lucide/component?raw';
 import IconLucideFileText from '~icons/lucide/file-text?raw';
+import IconLucideFlame from '~icons/lucide/flame?raw';
+import IconLucideFolder from '~icons/lucide/folder?raw';
+import IconLucideGauge from '~icons/lucide/gauge?raw';
+import IconLucideGithub from '~icons/lucide/github?raw';
+import IconLucideGlobe from '~icons/lucide/globe?raw';
 import IconLucideInfo from '~icons/lucide/info?raw';
+import IconLucideLayers from '~icons/lucide/layers?raw';
+import IconLucideLayout from '~icons/lucide/layout?raw';
+import IconLucideList from '~icons/lucide/list?raw';
+import IconLucideLoader from '~icons/lucide/loader?raw';
 import IconLucideMoon from '~icons/lucide/moon?raw';
+import IconLucideMousePointerClick from '~icons/lucide/mouse-pointer-click?raw';
+import IconLucidePackage from '~icons/lucide/package?raw';
 import IconLucidePlay from '~icons/lucide/play?raw';
+import IconLucideRepeat from '~icons/lucide/repeat?raw';
 import IconLucideRotateCcw from '~icons/lucide/rotate-ccw?raw';
+import IconLucideScroll from '~icons/lucide/scroll?raw';
 import IconLucideSearch from '~icons/lucide/search?raw';
+import IconLucideShare2 from '~icons/lucide/share-2?raw';
+import IconLucideSmartphone from '~icons/lucide/smartphone?raw';
 import IconLucideSquare from '~icons/lucide/square?raw';
 import IconLucideSun from '~icons/lucide/sun?raw';
+import IconLucideTerminal from '~icons/lucide/terminal?raw';
+import IconLucideTextCursor from '~icons/lucide/text-cursor?raw';
+import IconLucideTriangle from '~icons/lucide/triangle?raw';
+import IconLucideType from '~icons/lucide/type?raw';
 import IconLucideX from '~icons/lucide/x?raw';
 import IconLucideZap from '~icons/lucide/zap?raw';
 import IconMdiHome from '~icons/mdi/home?raw';
@@ -32,17 +61,48 @@ interface IconProps {
 
 // Map icon names to raw SVG strings
 const iconMap: Record<string, string> = {
-  'lucide:sun': IconLucideSun,
-  'lucide:moon': IconLucideMoon,
-  'lucide:zap': IconLucideZap,
-  'lucide:search': IconLucideSearch,
+  // Lucide icons
+  'lucide:atom': IconLucideAtom,
+  'lucide:bar-chart': IconLucideBarChart,
+  'lucide:bell': IconLucideBell,
+  'lucide:book-open': IconLucideBookOpen,
+  'lucide:box': IconLucideBox,
+  'lucide:brain': IconLucideBrain,
+  'lucide:check': IconLucideCheck,
+  'lucide:check-square': IconLucideCheckSquare,
+  'lucide:circle-dot': IconLucideCircleDot,
+  'lucide:component': IconLucideComponent,
   'lucide:file-text': IconLucideFileText,
-  'lucide:search-x': IconLucideX,
-  'lucide:x': IconLucideX,
-  'lucide:play': IconLucidePlay,
-  'lucide:square': IconLucideSquare,
-  'lucide:rotate-ccw': IconLucideRotateCcw,
+  'lucide:flame': IconLucideFlame,
+  'lucide:folder': IconLucideFolder,
+  'lucide:gauge': IconLucideGauge,
+  'lucide:github': IconLucideGithub,
+  'lucide:globe': IconLucideGlobe,
   'lucide:info': IconLucideInfo,
+  'lucide:layers': IconLucideLayers,
+  'lucide:layout': IconLucideLayout,
+  'lucide:list': IconLucideList,
+  'lucide:loader': IconLucideLoader,
+  'lucide:moon': IconLucideMoon,
+  'lucide:mouse-pointer-click': IconLucideMousePointerClick,
+  'lucide:package': IconLucidePackage,
+  'lucide:play': IconLucidePlay,
+  'lucide:repeat': IconLucideRepeat,
+  'lucide:rotate-ccw': IconLucideRotateCcw,
+  'lucide:scroll': IconLucideScroll,
+  'lucide:search': IconLucideSearch,
+  'lucide:search-x': IconLucideX,
+  'lucide:share-2': IconLucideShare2,
+  'lucide:smartphone': IconLucideSmartphone,
+  'lucide:square': IconLucideSquare,
+  'lucide:sun': IconLucideSun,
+  'lucide:terminal': IconLucideTerminal,
+  'lucide:text-cursor': IconLucideTextCursor,
+  'lucide:triangle': IconLucideTriangle,
+  'lucide:type': IconLucideType,
+  'lucide:x': IconLucideX,
+  'lucide:zap': IconLucideZap,
+  // Other icon sets
   'mdi:home': IconMdiHome,
   'heroicons:user': IconHeroiconsUser,
   'ph:heart-fill': IconPhHeartFill,

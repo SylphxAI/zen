@@ -55,11 +55,12 @@ function setupResizeListener() {
 }
 
 function teardownResizeListener() {
-  listenerCount--;
-  if (listenerCount <= 0 && resizeListenerActive) {
+  // Guard against going negative (defensive programming)
+  listenerCount = Math.max(0, listenerCount - 1);
+
+  if (listenerCount === 0 && resizeListenerActive) {
     process.stdout.off('resize', handleResize);
     resizeListenerActive = false;
-    listenerCount = 0;
   }
 }
 

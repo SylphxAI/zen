@@ -3,9 +3,13 @@
  *
  * Generates HTML strings instead of DOM nodes for server-side rendering.
  * Used automatically when bundling for server environments.
+ *
+ * IMPORTANT: SSR must emit marker comments (<!--signal-->, <!--reactive-->)
+ * to match client hydration expectations. Without these, hydration cursor
+ * gets misaligned.
  */
 
-import { executeComponent } from '@zen/runtime';
+import { executeComponent, isSignal } from '@zen/runtime';
 
 // Symbol to mark safe HTML strings
 const SAFE_HTML = Symbol('SAFE_HTML');
@@ -107,6 +111,10 @@ function renderAttributes(props: Record<string, any>): string {
 
 /**
  * Render children to HTML string
+ *
+ * IMPORTANT: Signals and functions emit marker comments to match
+ * client-side hydration. Client creates <!--signal--> and <!--reactive-->
+ * markers, so SSR must emit them too for hydration cursor alignment.
  */
 function renderChildren(children: any): string {
   // Null/undefined
@@ -125,13 +133,23 @@ function renderChildren(children: any): string {
     return children.map(renderChildren).join('');
   }
 
-  // Function (shouldn't happen in normal JSX, but handle it)
-  if (typeof children === 'function') {
-    return renderChildren(children());
+  // Signal - emit marker for hydration alignment
+  // Client creates <!--signal--> marker, so SSR must match
+  if (isSignal(children)) {
+    return `<!--signal-->${renderChildren(children.value)}`;
   }
 
-  // DOM Comment nodes (from Show, For, etc.)
-  // These are marker comments, skip them in SSR
+  // Function (reactive content) - emit marker for hydration alignment
+  // Client creates <!--reactive--> marker, so SSR must match
+  if (typeof children === 'function') {
+    return `<!--reactive-->${renderChildren(children())}`;
+  }
+
+  // DOM Comment nodes (from Show, For, etc.) - render as HTML comments
+  if (typeof children === 'object' && children.nodeType === 8) {
+    return `<!--${children.textContent || ''}-->`;
+  }
+
   return '';
 }
 

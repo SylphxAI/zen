@@ -261,13 +261,26 @@ function appendChild(parent: Element, child: unknown, hydrating: boolean): void 
 
   // Reactive signal - auto-unwrap (runtime-first)
   if (isSignal(child)) {
-    // Create a marker comment node to track position
-    const marker = document.createComment('signal');
-    if (!hydrating) {
+    // Get or create marker comment node to track position
+    // During hydration: reuse marker from SSR (<!--signal-->)
+    // Normal render: create new marker
+    let marker: Comment;
+    if (hydrating) {
+      const ssrMarker = getNextHydrateNode();
+      if (ssrMarker && ssrMarker.nodeType === Node.COMMENT_NODE) {
+        marker = ssrMarker as Comment;
+      } else {
+        // Fallback: create marker (SSR mismatch - content still works)
+        marker = document.createComment('signal');
+      }
+    } else {
+      marker = document.createComment('signal');
       parent.appendChild(marker);
     }
 
     let currentNodes: Node[] = [];
+    // Track initial render to skip DOM manipulation only on first hydration run
+    let isInitialRender = hydrating;
 
     // Cleanup marker and content nodes when disposed
     onCleanup(() => {
@@ -307,10 +320,17 @@ function appendChild(parent: Element, child: unknown, hydrating: boolean): void 
 
       previousValue = value;
 
-      // Remove previous nodes
-      for (const node of currentNodes) {
-        if (node.parentNode === parent) {
-          parent.removeChild(node);
+      // Skip DOM manipulation only on initial hydration render
+      // After that, we need to update DOM on signal changes
+      const skipDomUpdate = isInitialRender;
+      isInitialRender = false;
+
+      // Remove previous nodes (skip on initial hydration - SSR content exists)
+      if (!skipDomUpdate) {
+        for (const node of currentNodes) {
+          if (node.parentNode === parent) {
+            parent.removeChild(node);
+          }
         }
       }
       currentNodes = [];
@@ -325,7 +345,7 @@ function appendChild(parent: Element, child: unknown, hydrating: boolean): void 
       if (Array.isArray(value)) {
         for (const item of value) {
           if (item instanceof Node) {
-            if (!hydrating) {
+            if (!skipDomUpdate) {
               parent.insertBefore(item, marker);
             }
             currentNodes.push(item);
@@ -336,7 +356,7 @@ function appendChild(parent: Element, child: unknown, hydrating: boolean): void 
 
       // Node - append directly
       if (value instanceof Node) {
-        if (!hydrating) {
+        if (!skipDomUpdate) {
           parent.insertBefore(value, marker);
         }
         currentNodes.push(value);
@@ -344,11 +364,17 @@ function appendChild(parent: Element, child: unknown, hydrating: boolean): void 
       }
 
       // Primitive - create text node
-      const textNode = document.createTextNode(String(value));
-      if (!hydrating) {
+      if (skipDomUpdate) {
+        // During hydration, find the existing text node from SSR
+        const existingText = getNextHydrateNode();
+        if (existingText && existingText.nodeType === Node.TEXT_NODE) {
+          currentNodes.push(existingText);
+        }
+      } else {
+        const textNode = document.createTextNode(String(value));
         parent.insertBefore(textNode, marker);
+        currentNodes.push(textNode);
       }
-      currentNodes.push(textNode);
       return undefined;
     });
     return;
@@ -356,14 +382,27 @@ function appendChild(parent: Element, child: unknown, hydrating: boolean): void 
 
   // Function - reactive content (from unplugin transformation)
   if (typeof child === 'function') {
-    // Create a marker comment node to hold the reactive content
-    const marker = document.createComment('reactive');
-    if (!hydrating) {
+    // Get or create marker comment node to track position
+    // During hydration: reuse marker from SSR (<!--reactive-->)
+    // Normal render: create new marker
+    let marker: Comment;
+    if (hydrating) {
+      const ssrMarker = getNextHydrateNode();
+      if (ssrMarker && ssrMarker.nodeType === Node.COMMENT_NODE) {
+        marker = ssrMarker as Comment;
+      } else {
+        // Fallback: create marker (SSR mismatch - content still works)
+        marker = document.createComment('reactive');
+      }
+    } else {
+      marker = document.createComment('reactive');
       parent.appendChild(marker);
     }
 
     let currentNodes: Node[] = [];
     let previousValue: unknown;
+    // Track initial render to skip DOM manipulation only on first hydration run
+    let isInitialRender = hydrating;
 
     // Cleanup marker and content nodes when disposed
     onCleanup(() => {
@@ -402,17 +441,24 @@ function appendChild(parent: Element, child: unknown, hydrating: boolean): void 
 
       previousValue = value;
 
-      // Remove previous nodes
-      for (const node of currentNodes) {
-        if (node.parentNode === parent) {
-          parent.removeChild(node);
+      // Skip DOM manipulation only on initial hydration render
+      // After that, we need to update DOM on value changes
+      const skipDomUpdate = isInitialRender;
+      isInitialRender = false;
+
+      // Remove previous nodes (skip on initial hydration - SSR content exists)
+      if (!skipDomUpdate) {
+        for (const node of currentNodes) {
+          if (node.parentNode === parent) {
+            parent.removeChild(node);
+          }
         }
       }
       currentNodes = [];
 
       // Handle Node
       if (value instanceof Node) {
-        if (!hydrating) {
+        if (!skipDomUpdate) {
           parent.insertBefore(value, marker);
         }
         currentNodes.push(value);
@@ -423,7 +469,7 @@ function appendChild(parent: Element, child: unknown, hydrating: boolean): void 
       if (Array.isArray(value)) {
         for (const item of value) {
           if (item instanceof Node) {
-            if (!hydrating) {
+            if (!skipDomUpdate) {
               parent.insertBefore(item, marker);
             }
             currentNodes.push(item);
@@ -434,11 +480,17 @@ function appendChild(parent: Element, child: unknown, hydrating: boolean): void 
 
       // Handle primitive values (text)
       if (value != null && value !== false) {
-        const textNode = document.createTextNode(String(value));
-        if (!hydrating) {
+        if (skipDomUpdate) {
+          // During hydration, find the existing text node from SSR
+          const existingText = getNextHydrateNode();
+          if (existingText && existingText.nodeType === Node.TEXT_NODE) {
+            currentNodes.push(existingText);
+          }
+        } else {
+          const textNode = document.createTextNode(String(value));
           parent.insertBefore(textNode, marker);
+          currentNodes.push(textNode);
         }
-        currentNodes.push(textNode);
       }
 
       return undefined;

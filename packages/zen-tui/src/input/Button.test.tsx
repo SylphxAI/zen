@@ -74,9 +74,9 @@ describe('handleButton', () => {
     const isPressed = signal(false);
     const onClick = vi.fn();
 
-    const handled = handleButton(isPressed, false, '\r', onClick);
+    const result = handleButton(isPressed, false, '\r', onClick);
 
-    expect(handled).toBe(true);
+    expect(result.handled).toBe(true);
     expect(onClick).toHaveBeenCalled();
   });
 
@@ -84,9 +84,9 @@ describe('handleButton', () => {
     const isPressed = signal(false);
     const onClick = vi.fn();
 
-    const handled = handleButton(isPressed, false, ' ', onClick);
+    const result = handleButton(isPressed, false, ' ', onClick);
 
-    expect(handled).toBe(true);
+    expect(result.handled).toBe(true);
     expect(onClick).toHaveBeenCalled();
   });
 
@@ -94,9 +94,9 @@ describe('handleButton', () => {
     const isPressed = signal(false);
     const onClick = vi.fn();
 
-    const handled = handleButton(isPressed, false, '\n', onClick);
+    const result = handleButton(isPressed, false, '\n', onClick);
 
-    expect(handled).toBe(true);
+    expect(result.handled).toBe(true);
     expect(onClick).toHaveBeenCalled();
   });
 
@@ -113,9 +113,9 @@ describe('handleButton', () => {
     const isPressed = signal(false);
     const onClick = vi.fn();
 
-    const handled = handleButton(isPressed, true, '\r', onClick);
+    const result = handleButton(isPressed, true, '\r', onClick);
 
-    expect(handled).toBe(false);
+    expect(result.handled).toBe(false);
     expect(onClick).not.toHaveBeenCalled();
   });
 
@@ -131,9 +131,9 @@ describe('handleButton', () => {
     const isPressed = signal(false);
     const onClick = vi.fn();
 
-    const handled = handleButton(isPressed, false, 'x', onClick);
+    const result = handleButton(isPressed, false, 'x', onClick);
 
-    expect(handled).toBe(false);
+    expect(result.handled).toBe(false);
     expect(onClick).not.toHaveBeenCalled();
   });
 
@@ -141,5 +141,19 @@ describe('handleButton', () => {
     const isPressed = signal(false);
 
     expect(() => handleButton(isPressed, false, '\r')).not.toThrow();
+  });
+
+  it('should provide cleanup function when handled', () => {
+    const isPressed = signal(false);
+    const onClick = vi.fn();
+
+    const result = handleButton(isPressed, false, '\r', onClick);
+
+    expect(result.handled).toBe(true);
+    expect(typeof result.cleanup).toBe('function');
+
+    // Cleanup should reset pressed state and clear timeout
+    result.cleanup?.();
+    expect(isPressed.value).toBe(false);
   });
 });

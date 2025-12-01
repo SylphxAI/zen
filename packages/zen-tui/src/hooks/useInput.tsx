@@ -97,6 +97,8 @@ export interface Key {
   delete: boolean;
   /** Meta key was pressed */
   meta: boolean;
+  /** Space key was pressed */
+  space: boolean;
   // Extensions (not in Ink)
   /** Home key was pressed */
   home: boolean;
@@ -429,7 +431,7 @@ export function parseKey(str: string): { key: Key; input: string } {
     rightArrow: parsed.name === 'right',
     pageDown: parsed.name === 'pagedown',
     pageUp: parsed.name === 'pageup',
-    return: parsed.name === 'return',
+    return: parsed.name === 'return' || parsed.name === 'enter',
     escape: parsed.name === 'escape',
     ctrl: parsed.ctrl,
     shift: parsed.shift,
@@ -437,6 +439,7 @@ export function parseKey(str: string): { key: Key; input: string } {
     backspace: parsed.name === 'backspace',
     delete: str === '\x1B[3~', // Actual delete key sequence
     meta: parsed.meta || parsed.name === 'escape',
+    space: parsed.name === 'space',
     // Extensions
     home: parsed.name === 'home',
     end: parsed.name === 'end',

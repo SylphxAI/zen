@@ -1,6 +1,8 @@
 import { Router } from '@zen/router';
 import { Footer } from './components/Footer.tsx';
 import { Header } from './components/Header.tsx';
+import { Examples } from './pages/Examples.tsx';
+import { Migration } from './pages/Migration.tsx';
 import { NewDocs } from './pages/NewDocs.tsx';
 import { NewHome } from './pages/NewHome.tsx';
 import { Playground } from './pages/Playground.tsx';
@@ -15,6 +17,8 @@ export function App() {
           routes={[
             { path: '/', component: () => <NewHome /> },
             { path: '/docs', component: () => <NewDocs /> },
+            { path: '/examples', component: () => <Examples /> },
+            { path: '/migration', component: () => <Migration /> },
             { path: '/playground', component: () => <Playground /> },
             { path: '/test-descriptor', component: () => <TestDescriptor /> },
           ]}

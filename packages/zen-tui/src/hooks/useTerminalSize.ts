@@ -41,6 +41,8 @@ function handleResize() {
 
 function setupResizeListener() {
   if (!resizeListenerActive && process.stdout.isTTY) {
+    // Refresh values in case terminal was resized since module load
+    handleResize();
     process.stdout.on('resize', handleResize);
     resizeListenerActive = true;
   }

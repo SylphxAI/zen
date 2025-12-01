@@ -228,6 +228,135 @@ function setStaticValue(element: Element, key: string, value: unknown): void {
 }
 
 /**
+ * Handle reactive child content (signal or function)
+ *
+ * Extracts common logic for both signal.value and function() reactive patterns.
+ * This reduces ~160 lines of duplication to a single shared implementation.
+ */
+function handleReactiveChild(
+  parent: Element,
+  getValue: () => unknown,
+  markerLabel: string,
+  hydrating: boolean,
+): void {
+  // Get or create marker comment node to track position
+  // During hydration: reuse marker from SSR
+  // Normal render: create new marker
+  let marker: Comment;
+  if (hydrating) {
+    const ssrMarker = getNextHydrateNode();
+    if (ssrMarker && ssrMarker.nodeType === Node.COMMENT_NODE) {
+      marker = ssrMarker as Comment;
+    } else {
+      // Fallback: create marker (SSR mismatch - content still works)
+      marker = document.createComment(markerLabel);
+    }
+  } else {
+    marker = document.createComment(markerLabel);
+    parent.appendChild(marker);
+  }
+
+  let currentNodes: Node[] = [];
+  let previousValue: unknown;
+  // Track initial render to skip DOM manipulation only on first hydration run
+  let isInitialRender = hydrating;
+
+  // Cleanup marker and content nodes when disposed
+  onCleanup(() => {
+    for (const node of currentNodes) {
+      if (node.parentNode === parent) {
+        parent.removeChild(node);
+      }
+    }
+    if (marker.parentNode === parent) {
+      parent.removeChild(marker);
+    }
+  });
+
+  // Wrap in effect for reactivity
+  effect(() => {
+    const value = getValue();
+
+    // Fine-grained comparison: Only update if value actually changed
+    // For Nodes: reference equality (same instance = no update needed)
+    // For primitives: value equality
+    if (value instanceof Node) {
+      if (previousValue === value) {
+        return undefined; // Same Node instance, skip update
+      }
+    } else if (Array.isArray(value) && Array.isArray(previousValue)) {
+      // Array of nodes: check if all nodes are the same instances
+      if (
+        value.length === previousValue.length &&
+        value.every((item, i) => item === previousValue[i])
+      ) {
+        return undefined; // Same array content, skip update
+      }
+    } else if (value === previousValue) {
+      return undefined; // Same primitive value, skip update
+    }
+
+    previousValue = value;
+
+    // Skip DOM manipulation only on initial hydration render
+    // After that, we need to update DOM on value changes
+    const skipDomUpdate = isInitialRender;
+    isInitialRender = false;
+
+    // Remove previous nodes (skip on initial hydration - SSR content exists)
+    if (!skipDomUpdate) {
+      for (const node of currentNodes) {
+        if (node.parentNode === parent) {
+          parent.removeChild(node);
+        }
+      }
+    }
+    currentNodes = [];
+
+    // Handle null/undefined/false - remove nodes (already cleared above)
+    if (value == null || value === false) {
+      return undefined;
+    }
+
+    // Handle Node
+    if (value instanceof Node) {
+      if (!skipDomUpdate) {
+        parent.insertBefore(value, marker);
+      }
+      currentNodes.push(value);
+      return undefined;
+    }
+
+    // Handle array of nodes
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        if (item instanceof Node) {
+          if (!skipDomUpdate) {
+            parent.insertBefore(item, marker);
+          }
+          currentNodes.push(item);
+        }
+      }
+      return undefined;
+    }
+
+    // Handle primitive values (text)
+    if (skipDomUpdate) {
+      // During hydration, find the existing text node from SSR
+      const existingText = getNextHydrateNode();
+      if (existingText && existingText.nodeType === Node.TEXT_NODE) {
+        currentNodes.push(existingText);
+      }
+    } else {
+      const textNode = document.createTextNode(String(value));
+      parent.insertBefore(textNode, marker);
+      currentNodes.push(textNode);
+    }
+    return undefined;
+  });
+}
+
+/**
  * Append child - optimized with descriptor support
  */
 function appendChild(parent: Element, child: unknown, hydrating: boolean): void {
@@ -261,240 +390,13 @@ function appendChild(parent: Element, child: unknown, hydrating: boolean): void 
 
   // Reactive signal - auto-unwrap (runtime-first)
   if (isSignal(child)) {
-    // Get or create marker comment node to track position
-    // During hydration: reuse marker from SSR (<!--signal-->)
-    // Normal render: create new marker
-    let marker: Comment;
-    if (hydrating) {
-      const ssrMarker = getNextHydrateNode();
-      if (ssrMarker && ssrMarker.nodeType === Node.COMMENT_NODE) {
-        marker = ssrMarker as Comment;
-      } else {
-        // Fallback: create marker (SSR mismatch - content still works)
-        marker = document.createComment('signal');
-      }
-    } else {
-      marker = document.createComment('signal');
-      parent.appendChild(marker);
-    }
-
-    let currentNodes: Node[] = [];
-    // Track initial render to skip DOM manipulation only on first hydration run
-    let isInitialRender = hydrating;
-
-    // Cleanup marker and content nodes when disposed
-    onCleanup(() => {
-      for (const node of currentNodes) {
-        if (node.parentNode === parent) {
-          parent.removeChild(node);
-        }
-      }
-      if (marker.parentNode === parent) {
-        parent.removeChild(marker);
-      }
-    });
-    let previousValue: unknown;
-
-    // Wrap in effect for reactivity
-    effect(() => {
-      const value = child.value;
-
-      // Fine-grained comparison: Only update if value actually changed
-      // For Nodes: reference equality (same instance = no update needed)
-      // For primitives: value equality
-      if (value instanceof Node) {
-        if (previousValue === value) {
-          return undefined; // Same Node instance, skip update
-        }
-      } else if (Array.isArray(value) && Array.isArray(previousValue)) {
-        // Array of nodes: check if all nodes are the same instances
-        if (
-          value.length === previousValue.length &&
-          value.every((item, i) => item === previousValue[i])
-        ) {
-          return undefined; // Same array content, skip update
-        }
-      } else if (value === previousValue) {
-        return undefined; // Same primitive value, skip update
-      }
-
-      previousValue = value;
-
-      // Skip DOM manipulation only on initial hydration render
-      // After that, we need to update DOM on signal changes
-      const skipDomUpdate = isInitialRender;
-      isInitialRender = false;
-
-      // Remove previous nodes (skip on initial hydration - SSR content exists)
-      if (!skipDomUpdate) {
-        for (const node of currentNodes) {
-          if (node.parentNode === parent) {
-            parent.removeChild(node);
-          }
-        }
-      }
-      currentNodes = [];
-
-      // Handle different value types
-      // Null/undefined/false - remove nodes (already cleared above)
-      if (value == null || value === false) {
-        return undefined;
-      }
-
-      // Array - append each item
-      if (Array.isArray(value)) {
-        for (const item of value) {
-          if (item instanceof Node) {
-            if (!skipDomUpdate) {
-              parent.insertBefore(item, marker);
-            }
-            currentNodes.push(item);
-          }
-        }
-        return undefined;
-      }
-
-      // Node - append directly
-      if (value instanceof Node) {
-        if (!skipDomUpdate) {
-          parent.insertBefore(value, marker);
-        }
-        currentNodes.push(value);
-        return undefined;
-      }
-
-      // Primitive - create text node
-      if (skipDomUpdate) {
-        // During hydration, find the existing text node from SSR
-        const existingText = getNextHydrateNode();
-        if (existingText && existingText.nodeType === Node.TEXT_NODE) {
-          currentNodes.push(existingText);
-        }
-      } else {
-        const textNode = document.createTextNode(String(value));
-        parent.insertBefore(textNode, marker);
-        currentNodes.push(textNode);
-      }
-      return undefined;
-    });
+    handleReactiveChild(parent, () => child.value, 'signal', hydrating);
     return;
   }
 
   // Function - reactive content (from unplugin transformation)
   if (typeof child === 'function') {
-    // Get or create marker comment node to track position
-    // During hydration: reuse marker from SSR (<!--reactive-->)
-    // Normal render: create new marker
-    let marker: Comment;
-    if (hydrating) {
-      const ssrMarker = getNextHydrateNode();
-      if (ssrMarker && ssrMarker.nodeType === Node.COMMENT_NODE) {
-        marker = ssrMarker as Comment;
-      } else {
-        // Fallback: create marker (SSR mismatch - content still works)
-        marker = document.createComment('reactive');
-      }
-    } else {
-      marker = document.createComment('reactive');
-      parent.appendChild(marker);
-    }
-
-    let currentNodes: Node[] = [];
-    let previousValue: unknown;
-    // Track initial render to skip DOM manipulation only on first hydration run
-    let isInitialRender = hydrating;
-
-    // Cleanup marker and content nodes when disposed
-    onCleanup(() => {
-      for (const node of currentNodes) {
-        if (node.parentNode === parent) {
-          parent.removeChild(node);
-        }
-      }
-      if (marker.parentNode === parent) {
-        parent.removeChild(marker);
-      }
-    });
-
-    // Wrap in effect for reactivity
-    effect(() => {
-      const value = child();
-
-      // Fine-grained comparison: Only update if value actually changed
-      // For Nodes: reference equality (same instance = no update needed)
-      // For primitives: value equality
-      if (value instanceof Node) {
-        if (previousValue === value) {
-          return undefined; // Same Node instance, skip update
-        }
-      } else if (Array.isArray(value) && Array.isArray(previousValue)) {
-        // Array of nodes: check if all nodes are the same instances
-        if (
-          value.length === previousValue.length &&
-          value.every((item, i) => item === previousValue[i])
-        ) {
-          return undefined; // Same array content, skip update
-        }
-      } else if (value === previousValue) {
-        return undefined; // Same primitive value, skip update
-      }
-
-      previousValue = value;
-
-      // Skip DOM manipulation only on initial hydration render
-      // After that, we need to update DOM on value changes
-      const skipDomUpdate = isInitialRender;
-      isInitialRender = false;
-
-      // Remove previous nodes (skip on initial hydration - SSR content exists)
-      if (!skipDomUpdate) {
-        for (const node of currentNodes) {
-          if (node.parentNode === parent) {
-            parent.removeChild(node);
-          }
-        }
-      }
-      currentNodes = [];
-
-      // Handle Node
-      if (value instanceof Node) {
-        if (!skipDomUpdate) {
-          parent.insertBefore(value, marker);
-        }
-        currentNodes.push(value);
-        return undefined;
-      }
-
-      // Handle array of nodes
-      if (Array.isArray(value)) {
-        for (const item of value) {
-          if (item instanceof Node) {
-            if (!skipDomUpdate) {
-              parent.insertBefore(item, marker);
-            }
-            currentNodes.push(item);
-          }
-        }
-        return undefined;
-      }
-
-      // Handle primitive values (text)
-      if (value != null && value !== false) {
-        if (skipDomUpdate) {
-          // During hydration, find the existing text node from SSR
-          const existingText = getNextHydrateNode();
-          if (existingText && existingText.nodeType === Node.TEXT_NODE) {
-            currentNodes.push(existingText);
-          }
-        } else {
-          const textNode = document.createTextNode(String(value));
-          parent.insertBefore(textNode, marker);
-          currentNodes.push(textNode);
-        }
-      }
-
-      return undefined;
-    });
+    handleReactiveChild(parent, child, 'reactive', hydrating);
     return;
   }
 

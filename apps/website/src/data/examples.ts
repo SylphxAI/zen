@@ -23,28 +23,36 @@ export const examples: Example[] = [
 const count = signal(0);
 const doubled = computed(() => count.value * 2);
 
+// Button style helper
+const btnStyle = {
+  padding: '10px 20px',
+  fontSize: '16px',
+  fontWeight: '500',
+  border: 'none',
+  borderRadius: '8px',
+  cursor: 'pointer',
+  backgroundColor: '#6366f1',
+  color: 'white',
+  transition: 'background 0.2s'
+};
+
 // Create component
 const app = (
-  <div style={{ padding: '20px', fontFamily: 'sans-serif', color: 'var(--text)' }}>
-    <h2>Counter: {count}</h2>
-    <p>Doubled: {doubled}</p>
-    <div style={{ display: 'flex', gap: '10px' }}>
-      <button
-        onClick={() => count.value--}
-        style={{ padding: '8px 16px', cursor: 'pointer' }}
-      >
-        -
+  <div style={{ padding: '24px', fontFamily: 'system-ui, sans-serif' }}>
+    <h2 style={{ margin: '0 0 8px', fontSize: '28px', color: '#1f2937' }}>
+      Counter: {count}
+    </h2>
+    <p style={{ margin: '0 0 20px', fontSize: '18px', color: '#6b7280' }}>
+      Doubled: {doubled}
+    </p>
+    <div style={{ display: 'flex', gap: '12px' }}>
+      <button onClick={() => count.value--} style={btnStyle}>
+        − Decrease
       </button>
-      <button
-        onClick={() => count.value++}
-        style={{ padding: '8px 16px', cursor: 'pointer' }}
-      >
-        +
+      <button onClick={() => count.value++} style={{...btnStyle, backgroundColor: '#10b981'}}>
+        + Increase
       </button>
-      <button
-        onClick={() => count.value = 0}
-        style={{ padding: '8px 16px', cursor: 'pointer' }}
-      >
+      <button onClick={() => count.value = 0} style={{...btnStyle, backgroundColor: '#6b7280'}}>
         Reset
       </button>
     </div>

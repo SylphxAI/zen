@@ -20,6 +20,7 @@ import { For, Show, computed, signal } from '@zen/web';
 import * as Zen from '@zen/web';
 import { Fragment, jsx } from '@zen/web/jsx-runtime';
 import { Icon } from '../components/Icon.tsx';
+import { TuiPreview } from '../components/TuiPreview.tsx';
 import { categories, examples } from '../data/examples.ts';
 
 export function Playground() {
@@ -378,22 +379,42 @@ export function Playground() {
               <div class="bg-bg-light border border-border rounded-2xl overflow-hidden flex flex-col">
                 <div class="flex items-center justify-between bg-bg-lighter border-b border-border px-5 py-3">
                   <div class="flex items-center gap-2">
-                    <div class="w-2 h-2 rounded-full bg-success animate-pulse" />
-                    <span class="font-medium text-text text-sm">Live Preview</span>
+                    <Show
+                      when={() => selectedExample.value.category === 'tui'}
+                      fallback={<div class="w-2 h-2 rounded-full bg-success animate-pulse" />}
+                    >
+                      <Icon icon="lucide:terminal" width="14" height="14" class="text-cyan-400" />
+                    </Show>
+                    <span class="font-medium text-text text-sm">
+                      {() => (selectedExample.value.category === 'tui' ? 'Terminal Preview' : 'Live Preview')}
+                    </span>
                   </div>
-                  <button
-                    type="button"
-                    class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text bg-bg hover:bg-bg-dark border border-border rounded-lg transition-all"
-                    onClick={() => {
-                      const el = document.getElementById('preview');
-                      if (el) el.innerHTML = '';
-                    }}
-                  >
-                    <Icon icon="lucide:x" width="12" height="12" />
-                    Clear
-                  </button>
+                  <Show when={() => selectedExample.value.category !== 'tui'}>
+                    <button
+                      type="button"
+                      class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text bg-bg hover:bg-bg-dark border border-border rounded-lg transition-all"
+                      onClick={() => {
+                        const el = document.getElementById('preview');
+                        if (el) el.innerHTML = '';
+                      }}
+                    >
+                      <Icon icon="lucide:x" width="12" height="12" />
+                      Clear
+                    </button>
+                  </Show>
                 </div>
-                <div id="preview" class="flex-1 min-h-[480px] p-5 overflow-auto bg-bg" />
+                <Show
+                  when={() => selectedExample.value.category === 'tui'}
+                  fallback={<div id="preview" class="flex-1 min-h-[480px] p-5 overflow-auto bg-bg" />}
+                >
+                  <div class="flex-1 min-h-[480px] p-4 overflow-auto">
+                    <TuiPreview
+                      output={() => selectedExample.value.tuiOutput || ''}
+                      cols={60}
+                      rows={20}
+                    />
+                  </div>
+                </Show>
               </div>
             </div>
 

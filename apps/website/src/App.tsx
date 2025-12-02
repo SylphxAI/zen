@@ -1,4 +1,5 @@
 import { Router } from '@zen/router';
+import { signal } from '@zen/web';
 import { Footer } from './components/Footer.tsx';
 import { Header } from './components/Header.tsx';
 import { Examples } from './pages/Examples.tsx';
@@ -8,10 +9,21 @@ import { NewHome } from './pages/NewHome.tsx';
 import { Playground } from './pages/Playground.tsx';
 import { TestDescriptor } from './pages/TestDescriptor.tsx';
 
+// Track if current page is full-screen (no header/footer)
+const isFullScreen = signal(false);
+
+// Check path on load and update
+if (typeof window !== 'undefined') {
+  isFullScreen.value = window.location.pathname === '/playground';
+  window.addEventListener('popstate', () => {
+    isFullScreen.value = window.location.pathname === '/playground';
+  });
+}
+
 export function App() {
   return (
     <div class="app">
-      <Header />
+      {() => (!isFullScreen.value ? <Header /> : null)}
       <main>
         <Router
           routes={[
@@ -19,7 +31,13 @@ export function App() {
             { path: '/docs', component: () => <NewDocs /> },
             { path: '/examples', component: () => <Examples /> },
             { path: '/migration', component: () => <Migration /> },
-            { path: '/playground', component: () => <Playground /> },
+            {
+              path: '/playground',
+              component: () => {
+                isFullScreen.value = true;
+                return <Playground />;
+              },
+            },
             { path: '/test-descriptor', component: () => <TestDescriptor /> },
           ]}
           fallback={() => (
@@ -33,7 +51,7 @@ export function App() {
           )}
         />
       </main>
-      <Footer />
+      {() => (!isFullScreen.value ? <Footer /> : null)}
     </div>
   );
 }

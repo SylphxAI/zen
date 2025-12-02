@@ -58,8 +58,8 @@ const btnBase = {
 
 const app = (
   <div style={container}>
-    <h2 style={title}>Counter: {count}</h2>
-    <p style={subtitle}>Doubled: {doubled}</p>
+    <h2 style={title}>Counter: {() => count.value}</h2>
+    <p style={subtitle}>Doubled: {() => doubled.value}</p>
     <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
       <button
         onClick={() => count.value--}
@@ -140,12 +140,12 @@ const app = (
 
     <div style={stat}>
       <span style={{ color: '#374151', fontWeight: '500' }}>Current Count</span>
-      <span style={{...badge, backgroundColor: '#dbeafe', color: '#1d4ed8'}}>{count}</span>
+      <span style={{...badge, backgroundColor: '#dbeafe', color: '#1d4ed8'}}>{() => count.value}</span>
     </div>
 
     <div style={stat}>
       <span style={{ color: '#374151', fontWeight: '500' }}>Effect Runs</span>
-      <span style={{...badge, backgroundColor: '#dcfce7', color: '#15803d'}}>{effectRuns}</span>
+      <span style={{...badge, backgroundColor: '#dcfce7', color: '#15803d'}}>{() => effectRuns.value}</span>
     </div>
 
     <div style={{
@@ -426,7 +426,7 @@ const app = (
           Message Sent!
         </h2>
         <p style={{ margin: 0, color: '#6b7280' }}>
-          Thanks {name}, we'll be in touch at {email}
+          Thanks {() => name.value}, we'll be in touch at {() => email.value}
         </p>
       </div>
     </Show>
@@ -525,7 +525,7 @@ const app = (
         color: '#dc2626',
         marginBottom: '20px'
       }}>
-        ⚠️ Error: {error}
+        ⚠️ Error: {() => error.value}
       </div>
     </Show>
 

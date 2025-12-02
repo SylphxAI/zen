@@ -15,80 +15,104 @@ import {
   lineNumbers,
 } from '@codemirror/view';
 import * as ZenSignal from '@zen/signal';
-import { effect } from '@zen/signal';
 import { For, Show, computed, signal } from '@zen/web';
 import * as Zen from '@zen/web';
 import { Fragment, jsx } from '@zen/web/jsx-runtime';
+import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string';
 import { Icon } from '../components/Icon.tsx';
-import { categories, examples } from '../data/examples.ts';
+import { examples } from '../data/examples.ts';
+
+// CSS for reactivity highlighting
+const HIGHLIGHT_CSS = `
+  .zen-updated {
+    animation: zen-highlight 0.5s ease-out;
+  }
+  @keyframes zen-highlight {
+    0% { outline: 2px solid #22d3ee; outline-offset: 2px; background-color: rgba(34, 211, 238, 0.1); }
+    100% { outline: 2px solid transparent; outline-offset: 2px; background-color: transparent; }
+  }
+`;
 
 export function Playground() {
-  const templates = examples.reduce(
-    (acc, ex) => {
-      acc[ex.id] = ex.code;
-      return acc;
-    },
-    {} as Record<string, string>,
-  );
+  // Inject highlight CSS
+  if (typeof document !== 'undefined' && !document.getElementById('zen-highlight-style')) {
+    const style = document.createElement('style');
+    style.id = 'zen-highlight-style';
+    style.textContent = HIGHLIGHT_CSS;
+    document.head.appendChild(style);
+  }
 
-  const selectedCategory = signal<string>('basic');
-  const selectedExampleId = signal<string>('counter');
-  const code = signal(templates.counter || '');
-
-  const filteredExamples = computed(() =>
-    examples.filter((ex) => ex.category === selectedCategory.value),
-  );
-
-  const selectedExample = computed(
-    () => examples.find((ex) => ex.id === selectedExampleId.value) || examples[0],
-  );
+  // State
+  const code = signal(getInitialCode());
   const error = signal('');
-  const executeTime = signal(0);
-  const renderTime = signal(0);
-  const opsPerSecond = signal(0);
+  const domUpdates = signal(0);
+  const signalChanges = signal(0);
+  const lastRunTime = signal(0);
+  const showExamples = signal(false);
+  const selectedExample = signal(examples[0]);
 
   let editorView: EditorView | null = null;
-  let autoRunTimer: number | null = null;
+  let debounceTimer: number | null = null;
 
-  const handleCategoryChange = (categoryId: string) => {
-    selectedCategory.value = categoryId;
-    const firstExample = examples.find((ex) => ex.category === categoryId);
-    if (firstExample) {
-      selectedExampleId.value = firstExample.id;
-      loadExample(firstExample.id);
+  // Get initial code from URL or default
+  function getInitialCode(): string {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash;
+      if (hash.startsWith('#code=')) {
+        try {
+          const compressed = hash.slice(6);
+          const decoded = decompressFromEncodedURIComponent(compressed);
+          if (decoded) return decoded;
+        } catch {
+          // Ignore decode errors
+        }
+      }
     }
+    return examples[0].code;
+  }
+
+  // Share URL
+  const shareCode = () => {
+    const compressed = compressToEncodedURIComponent(code.value);
+    const url = `${window.location.origin}${window.location.pathname}#code=${compressed}`;
+    navigator.clipboard.writeText(url);
+    // Could show a toast here
   };
 
-  const loadExample = (exampleId: string) => {
-    selectedExampleId.value = exampleId;
-    const newCode = templates[exampleId] || templates.counter;
-    code.value = newCode;
-
+  // Load example
+  const loadExample = (example: (typeof examples)[0]) => {
+    code.value = example.code;
+    selectedExample.value = example;
+    showExamples.value = false;
     if (editorView) {
       editorView.dispatch({
-        changes: { from: 0, to: editorView.state.doc.length, insert: newCode },
+        changes: { from: 0, to: editorView.state.doc.length, insert: example.code },
       });
     }
+    // Clear URL hash when loading example
+    window.history.replaceState(null, '', window.location.pathname);
   };
 
+  // Debounced code execution
   Zen.effect(() => {
     const _currentCode = code.value;
 
-    if (autoRunTimer !== null) {
-      clearTimeout(autoRunTimer);
+    if (debounceTimer !== null) {
+      clearTimeout(debounceTimer);
     }
 
-    autoRunTimer = window.setTimeout(() => {
+    debounceTimer = window.setTimeout(() => {
       runCode();
-    }, 1000);
+    }, 100); // 100ms debounce instead of 1s
 
     return () => {
-      if (autoRunTimer !== null) {
-        clearTimeout(autoRunTimer);
+      if (debounceTimer !== null) {
+        clearTimeout(debounceTimer);
       }
     };
   });
 
+  // Initialize editor
   const initEditor = (container: HTMLDivElement) => {
     const startState = EditorState.create({
       doc: code.value,
@@ -110,6 +134,10 @@ export function Playground() {
             code.value = update.state.doc.toString();
           }
         }),
+        EditorView.theme({
+          '&': { height: '100%' },
+          '.cm-scroller': { overflow: 'auto' },
+        }),
       ],
     });
 
@@ -119,8 +147,12 @@ export function Playground() {
     });
   };
 
+  // Run code with tracking
   const runCode = () => {
     const startTime = performance.now();
+    domUpdates.value = 0;
+    signalChanges.value = 0;
+
     try {
       const previewEl = document.getElementById('preview');
       if (!previewEl) return;
@@ -141,7 +173,26 @@ export function Playground() {
         filename: 'playground.tsx',
       });
 
-      // biome-ignore lint/suspicious/noExplicitAny: JSX createElement requires dynamic types
+      // Create tracked signal that counts changes
+      const createTrackedSignal = <T,>(initial: T) => {
+        const s = signal(initial);
+        const descriptor = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(s), 'value');
+        const originalGet = descriptor?.get;
+        const originalSet = descriptor?.set;
+        if (originalGet && originalSet) {
+          Object.defineProperty(s, 'value', {
+            get() {
+              return originalGet.call(this);
+            },
+            set(v: T) {
+              signalChanges.value++;
+              originalSet.call(this, v);
+            },
+          });
+        }
+        return s;
+      };
+
       const createElement = (
         type: unknown,
         props: Record<string, unknown> | null,
@@ -158,295 +209,219 @@ export function Playground() {
       const zenContext = {
         ...Zen,
         ...ZenSignal,
+        signal: createTrackedSignal,
         jsx: createElement,
         Fragment,
         document,
         console,
       };
 
-      const execStart = performance.now();
       const wrappedCode = `
         ${transformed.code}
         return typeof app !== 'undefined' ? app : null;
       `;
       const fn = new Function(...Object.keys(zenContext), wrappedCode);
       let result = fn(...Object.values(zenContext));
-      const execEnd = performance.now();
 
+      // Cleanup previous content
       if (previewEl.firstChild) {
         Zen.disposeNode(previewEl.firstChild);
       }
-
       previewEl.innerHTML = '';
 
       // Handle ComponentDescriptor pattern (ADR-011)
-      // When jsx(Component, props) is called, it returns a descriptor object
-      // that needs to be executed to get the actual DOM node
       if (result && typeof result === 'object' && '_jsx' in result && result._jsx === true) {
         result = Zen.executeDescriptor(result);
       }
 
       if (result && result instanceof Node) {
+        // Wrap result to track DOM updates
+        // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: DOM mutation tracking requires nested conditionals
+        const observer = new MutationObserver((mutations) => {
+          for (const mutation of mutations) {
+            if (mutation.type === 'characterData' || mutation.type === 'childList') {
+              domUpdates.value++;
+              // Highlight the updated element
+              const target =
+                mutation.target.nodeType === Node.ELEMENT_NODE
+                  ? (mutation.target as Element)
+                  : mutation.target.parentElement;
+              if (target) {
+                target.classList.remove('zen-updated');
+                // Trigger reflow to restart animation
+                void target.offsetWidth;
+                target.classList.add('zen-updated');
+              }
+            }
+          }
+        });
+
         previewEl.appendChild(result);
+        observer.observe(previewEl, {
+          childList: true,
+          subtree: true,
+          characterData: true,
+        });
       }
 
       error.value = '';
-
-      executeTime.value = execEnd - execStart;
-      renderTime.value = execEnd - startTime;
-
-      const iterations = 1000;
-      const benchStart = performance.now();
-      const testSignal = signal(0);
-      for (let i = 0; i < iterations; i++) {
-        testSignal.value = i;
-      }
-      const benchEnd = performance.now();
-      const timePerOp = (benchEnd - benchStart) / iterations;
-      opsPerSecond.value = Math.round(1000 / timePerOp);
+      lastRunTime.value = performance.now() - startTime;
     } catch (e: unknown) {
       error.value = (e as Error).message || 'Unknown error';
     }
   };
 
   return (
-    <div class="min-h-screen bg-bg">
-      {/* Hero */}
-      <section class="py-8 px-6 bg-gradient-hero border-b border-border">
-        <div class="max-w-7xl mx-auto">
-          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 class="heading-2 text-text mb-2">Interactive Playground</h1>
-              <p class="text-text-muted">Browse examples, edit code, and see instant results</p>
-            </div>
-            <Show when={() => executeTime.value > 0}>
-              <div class="flex gap-4">
-                <div class="text-center px-4 py-2 bg-bg-light border border-border rounded-xl">
-                  <div class="text-xs text-text-muted">Execute</div>
-                  <div class="font-bold text-success">{executeTime.value.toFixed(2)}ms</div>
-                </div>
-                <div class="text-center px-4 py-2 bg-bg-light border border-border rounded-xl">
-                  <div class="text-xs text-text-muted">Total</div>
-                  <div class="font-bold text-primary">{renderTime.value.toFixed(2)}ms</div>
-                </div>
-                <div class="text-center px-4 py-2 bg-bg-light border border-border rounded-xl">
-                  <div class="text-xs text-text-muted">Ops/sec</div>
-                  <div class="font-bold text-secondary">{opsPerSecond.value.toLocaleString()}</div>
-                </div>
-              </div>
-            </Show>
-          </div>
-        </div>
-      </section>
+    <div class="h-screen flex flex-col bg-bg overflow-hidden">
+      {/* Header */}
+      <header class="flex-shrink-0 h-14 border-b border-border bg-bg-light flex items-center justify-between px-4">
+        <div class="flex items-center gap-4">
+          <h1 class="text-lg font-bold text-text flex items-center gap-2">
+            <Icon icon="lucide:play-circle" width="20" height="20" class="text-primary" />
+            Zen Playground
+          </h1>
 
-      <div class="max-w-7xl mx-auto px-6 py-8">
-        <div class="grid grid-cols-12 gap-6">
-          {/* Sidebar */}
-          <aside class="col-span-12 lg:col-span-3 space-y-6">
-            {/* Categories */}
-            <div class="bg-bg-light border border-border rounded-2xl p-5">
-              <h3 class="text-xs font-bold text-text-subtle uppercase tracking-widest mb-4">
-                Categories
-              </h3>
-              <nav class="flex flex-wrap gap-2">
-                <For each={categories}>
-                  {(category) => (
-                    <button
-                      type="button"
-                      class={
-                        selectedCategory.value === category.id
-                          ? 'flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium text-sm shadow-md transition-all'
-                          : 'flex items-center gap-2 px-4 py-2 bg-bg-lighter text-text-muted hover:text-text hover:bg-bg-dark border border-border rounded-lg text-sm transition-all'
-                      }
-                      onClick={() => handleCategoryChange(category.id)}
-                    >
-                      <Icon icon={category.icon} width="16" height="16" />
-                      {category.name}
-                    </button>
-                  )}
-                </For>
-              </nav>
-            </div>
+          {/* Examples Dropdown */}
+          <div class="relative">
+            <button
+              type="button"
+              class="flex items-center gap-2 px-3 py-1.5 bg-bg hover:bg-bg-lighter border border-border rounded-lg text-sm text-text-muted hover:text-text transition-colors"
+              onClick={() => {
+                showExamples.value = !showExamples.value;
+              }}
+            >
+              <Icon icon="lucide:folder-open" width="14" height="14" />
+              <span class="max-w-[150px] truncate">{selectedExample.value.title}</span>
+              <Icon icon="lucide:chevron-down" width="14" height="14" />
+            </button>
 
-            {/* Examples List */}
-            <div class="bg-bg-light border border-border rounded-2xl p-5">
-              <h3 class="text-xs font-bold text-text-subtle uppercase tracking-widest mb-4">
-                Examples
-              </h3>
-              <div class="space-y-2">
-                <For each={filteredExamples}>
+            <Show when={() => showExamples.value}>
+              <div class="absolute top-full left-0 mt-1 w-72 bg-bg-light border border-border rounded-xl shadow-lg z-50 max-h-96 overflow-y-auto">
+                <For each={examples}>
                   {(example) => (
                     <button
                       type="button"
-                      class={
-                        selectedExampleId.value === example.id
-                          ? 'w-full text-left p-3 bg-bg-lighter border-2 border-primary rounded-xl transition-all shadow-sm'
-                          : 'w-full text-left p-3 bg-bg hover:bg-bg-lighter border border-border hover:border-border-light rounded-xl transition-all'
-                      }
-                      onClick={() => loadExample(example.id)}
+                      class="w-full text-left px-4 py-3 hover:bg-bg-lighter border-b border-border last:border-b-0 transition-colors"
+                      onClick={() => loadExample(example)}
                     >
-                      <div class="flex items-start gap-3">
-                        <div
-                          class={
-                            selectedExampleId.value === example.id
-                              ? 'flex-shrink-0 w-9 h-9 flex items-center justify-center bg-primary text-white rounded-lg shadow-sm'
-                              : 'flex-shrink-0 w-9 h-9 flex items-center justify-center bg-bg-lighter text-text-muted rounded-lg border border-border'
-                          }
-                        >
-                          <Icon icon={example.icon} width="18" height="18" />
-                        </div>
-                        <div class="flex-1 min-w-0">
-                          <h4 class="text-sm font-semibold text-text">{example.title}</h4>
-                          <p class="text-xs text-text-muted mt-0.5 line-clamp-2">
-                            {example.description}
-                          </p>
+                      <div class="flex items-center gap-3">
+                        <Icon
+                          icon={example.icon}
+                          width="18"
+                          height="18"
+                          class="text-text-muted flex-shrink-0"
+                        />
+                        <div class="min-w-0">
+                          <div class="font-medium text-text text-sm">{example.title}</div>
+                          <div class="text-xs text-text-muted truncate">{example.description}</div>
                         </div>
                       </div>
                     </button>
                   )}
                 </For>
               </div>
-            </div>
-          </aside>
-
-          {/* Main Content Area */}
-          <main class="col-span-12 lg:col-span-9 space-y-5">
-            {/* Current Example Header */}
-            <div class="bg-bg-light border border-border rounded-2xl p-5 flex items-center gap-4">
-              <div class="w-14 h-14 flex items-center justify-center bg-gradient-to-br from-primary to-secondary text-white rounded-xl shadow-lg">
-                <Icon icon={selectedExample.value.icon} width="28" height="28" />
-              </div>
-              <div class="flex-1">
-                <h2 class="text-xl font-bold text-text">{selectedExample.value.title}</h2>
-                <p class="text-sm text-text-muted mt-1">{selectedExample.value.description}</p>
-              </div>
-            </div>
-
-            <Show when={() => error.value !== ''}>
-              <div class="p-4 bg-error/10 border border-error/30 rounded-xl text-error font-mono text-sm flex items-start gap-3">
-                <Icon icon="lucide:x" width="18" height="18" class="flex-shrink-0 mt-0.5" />
-                <div>
-                  <strong class="block mb-1">Error</strong>
-                  {error}
-                </div>
-              </div>
             </Show>
+          </div>
+        </div>
 
-            <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
-              {/* Editor */}
-              <div class="bg-bg-light border border-border rounded-2xl overflow-hidden flex flex-col">
-                <div class="flex items-center justify-between bg-bg-lighter border-b border-border px-5 py-3">
-                  <div class="flex items-center gap-2">
-                    <div class="flex gap-1.5">
-                      <div class="w-3 h-3 rounded-full bg-error/60" />
-                      <div class="w-3 h-3 rounded-full bg-warning/60" />
-                      <div class="w-3 h-3 rounded-full bg-success/60" />
-                    </div>
-                    <span class="font-medium text-text text-sm ml-2">Code Editor</span>
-                  </div>
-                  <button
-                    type="button"
-                    class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text bg-bg hover:bg-bg-dark border border-border rounded-lg transition-all"
-                    onClick={() => {
-                      code.value = selectedExample.value.code;
-                      if (editorView) {
-                        editorView.dispatch({
-                          changes: {
-                            from: 0,
-                            to: editorView.state.doc.length,
-                            insert: selectedExample.value.code,
-                          },
-                        });
-                      }
-                    }}
-                  >
-                    <Icon icon="lucide:rotate-ccw" width="12" height="12" />
-                    Reset
-                  </button>
-                </div>
-                <div
-                  class="flex-1 min-h-[480px]"
-                  ref={(el) => {
-                    if (el && !editorView) {
-                      initEditor(el as HTMLDivElement);
-                    }
-                  }}
-                />
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            class="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-primary-dark text-white rounded-lg text-sm font-medium transition-colors"
+            onClick={shareCode}
+          >
+            <Icon icon="lucide:share" width="14" height="14" />
+            Share
+          </button>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <div class="flex-1 flex overflow-hidden">
+        {/* Editor */}
+        <div class="w-1/2 border-r border-border flex flex-col">
+          <div class="flex-shrink-0 h-10 bg-bg-lighter border-b border-border flex items-center px-4">
+            <div class="flex items-center gap-2">
+              <div class="flex gap-1.5">
+                <div class="w-3 h-3 rounded-full bg-error/60" />
+                <div class="w-3 h-3 rounded-full bg-warning/60" />
+                <div class="w-3 h-3 rounded-full bg-success/60" />
               </div>
+              <span class="text-sm text-text-muted ml-2">app.tsx</span>
+            </div>
+          </div>
+          <div
+            class="flex-1 overflow-hidden"
+            ref={(el) => {
+              if (el && !editorView) {
+                initEditor(el as HTMLDivElement);
+              }
+            }}
+          />
+        </div>
 
-              {/* Preview */}
-              <div class="bg-bg-light border border-border rounded-2xl overflow-hidden flex flex-col">
-                <div class="flex items-center justify-between bg-bg-lighter border-b border-border px-5 py-3">
-                  <div class="flex items-center gap-2">
-                    <div class="w-2 h-2 rounded-full bg-success animate-pulse" />
-                    <span class="font-medium text-text text-sm">Live Preview</span>
-                  </div>
-                  <button
-                    type="button"
-                    class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text bg-bg hover:bg-bg-dark border border-border rounded-lg transition-all"
-                    onClick={() => {
-                      const el = document.getElementById('preview');
-                      if (el) el.innerHTML = '';
-                    }}
-                  >
-                    <Icon icon="lucide:x" width="12" height="12" />
-                    Clear
-                  </button>
-                </div>
-                <div id="preview" class="flex-1 min-h-[480px] p-5 overflow-auto bg-bg" />
+        {/* Preview */}
+        <div class="w-1/2 flex flex-col">
+          <div class="flex-shrink-0 h-10 bg-bg-lighter border-b border-border flex items-center justify-between px-4">
+            <div class="flex items-center gap-2">
+              <div class="w-2 h-2 rounded-full bg-success animate-pulse" />
+              <span class="text-sm text-text-muted">Live Preview</span>
+            </div>
+            <Show when={() => lastRunTime.value > 0}>
+              <span class="text-xs text-text-muted">{lastRunTime.value.toFixed(1)}ms</span>
+            </Show>
+          </div>
+
+          <Show when={() => error.value !== ''}>
+            <div class="flex-shrink-0 p-3 bg-error/10 border-b border-error/30 text-error font-mono text-sm">
+              <div class="flex items-start gap-2">
+                <Icon icon="lucide:x-circle" width="16" height="16" class="flex-shrink-0 mt-0.5" />
+                <span>{error}</span>
               </div>
             </div>
+          </Show>
 
-            {/* Tips */}
-            <div class="bg-bg-light border border-border rounded-2xl p-5">
-              <h3 class="font-semibold text-text mb-4 flex items-center gap-2">
-                <div class="w-8 h-8 flex items-center justify-center bg-warning/10 text-warning rounded-lg">
-                  <Icon icon="lucide:lightbulb" width="18" height="18" />
-                </div>
-                Playground Tips
-              </h3>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div class="flex items-start gap-3 p-3 bg-bg rounded-xl">
-                  <span class="w-6 h-6 flex items-center justify-center bg-primary/10 text-primary rounded-md text-xs font-bold">
-                    1
-                  </span>
-                  <span class="text-sm text-text-muted">
-                    Create a variable called{' '}
-                    <code class="px-1.5 py-0.5 bg-bg-lighter border border-border rounded text-primary text-xs font-mono">
-                      app
-                    </code>{' '}
-                    with your component
-                  </span>
-                </div>
-                <div class="flex items-start gap-3 p-3 bg-bg rounded-xl">
-                  <span class="w-6 h-6 flex items-center justify-center bg-primary/10 text-primary rounded-md text-xs font-bold">
-                    2
-                  </span>
-                  <span class="text-sm text-text-muted">
-                    Code runs automatically 1 second after you stop typing
-                  </span>
-                </div>
-                <div class="flex items-start gap-3 p-3 bg-bg rounded-xl">
-                  <span class="w-6 h-6 flex items-center justify-center bg-primary/10 text-primary rounded-md text-xs font-bold">
-                    3
-                  </span>
-                  <span class="text-sm text-text-muted">
-                    Errors won't clear your preview - previous version stays visible
-                  </span>
-                </div>
-                <div class="flex items-start gap-3 p-3 bg-bg rounded-xl">
-                  <span class="w-6 h-6 flex items-center justify-center bg-primary/10 text-primary rounded-md text-xs font-bold">
-                    4
-                  </span>
-                  <span class="text-sm text-text-muted">
-                    All Zen features: signal, computed, effect, Show, For
-                  </span>
-                </div>
-              </div>
-            </div>
-          </main>
+          <div id="preview" class="flex-1 p-6 overflow-auto bg-white" />
         </div>
       </div>
+
+      {/* Bottom Stats Bar */}
+      <footer class="flex-shrink-0 h-10 border-t border-border bg-bg-light flex items-center justify-between px-4">
+        <div class="flex items-center gap-6 text-xs">
+          <div class="flex items-center gap-2">
+            <div class="w-2 h-2 rounded-full bg-cyan-400" />
+            <span class="text-text-muted">DOM Updates:</span>
+            <span class="font-mono font-bold text-cyan-400">{domUpdates}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-2 h-2 rounded-full bg-purple-400" />
+            <span class="text-text-muted">Signal Changes:</span>
+            <span class="font-mono font-bold text-purple-400">{signalChanges}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-2 h-2 rounded-full bg-green-400" />
+            <span class="text-text-muted">Re-renders:</span>
+            <span class="font-mono font-bold text-green-400">0</span>
+            <span class="text-text-subtle">(Zen never re-renders!)</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 text-xs text-text-muted">
+          <span>Fine-grained reactivity in action</span>
+          <Icon icon="lucide:zap" width="14" height="14" class="text-warning" />
+        </div>
+      </footer>
+
+      {/* Click outside to close examples dropdown */}
+      <Show when={() => showExamples.value}>
+        {/* biome-ignore lint/a11y/useKeyWithClickEvents: overlay dismissal doesn't need keyboard focus */}
+        <div
+          class="fixed inset-0 z-40"
+          onClick={() => {
+            showExamples.value = false;
+          }}
+        />
+      </Show>
     </div>
   );
 }

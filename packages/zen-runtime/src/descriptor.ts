@@ -114,6 +114,20 @@ function makeLazyPropsForDescriptor(
         // This allows props.children to be read multiple times safely
         if (!hasExecuted) {
           executed = executeDescriptor(children);
+          // IMPORTANT: DocumentFragment children are MOVED when appended to DOM,
+          // leaving the fragment empty. Extract children as array BEFORE they get moved.
+          // This fixes the bug where components returning <> (Fragment) disappear after re-render.
+          if (
+            executed &&
+            typeof executed === 'object' &&
+            'nodeName' in executed &&
+            (executed as Node).nodeName === '#document-fragment'
+          ) {
+            const fragment = executed as DocumentFragment;
+            if (fragment.childNodes.length > 0) {
+              executed = Array.from(fragment.childNodes);
+            }
+          }
           hasExecuted = true;
         }
         return executed;

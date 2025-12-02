@@ -78,6 +78,17 @@ export function Show<T>(props: ShowProps<T>): unknown {
           if (isDescriptor(child)) {
             child = executeDescriptor(child);
           }
+          // IMPORTANT: DocumentFragment children are MOVED when appended, leaving fragment empty.
+          // Extract children BEFORE appending to preserve them for re-renders.
+          // This fixes the bug where Header (returning <>) disappears after navigation.
+          if (child && typeof child === 'object' && 'nodeName' in child && (child as Node).nodeName === '#document-fragment') {
+            const fragment = child as DocumentFragment;
+            // Convert to array of children (before they get moved)
+            const childArray = Array.from(fragment.childNodes);
+            if (childArray.length > 0) {
+              child = childArray;
+            }
+          }
           return child;
         });
       } else {

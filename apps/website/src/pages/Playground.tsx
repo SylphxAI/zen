@@ -386,7 +386,11 @@ export function Playground() {
                       <Icon icon="lucide:terminal" width="14" height="14" class="text-cyan-400" />
                     </Show>
                     <span class="font-medium text-text text-sm">
-                      {() => (selectedExample.value.category === 'tui' ? 'Terminal Preview' : 'Live Preview')}
+                      {() =>
+                        selectedExample.value.category === 'tui'
+                          ? 'Terminal Preview'
+                          : 'Live Preview'
+                      }
                     </span>
                   </div>
                   <Show when={() => selectedExample.value.category !== 'tui'}>
@@ -405,9 +409,23 @@ export function Playground() {
                 </div>
                 <Show
                   when={() => selectedExample.value.category === 'tui'}
-                  fallback={<div id="preview" class="flex-1 min-h-[480px] p-5 overflow-auto bg-bg" />}
+                  fallback={
+                    <div id="preview" class="flex-1 min-h-[480px] p-5 overflow-auto bg-bg" />
+                  }
                 >
-                  <div class="flex-1 min-h-[480px] p-4 overflow-auto">
+                  <div class="flex-1 min-h-[480px] p-4 overflow-auto flex flex-col">
+                    <div class="mb-3 p-3 bg-cyan-500/10 border border-cyan-500/30 rounded-lg flex items-start gap-2">
+                      <Icon
+                        icon="lucide:info"
+                        width="16"
+                        height="16"
+                        class="text-cyan-400 flex-shrink-0 mt-0.5"
+                      />
+                      <span class="text-xs text-cyan-300">
+                        Static preview — @zen/tui runs in Node.js terminals, not browsers. This
+                        shows pre-rendered output.
+                      </span>
+                    </div>
                     <TuiPreview
                       output={() => selectedExample.value.tuiOutput || ''}
                       cols={60}

@@ -102,7 +102,9 @@ export function Show<T>(props: ShowProps<T>): unknown {
 
       // Update container
       if (currentNode) {
-        ops.setChildren(container, [currentNode as object]);
+        // Handle array of children (multiple JSX children)
+        const nodes = Array.isArray(currentNode) ? currentNode : [currentNode];
+        ops.setChildren(container, nodes as object[]);
       } else {
         ops.setChildren(container, []);
       }

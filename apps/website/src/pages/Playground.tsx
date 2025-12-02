@@ -170,7 +170,7 @@ export function Playground() {
         return typeof app !== 'undefined' ? app : null;
       `;
       const fn = new Function(...Object.keys(zenContext), wrappedCode);
-      const result = fn(...Object.values(zenContext));
+      let result = fn(...Object.values(zenContext));
       const execEnd = performance.now();
 
       if (previewEl.firstChild) {
@@ -178,6 +178,13 @@ export function Playground() {
       }
 
       previewEl.innerHTML = '';
+
+      // Handle ComponentDescriptor pattern (ADR-011)
+      // When jsx(Component, props) is called, it returns a descriptor object
+      // that needs to be executed to get the actual DOM node
+      if (result && typeof result === 'object' && '_jsx' in result && result._jsx === true) {
+        result = Zen.executeDescriptor(result);
+      }
 
       if (result && result instanceof Node) {
         previewEl.appendChild(result);

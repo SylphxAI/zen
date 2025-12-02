@@ -47,6 +47,9 @@ export {
   splitProps,
   selector,
   runWithOwner,
+  // Descriptor pattern (ADR-011)
+  isDescriptor,
+  executeDescriptor,
   // Server utils
   isServer,
   createUniqueId,

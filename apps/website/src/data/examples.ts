@@ -302,32 +302,30 @@ const app = (
     code: `// Form state
 const name = signal('');
 const email = signal('');
-const password = signal('');
+const message = signal('');
+const submitted = signal(false);
 
-// Validation rules
+// Validation
 const nameValid = computed(() => name.value.length >= 2);
 const emailValid = computed(() => /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email.value));
-const passwordValid = computed(() => password.value.length >= 6);
-const formValid = computed(() => nameValid.value && emailValid.value && passwordValid.value);
+const messageValid = computed(() => message.value.length >= 10);
+const formValid = computed(() => nameValid.value && emailValid.value && messageValid.value);
 
-// Styles
-const container = {
-  padding: '32px',
-  fontFamily: 'system-ui, sans-serif',
-  maxWidth: '400px',
-  backgroundColor: '#fafafa',
-  borderRadius: '16px'
+const handleSubmit = () => {
+  if (formValid.value) submitted.value = true;
 };
 
-const inputBase = {
+// Styles
+const inputStyle = (valid, touched) => ({
   width: '100%',
   padding: '14px 16px',
   fontSize: '16px',
+  border: '2px solid ' + (touched ? (valid ? '#10b981' : '#ef4444') : '#e5e7eb'),
   borderRadius: '10px',
   outline: 'none',
   boxSizing: 'border-box',
-  marginBottom: '6px'
-};
+  transition: 'border-color 0.2s'
+});
 
 const label = {
   display: 'block',
@@ -337,112 +335,101 @@ const label = {
   fontSize: '14px'
 };
 
-const fieldGroup = { marginBottom: '20px' };
-
 const app = (
-  <div style={container}>
-    <h2 style={{ margin: '0 0 8px', fontSize: '26px', color: '#1f2937' }}>
-      Create Account
-    </h2>
-    <p style={{ margin: '0 0 24px', color: '#6b7280', fontSize: '15px' }}>
-      Fill in your details to get started
-    </p>
+  <div style={{ padding: '32px', fontFamily: 'system-ui, sans-serif', maxWidth: '420px' }}>
+    <Show when={computed(() => !submitted.value)}>
+      <h2 style={{ margin: '0 0 8px', fontSize: '28px', color: '#1f2937' }}>
+        Contact Us
+      </h2>
+      <p style={{ margin: '0 0 28px', color: '#6b7280' }}>
+        Fill out the form below and we'll get back to you.
+      </p>
 
-    <div style={fieldGroup}>
-      <label style={label}>Name</label>
-      <input
-        type="text"
-        value={name}
-        onInput={(e) => name.value = e.target.value}
-        placeholder="John Doe"
-        style={{
-          ...inputBase,
-          border: () => '2px solid ' + (name.value.length === 0 ? '#e5e7eb' : (nameValid.value ? '#10b981' : '#ef4444'))
-        }}
-      />
-      <div style={{ fontSize: '13px', height: '18px' }}>
-        {() => name.value.length > 0 && !nameValid.value ? (
-          <span style={{ color: '#ef4444' }}>Min 2 characters</span>
-        ) : name.value.length > 0 ? (
-          <span style={{ color: '#10b981' }}>✓ Valid</span>
-        ) : null}
+      <div style={{ marginBottom: '20px' }}>
+        <label style={label}>Name</label>
+        <input
+          type="text"
+          value={name}
+          onInput={(e) => name.value = e.target.value}
+          placeholder="John Doe"
+          style={inputStyle(nameValid.value, name.value.length > 0)}
+        />
+        <Show when={computed(() => name.value.length > 0 && !nameValid.value)}>
+          <p style={{ margin: '6px 0 0', color: '#ef4444', fontSize: '13px' }}>
+            Name must be at least 2 characters
+          </p>
+        </Show>
       </div>
-    </div>
 
-    <div style={fieldGroup}>
-      <label style={label}>Email</label>
-      <input
-        type="email"
-        value={email}
-        onInput={(e) => email.value = e.target.value}
-        placeholder="john@example.com"
-        style={{
-          ...inputBase,
-          border: () => '2px solid ' + (email.value.length === 0 ? '#e5e7eb' : (emailValid.value ? '#10b981' : '#ef4444'))
-        }}
-      />
-      <div style={{ fontSize: '13px', height: '18px' }}>
-        {() => email.value.length > 0 && !emailValid.value ? (
-          <span style={{ color: '#ef4444' }}>Invalid email format</span>
-        ) : email.value.length > 0 ? (
-          <span style={{ color: '#10b981' }}>✓ Valid</span>
-        ) : null}
+      <div style={{ marginBottom: '20px' }}>
+        <label style={label}>Email</label>
+        <input
+          type="email"
+          value={email}
+          onInput={(e) => email.value = e.target.value}
+          placeholder="john@example.com"
+          style={inputStyle(emailValid.value, email.value.length > 0)}
+        />
+        <Show when={computed(() => email.value.length > 0 && !emailValid.value)}>
+          <p style={{ margin: '6px 0 0', color: '#ef4444', fontSize: '13px' }}>
+            Please enter a valid email address
+          </p>
+        </Show>
       </div>
-    </div>
 
-    <div style={fieldGroup}>
-      <label style={label}>Password</label>
-      <input
-        type="password"
-        value={password}
-        onInput={(e) => password.value = e.target.value}
-        placeholder="••••••••"
-        style={{
-          ...inputBase,
-          border: () => '2px solid ' + (password.value.length === 0 ? '#e5e7eb' : (passwordValid.value ? '#10b981' : '#ef4444'))
-        }}
-      />
-      <div style={{ fontSize: '13px', height: '18px' }}>
-        {() => password.value.length > 0 && !passwordValid.value ? (
-          <span style={{ color: '#ef4444' }}>Min 6 characters ({password.value.length}/6)</span>
-        ) : password.value.length > 0 ? (
-          <span style={{ color: '#10b981' }}>✓ Strong enough</span>
-        ) : null}
+      <div style={{ marginBottom: '24px' }}>
+        <label style={label}>Message</label>
+        <textarea
+          value={message}
+          onInput={(e) => message.value = e.target.value}
+          placeholder="Your message here..."
+          rows="4"
+          style={{...inputStyle(messageValid.value, message.value.length > 0), resize: 'vertical'}}
+        />
+        <p style={{ margin: '6px 0 0', color: '#9ca3af', fontSize: '13px' }}>
+          {() => \`\${message.value.length}/10 characters minimum\`}
+        </p>
       </div>
-    </div>
 
-    <button
-      onClick={() => formValid.value && alert('Form submitted!')}
-      style={{
-        width: '100%',
-        padding: '16px',
-        fontSize: '16px',
-        fontWeight: '600',
-        backgroundColor: () => formValid.value ? '#6366f1' : '#a5b4fc',
-        color: 'white',
-        border: 'none',
-        borderRadius: '12px',
-        cursor: () => formValid.value ? 'pointer' : 'not-allowed',
-        transition: 'all 0.2s'
-      }}
-    >
-      {() => formValid.value ? 'Create Account ✓' : 'Complete all fields'}
-    </button>
+      <button
+        onClick={handleSubmit}
+        style={{
+          width: '100%',
+          padding: '16px',
+          fontSize: '16px',
+          fontWeight: '600',
+          backgroundColor: () => formValid.value ? '#6366f1' : '#a5b4fc',
+          color: 'white',
+          border: 'none',
+          borderRadius: '12px',
+          cursor: () => formValid.value ? 'pointer' : 'not-allowed'
+        }}
+      >
+        {() => formValid.value ? 'Send Message ✓' : 'Complete all fields'}
+      </button>
+    </Show>
 
-    <div style={{
-      marginTop: '20px',
-      padding: '12px',
-      backgroundColor: () => formValid.value ? '#dcfce7' : '#fef3c7',
-      borderRadius: '8px',
-      fontSize: '13px',
-      color: () => formValid.value ? '#166534' : '#92400e',
-      textAlign: 'center'
-    }}>
-      {() => formValid.value
-        ? '✓ All fields valid - ready to submit!'
-        : \`\${[nameValid.value, emailValid.value, passwordValid.value].filter(Boolean).length}/3 fields completed\`
-      }
-    </div>
+    <Show when={submitted}>
+      <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+        <div style={{
+          width: '64px',
+          height: '64px',
+          borderRadius: '50%',
+          backgroundColor: '#dcfce7',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          margin: '0 auto 20px',
+          fontSize: '32px'
+        }}>✓</div>
+        <h2 style={{ margin: '0 0 12px', color: '#1f2937', fontSize: '24px' }}>
+          Message Sent!
+        </h2>
+        <p style={{ margin: 0, color: '#6b7280' }}>
+          Thanks {name}, we'll be in touch at {email}
+        </p>
+      </div>
+    </Show>
   </div>
 );`,
   },

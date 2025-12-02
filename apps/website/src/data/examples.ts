@@ -19,41 +19,65 @@ export const examples: Example[] = [
     description: 'Basic reactive state with signal() and computed()',
     icon: 'lucide:hash',
     category: 'basic',
-    code: `// Create reactive state
+    code: `// Reactive state
 const count = signal(0);
 const doubled = computed(() => count.value * 2);
 
-// Button style helper
-const btnStyle = {
-  padding: '10px 20px',
-  fontSize: '16px',
-  fontWeight: '500',
-  border: 'none',
-  borderRadius: '8px',
-  cursor: 'pointer',
-  backgroundColor: '#6366f1',
-  color: 'white',
-  transition: 'background 0.2s'
+// Styles
+const container = {
+  padding: '32px',
+  fontFamily: 'system-ui, -apple-system, sans-serif',
+  maxWidth: '400px'
 };
 
-// Create component
+const title = {
+  margin: '0 0 8px',
+  fontSize: '32px',
+  fontWeight: '700',
+  color: '#1f2937'
+};
+
+const subtitle = {
+  margin: '0 0 24px',
+  fontSize: '18px',
+  color: '#6b7280'
+};
+
+const btnBase = {
+  padding: '12px 24px',
+  fontSize: '16px',
+  fontWeight: '600',
+  border: 'none',
+  borderRadius: '10px',
+  cursor: 'pointer',
+  transition: 'all 0.2s',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '8px'
+};
+
 const app = (
-  <div style={{ padding: '24px', fontFamily: 'system-ui, sans-serif' }}>
-    <h2 style={{ margin: '0 0 8px', fontSize: '28px', color: '#1f2937' }}>
-      Counter: {count}
-    </h2>
-    <p style={{ margin: '0 0 20px', fontSize: '18px', color: '#6b7280' }}>
-      Doubled: {doubled}
-    </p>
-    <div style={{ display: 'flex', gap: '12px' }}>
-      <button onClick={() => count.value--} style={btnStyle}>
+  <div style={container}>
+    <h2 style={title}>Counter: {count}</h2>
+    <p style={subtitle}>Doubled: {doubled}</p>
+    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+      <button
+        onClick={() => count.value--}
+        style={{...btnBase, backgroundColor: '#6366f1', color: 'white'}}
+      >
         − Decrease
       </button>
-      <button onClick={() => count.value++} style={{...btnStyle, backgroundColor: '#10b981'}}>
+      <button
+        onClick={() => count.value++}
+        style={{...btnBase, backgroundColor: '#10b981', color: 'white'}}
+      >
         + Increase
       </button>
-      <button onClick={() => count.value = 0} style={{...btnStyle, backgroundColor: '#6b7280'}}>
-        Reset
+      <button
+        onClick={() => count.value = 0}
+        style={{...btnBase, backgroundColor: '#f3f4f6', color: '#374151'}}
+      >
+        ↺ Reset
       </button>
     </div>
   </div>
@@ -65,66 +89,80 @@ const app = (
     description: 'Component renders once, only signals update',
     icon: 'lucide:zap',
     category: 'basic',
-    code: `// Fine-grained reactivity - component only renders ONCE
-console.log('🎨 Component created');
-
+    code: `// This component only renders ONCE!
 const count = signal(0);
-const renderCount = signal(0);
+const effectRuns = signal(0);
 
-// Timer at component level (SolidJS style)
-const timer = setInterval(() => {
-  count.value++;
-  console.log(\`⏰ Timer tick: count = \${count.value}\`);
-}, 1000);
+// Auto-increment every second
+const timer = setInterval(() => count.value++, 1000);
 
-// Register cleanup - will run when component is removed
-onCleanup(() => {
-  console.log('🧹 Cleaning up timer');
-  clearInterval(timer);
-});
-
-// Track effect runs (not component re-renders)
+// Track effect executions
 effect(() => {
-  renderCount.value++;
-  console.log(\`✨ Effect ran: count = \${count.value}\`);
+  const c = count.value;
+  effectRuns.value++;
 });
+
+// Styles
+const card = {
+  padding: '32px',
+  fontFamily: 'system-ui, sans-serif',
+  maxWidth: '450px',
+  backgroundColor: '#fafafa',
+  borderRadius: '16px'
+};
+
+const stat = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  padding: '16px 20px',
+  backgroundColor: 'white',
+  borderRadius: '12px',
+  marginBottom: '12px',
+  boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+};
+
+const badge = {
+  padding: '6px 14px',
+  borderRadius: '20px',
+  fontSize: '14px',
+  fontWeight: '600'
+};
 
 const app = (
-  <div style={{
-    padding: '20px',
-    fontFamily: 'sans-serif',
-    color: 'var(--text)',
-    backgroundColor: 'var(--bg)',
-    borderRadius: '8px'
-  }}>
-    <h2 style={{ marginBottom: '16px' }}>⚡ Fine-grained Reactivity</h2>
-    <div style={{
-      padding: '16px',
-      backgroundColor: 'var(--bg-light)',
-      borderRadius: '8px',
-      marginBottom: '16px'
-    }}>
-      <p style={{ fontSize: '24px', margin: '8px 0' }}>
-        Count: <strong>{count}</strong>
-      </p>
-      <p style={{ fontSize: '16px', margin: '8px 0', opacity: 0.7 }}>
-        Effect runs: {renderCount}
-      </p>
+  <div style={card}>
+    <h2 style={{ margin: '0 0 8px', fontSize: '24px', color: '#1f2937' }}>
+      ⚡ Fine-grained Updates
+    </h2>
+    <p style={{ margin: '0 0 24px', color: '#6b7280', fontSize: '15px' }}>
+      Watch the numbers change without re-rendering the component
+    </p>
+
+    <div style={stat}>
+      <span style={{ color: '#374151', fontWeight: '500' }}>Current Count</span>
+      <span style={{...badge, backgroundColor: '#dbeafe', color: '#1d4ed8'}}>{count}</span>
     </div>
+
+    <div style={stat}>
+      <span style={{ color: '#374151', fontWeight: '500' }}>Effect Runs</span>
+      <span style={{...badge, backgroundColor: '#dcfce7', color: '#15803d'}}>{effectRuns}</span>
+    </div>
+
     <div style={{
-      padding: '12px',
-      backgroundColor: 'var(--bg-lighter)',
-      borderRadius: '8px',
-      fontSize: '14px',
-      fontFamily: 'monospace'
+      marginTop: '20px',
+      padding: '16px',
+      backgroundColor: '#f0fdf4',
+      borderRadius: '10px',
+      border: '1px solid #bbf7d0'
     }}>
-      <p style={{ margin: '4px 0' }}>✅ Component created ONCE</p>
-      <p style={{ margin: '4px 0' }}>✅ Only text nodes update</p>
-      <p style={{ margin: '4px 0' }}>✅ No re-renders, no VDOM diff</p>
-      <p style={{ margin: '4px 0' }}>✅ onCleanup clears timer on re-run</p>
-      <p style={{ margin: '4px 0', marginTop: '12px', opacity: 0.7 }}>
-        Watch console for cleanup logs 👉
+      <p style={{ margin: '0 0 8px', fontWeight: '600', color: '#166534', fontSize: '14px' }}>
+        ✓ How it works:
       </p>
+      <ul style={{ margin: 0, paddingLeft: '20px', color: '#15803d', fontSize: '13px', lineHeight: '1.8' }}>
+        <li>Component function runs only once</li>
+        <li>Only the text nodes with signals update</li>
+        <li>No virtual DOM diffing needed</li>
+      </ul>
     </div>
   </div>
 );`,
@@ -132,206 +170,302 @@ const app = (
   {
     id: 'todo',
     title: 'Todo List',
-    description: 'List rendering with For component and state management',
+    description: 'List rendering with reactive arrays',
     icon: 'lucide:check-square',
     category: 'components',
-    code: `// Todo list example
-const todos = signal([]);
-const input = signal('');
+    code: `// State
+const todos = signal([
+  { id: 1, text: 'Learn Zen signals', done: true },
+  { id: 2, text: 'Build something awesome', done: false },
+  { id: 3, text: 'Ship to production', done: false }
+]);
+const newTodo = signal('');
 
+// Actions
 const addTodo = () => {
-  if (input.value.trim()) {
-    todos.value = [...todos.value, { id: Date.now(), text: input.value, done: false }];
-    input.value = '';
-  }
+  if (!newTodo.value.trim()) return;
+  todos.value = [...todos.value, {
+    id: Date.now(),
+    text: newTodo.value,
+    done: false
+  }];
+  newTodo.value = '';
 };
 
-const toggleTodo = (id) => {
+const toggle = (id) => {
   todos.value = todos.value.map(t =>
-    t.id === id ? { ...t, done: !t.done } : t
+    t.id === id ? {...t, done: !t.done} : t
   );
 };
 
+const remove = (id) => {
+  todos.value = todos.value.filter(t => t.id !== id);
+};
+
+// Styles
+const input = {
+  flex: 1,
+  padding: '14px 18px',
+  fontSize: '16px',
+  border: '2px solid #e5e7eb',
+  borderRadius: '12px',
+  outline: 'none'
+};
+
+const addBtn = {
+  padding: '14px 28px',
+  backgroundColor: '#6366f1',
+  color: 'white',
+  border: 'none',
+  borderRadius: '12px',
+  fontWeight: '600',
+  cursor: 'pointer'
+};
+
+const todoItem = (done) => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '14px',
+  padding: '16px',
+  backgroundColor: done ? '#f0fdf4' : 'white',
+  borderRadius: '12px',
+  marginBottom: '10px',
+  border: '1px solid ' + (done ? '#bbf7d0' : '#e5e7eb'),
+  transition: 'all 0.2s'
+});
+
 const app = (
-  <div style={{
-    padding: '20px',
-    fontFamily: 'sans-serif',
-    maxWidth: '500px',
-    color: 'var(--text)'
-  }}>
-    <h2 style={{ marginBottom: '16px' }}>Todo List</h2>
-    <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+  <div style={{ padding: '32px', fontFamily: 'system-ui, sans-serif', maxWidth: '500px' }}>
+    <h2 style={{ margin: '0 0 24px', fontSize: '28px', color: '#1f2937' }}>
+      📝 Todo List
+    </h2>
+
+    <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
       <input
         type="text"
-        value={input}
-        onInput={(e) => input.value = e.target.value}
-        placeholder="Add a todo..."
-        style={{
-          flex: 1,
-          padding: '8px 12px',
-          border: '1px solid var(--border)',
-          borderRadius: '4px',
-          backgroundColor: 'var(--bg)',
-          color: 'var(--text)'
-        }}
+        value={newTodo}
+        onInput={(e) => newTodo.value = e.target.value}
+        onKeyPress={(e) => e.key === 'Enter' && addTodo()}
+        placeholder="What needs to be done?"
+        style={input}
       />
-      <button
-        onClick={addTodo}
-        style={{
-          padding: '8px 16px',
-          cursor: 'pointer',
-          backgroundColor: 'var(--primary)',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px'
-        }}
-      >
-        Add
-      </button>
+      <button onClick={addTodo} style={addBtn}>Add</button>
     </div>
+
     <div>
-      {todos.value.map(todo => (
-        <div key={todo.id} style={{
-          display: 'flex',
-          gap: '10px',
-          marginBottom: '8px',
-          padding: '8px',
-          backgroundColor: 'var(--bg-light)',
-          borderRadius: '4px'
-        }}>
+      {() => todos.value.map(todo => (
+        <div key={todo.id} style={todoItem(todo.done)}>
           <input
             type="checkbox"
             checked={todo.done}
-            onChange={() => toggleTodo(todo.id)}
+            onChange={() => toggle(todo.id)}
+            style={{ width: '20px', height: '20px', cursor: 'pointer' }}
           />
           <span style={{
+            flex: 1,
+            fontSize: '16px',
             textDecoration: todo.done ? 'line-through' : 'none',
-            opacity: todo.done ? 0.5 : 1
+            color: todo.done ? '#9ca3af' : '#1f2937'
           }}>
             {todo.text}
           </span>
+          <button
+            onClick={() => remove(todo.id)}
+            style={{
+              padding: '6px 12px',
+              backgroundColor: '#fee2e2',
+              color: '#dc2626',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}
+          >
+            Delete
+          </button>
         </div>
       ))}
     </div>
+
+    <p style={{ marginTop: '16px', color: '#9ca3af', fontSize: '14px' }}>
+      {() => \`\${todos.value.filter(t => t.done).length} of \${todos.value.length} completed\`}
+    </p>
   </div>
 );`,
   },
   {
     id: 'form',
     title: 'Form Validation',
-    description: 'Real-time form validation with computed values',
+    description: 'Real-time validation with computed values',
     icon: 'lucide:file-text',
     category: 'components',
-    code: `// Form with validation
+    code: `// Form state
 const name = signal('');
 const email = signal('');
-const submitted = signal(false);
+const password = signal('');
 
-const isValid = computed(() =>
-  name.value.length > 0 && email.value.includes('@')
-);
+// Validation rules
+const nameValid = computed(() => name.value.length >= 2);
+const emailValid = computed(() => /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email.value));
+const passwordValid = computed(() => password.value.length >= 6);
+const formValid = computed(() => nameValid.value && emailValid.value && passwordValid.value);
 
-const handleSubmit = () => {
-  if (isValid.value) {
-    submitted.value = true;
-  }
+// Styles
+const container = {
+  padding: '32px',
+  fontFamily: 'system-ui, sans-serif',
+  maxWidth: '400px',
+  backgroundColor: '#fafafa',
+  borderRadius: '16px'
 };
 
+const inputBase = {
+  width: '100%',
+  padding: '14px 16px',
+  fontSize: '16px',
+  borderRadius: '10px',
+  outline: 'none',
+  boxSizing: 'border-box',
+  marginBottom: '6px'
+};
+
+const label = {
+  display: 'block',
+  marginBottom: '8px',
+  fontWeight: '600',
+  color: '#374151',
+  fontSize: '14px'
+};
+
+const fieldGroup = { marginBottom: '20px' };
+
 const app = (
-  <div style={{
-    padding: '20px',
-    fontFamily: 'sans-serif',
-    maxWidth: '400px',
-    color: 'var(--text)'
-  }}>
-    <h2 style={{ marginBottom: '16px' }}>Contact Form</h2>
-    <Show when={computed(() => !submitted.value)}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-        <div>
-          <label style={{ display: 'block', marginBottom: '4px' }}>Name:</label>
-          <input
-            type="text"
-            value={name}
-            onInput={(e) => name.value = e.target.value}
-            style={{
-              display: 'block',
-              width: '100%',
-              padding: '8px 12px',
-              border: '1px solid var(--border)',
-              borderRadius: '4px',
-              backgroundColor: 'var(--bg)',
-              color: 'var(--text)'
-            }}
-          />
-        </div>
-        <div>
-          <label style={{ display: 'block', marginBottom: '4px' }}>Email:</label>
-          <input
-            type="email"
-            value={email}
-            onInput={(e) => email.value = e.target.value}
-            style={{
-              display: 'block',
-              width: '100%',
-              padding: '8px 12px',
-              border: '1px solid var(--border)',
-              borderRadius: '4px',
-              backgroundColor: 'var(--bg)',
-              color: 'var(--text)'
-            }}
-          />
-        </div>
-        <button
-          onClick={handleSubmit}
-          disabled={() => !isValid.value}
-          style={{
-            padding: '10px 16px',
-            opacity: () => isValid.value ? 1 : 0.5,
-            cursor: () => isValid.value ? 'pointer' : 'not-allowed',
-            backgroundColor: 'var(--primary)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px'
-          }}
-        >
-          Submit
-        </button>
+  <div style={container}>
+    <h2 style={{ margin: '0 0 8px', fontSize: '26px', color: '#1f2937' }}>
+      Create Account
+    </h2>
+    <p style={{ margin: '0 0 24px', color: '#6b7280', fontSize: '15px' }}>
+      Fill in your details to get started
+    </p>
+
+    <div style={fieldGroup}>
+      <label style={label}>Name</label>
+      <input
+        type="text"
+        value={name}
+        onInput={(e) => name.value = e.target.value}
+        placeholder="John Doe"
+        style={{
+          ...inputBase,
+          border: () => '2px solid ' + (name.value.length === 0 ? '#e5e7eb' : (nameValid.value ? '#10b981' : '#ef4444'))
+        }}
+      />
+      <div style={{ fontSize: '13px', height: '18px' }}>
+        {() => name.value.length > 0 && !nameValid.value ? (
+          <span style={{ color: '#ef4444' }}>Min 2 characters</span>
+        ) : name.value.length > 0 ? (
+          <span style={{ color: '#10b981' }}>✓ Valid</span>
+        ) : null}
       </div>
-    </Show>
-    <Show when={submitted}>
-      <div style={{
-        color: 'var(--success)',
-        padding: '20px',
-        textAlign: 'center',
-        backgroundColor: 'var(--bg-light)',
-        borderRadius: '8px'
-      }}>
-        <h3 style={{ marginBottom: '8px' }}>✓ Form submitted!</h3>
-        <p style={{ margin: '4px 0' }}>Name: {name}</p>
-        <p style={{ margin: '4px 0' }}>Email: {email}</p>
+    </div>
+
+    <div style={fieldGroup}>
+      <label style={label}>Email</label>
+      <input
+        type="email"
+        value={email}
+        onInput={(e) => email.value = e.target.value}
+        placeholder="john@example.com"
+        style={{
+          ...inputBase,
+          border: () => '2px solid ' + (email.value.length === 0 ? '#e5e7eb' : (emailValid.value ? '#10b981' : '#ef4444'))
+        }}
+      />
+      <div style={{ fontSize: '13px', height: '18px' }}>
+        {() => email.value.length > 0 && !emailValid.value ? (
+          <span style={{ color: '#ef4444' }}>Invalid email format</span>
+        ) : email.value.length > 0 ? (
+          <span style={{ color: '#10b981' }}>✓ Valid</span>
+        ) : null}
       </div>
-    </Show>
+    </div>
+
+    <div style={fieldGroup}>
+      <label style={label}>Password</label>
+      <input
+        type="password"
+        value={password}
+        onInput={(e) => password.value = e.target.value}
+        placeholder="••••••••"
+        style={{
+          ...inputBase,
+          border: () => '2px solid ' + (password.value.length === 0 ? '#e5e7eb' : (passwordValid.value ? '#10b981' : '#ef4444'))
+        }}
+      />
+      <div style={{ fontSize: '13px', height: '18px' }}>
+        {() => password.value.length > 0 && !passwordValid.value ? (
+          <span style={{ color: '#ef4444' }}>Min 6 characters ({password.value.length}/6)</span>
+        ) : password.value.length > 0 ? (
+          <span style={{ color: '#10b981' }}>✓ Strong enough</span>
+        ) : null}
+      </div>
+    </div>
+
+    <button
+      onClick={() => formValid.value && alert('Form submitted!')}
+      style={{
+        width: '100%',
+        padding: '16px',
+        fontSize: '16px',
+        fontWeight: '600',
+        backgroundColor: () => formValid.value ? '#6366f1' : '#a5b4fc',
+        color: 'white',
+        border: 'none',
+        borderRadius: '12px',
+        cursor: () => formValid.value ? 'pointer' : 'not-allowed',
+        transition: 'all 0.2s'
+      }}
+    >
+      {() => formValid.value ? 'Create Account ✓' : 'Complete all fields'}
+    </button>
+
+    <div style={{
+      marginTop: '20px',
+      padding: '12px',
+      backgroundColor: () => formValid.value ? '#dcfce7' : '#fef3c7',
+      borderRadius: '8px',
+      fontSize: '13px',
+      color: () => formValid.value ? '#166534' : '#92400e',
+      textAlign: 'center'
+    }}>
+      {() => formValid.value
+        ? '✓ All fields valid - ready to submit!'
+        : \`\${[nameValid.value, emailValid.value, passwordValid.value].filter(Boolean).length}/3 fields completed\`
+      }
+    </div>
   </div>
 );`,
   },
   {
     id: 'async',
-    title: 'Async Data Fetching',
-    description: 'Loading states and error handling',
-    icon: 'lucide:loader',
+    title: 'Async Data',
+    description: 'Loading states and data fetching',
+    icon: 'lucide:cloud',
     category: 'async',
-    code: `// Async data fetching
+    code: `// State for async operation
+const users = signal([]);
 const loading = signal(false);
-const data = signal(null);
 const error = signal(null);
 
-const fetchData = async () => {
+// Fetch users from API
+const fetchUsers = async () => {
   loading.value = true;
   error.value = null;
+
   try {
-    const res = await fetch('https://api.github.com/repos/zenjs/zen');
-    const json = await res.json();
-    data.value = json;
+    const res = await fetch('https://jsonplaceholder.typicode.com/users?_limit=5');
+    if (!res.ok) throw new Error('Failed to fetch');
+    users.value = await res.json();
   } catch (e) {
     error.value = e.message;
   } finally {
@@ -339,56 +473,207 @@ const fetchData = async () => {
   }
 };
 
+// Styles
+const btn = {
+  padding: '14px 28px',
+  fontSize: '16px',
+  fontWeight: '600',
+  backgroundColor: '#6366f1',
+  color: 'white',
+  border: 'none',
+  borderRadius: '12px',
+  cursor: 'pointer',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '10px'
+};
+
+const userCard = {
+  padding: '16px 20px',
+  backgroundColor: 'white',
+  borderRadius: '12px',
+  marginBottom: '12px',
+  border: '1px solid #e5e7eb',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '16px'
+};
+
+const avatar = {
+  width: '48px',
+  height: '48px',
+  borderRadius: '50%',
+  backgroundColor: '#e0e7ff',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontWeight: '700',
+  color: '#4338ca',
+  fontSize: '18px'
+};
+
 const app = (
-  <div style={{
-    padding: '20px',
-    fontFamily: 'sans-serif',
-    color: 'var(--text)'
-  }}>
-    <h2 style={{ marginBottom: '16px' }}>GitHub Repo Info</h2>
+  <div style={{ padding: '32px', fontFamily: 'system-ui, sans-serif', maxWidth: '500px' }}>
+    <h2 style={{ margin: '0 0 8px', fontSize: '28px', color: '#1f2937' }}>
+      👥 User Directory
+    </h2>
+    <p style={{ margin: '0 0 24px', color: '#6b7280' }}>
+      Fetch users from a remote API
+    </p>
+
     <button
-      onClick={fetchData}
+      onClick={fetchUsers}
       disabled={loading}
-      style={{
-        padding: '10px 16px',
-        cursor: () => loading.value ? 'not-allowed' : 'pointer',
-        backgroundColor: 'var(--primary)',
-        color: 'white',
-        border: 'none',
-        borderRadius: '4px',
-        opacity: () => loading.value ? 0.6 : 1
-      }}
+      style={{...btn, opacity: loading.value ? 0.7 : 1, marginBottom: '24px'}}
     >
-      {() => loading.value ? 'Loading...' : 'Fetch Data'}
+      {() => loading.value ? '⏳ Loading...' : '🔄 Fetch Users'}
     </button>
 
     <Show when={error}>
       <div style={{
-        color: 'var(--danger)',
-        marginTop: '20px',
-        padding: '12px',
-        backgroundColor: 'var(--bg-light)',
-        borderRadius: '4px'
+        padding: '16px',
+        backgroundColor: '#fef2f2',
+        border: '1px solid #fecaca',
+        borderRadius: '12px',
+        color: '#dc2626',
+        marginBottom: '20px'
       }}>
-        Error: {error}
+        ⚠️ Error: {error}
       </div>
     </Show>
 
-    <Show when={computed(() => data.value !== null)}>
-      {(d) => (
-        <div style={{
-          marginTop: '20px',
-          padding: '16px',
-          backgroundColor: 'var(--bg-light)',
-          borderRadius: '8px'
-        }}>
-          <h3 style={{ marginBottom: '8px' }}>{d.name}</h3>
-          <p style={{ marginBottom: '12px', opacity: 0.8 }}>{d.description}</p>
-          <p style={{ margin: '4px 0' }}>⭐ Stars: {d.stargazers_count}</p>
-          <p style={{ margin: '4px 0' }}>🍴 Forks: {d.forks_count}</p>
-        </div>
-      )}
+    <Show when={computed(() => users.value.length > 0)}>
+      <div>
+        {() => users.value.map(user => (
+          <div key={user.id} style={userCard}>
+            <div style={avatar}>
+              {user.name.split(' ').map(n => n[0]).join('')}
+            </div>
+            <div>
+              <div style={{ fontWeight: '600', color: '#1f2937', marginBottom: '4px' }}>
+                {user.name}
+              </div>
+              <div style={{ fontSize: '14px', color: '#6b7280' }}>
+                {user.email}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </Show>
+
+    <Show when={computed(() => !loading.value && users.value.length === 0 && !error.value)}>
+      <div style={{
+        padding: '40px',
+        textAlign: 'center',
+        color: '#9ca3af',
+        backgroundColor: '#f9fafb',
+        borderRadius: '12px'
+      }}>
+        Click the button above to load users
+      </div>
+    </Show>
+  </div>
+);`,
+  },
+  {
+    id: 'theme',
+    title: 'Theme Toggle',
+    description: 'Dynamic styling with signals',
+    icon: 'lucide:palette',
+    category: 'advanced',
+    code: `// Theme state
+const isDark = signal(false);
+
+// Theme colors
+const themes = {
+  light: {
+    bg: '#ffffff',
+    card: '#f9fafb',
+    text: '#1f2937',
+    muted: '#6b7280',
+    primary: '#6366f1',
+    border: '#e5e7eb'
+  },
+  dark: {
+    bg: '#111827',
+    card: '#1f2937',
+    text: '#f9fafb',
+    muted: '#9ca3af',
+    primary: '#818cf8',
+    border: '#374151'
+  }
+};
+
+const theme = computed(() => isDark.value ? themes.dark : themes.light);
+
+const app = (
+  <div style={() => ({
+    padding: '32px',
+    fontFamily: 'system-ui, sans-serif',
+    backgroundColor: theme.value.bg,
+    minHeight: '300px',
+    borderRadius: '16px',
+    transition: 'all 0.3s ease'
+  })}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+      <h2 style={() => ({ margin: 0, color: theme.value.text, fontSize: '24px' })}>
+        {() => isDark.value ? '🌙 Dark Mode' : '☀️ Light Mode'}
+      </h2>
+
+      <button
+        onClick={() => isDark.value = !isDark.value}
+        style={() => ({
+          padding: '12px 24px',
+          fontSize: '15px',
+          fontWeight: '600',
+          backgroundColor: theme.value.primary,
+          color: 'white',
+          border: 'none',
+          borderRadius: '10px',
+          cursor: 'pointer'
+        })}
+      >
+        Toggle Theme
+      </button>
+    </div>
+
+    <div style={() => ({
+      padding: '24px',
+      backgroundColor: theme.value.card,
+      borderRadius: '12px',
+      border: \`1px solid \${theme.value.border}\`
+    })}>
+      <h3 style={() => ({ margin: '0 0 12px', color: theme.value.text, fontSize: '18px' })}>
+        Sample Card
+      </h3>
+      <p style={() => ({ margin: '0 0 16px', color: theme.value.muted, lineHeight: '1.6' })}>
+        This card demonstrates reactive styling. The entire UI updates smoothly
+        when you toggle between light and dark themes.
+      </p>
+      <div style={{ display: 'flex', gap: '12px' }}>
+        <span style={() => ({
+          padding: '6px 12px',
+          backgroundColor: theme.value.primary + '20',
+          color: theme.value.primary,
+          borderRadius: '6px',
+          fontSize: '14px',
+          fontWeight: '500'
+        })}>
+          Reactive
+        </span>
+        <span style={() => ({
+          padding: '6px 12px',
+          backgroundColor: theme.value.border,
+          color: theme.value.text,
+          borderRadius: '6px',
+          fontSize: '14px',
+          fontWeight: '500'
+        })}>
+          Smooth
+        </span>
+      </div>
+    </div>
   </div>
 );`,
   },

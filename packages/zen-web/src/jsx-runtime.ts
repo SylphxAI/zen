@@ -148,6 +148,15 @@ function setAttribute(element: Element, key: string, value: unknown): void {
   if (key === 'style') {
     if (typeof value === 'string') {
       (element as HTMLElement).style.cssText = value;
+    } else if (typeof value === 'function') {
+      // Reactive style function: style={() => ({ color: 'red' })}
+      effect(() => {
+        const styleObj = value();
+        if (styleObj && typeof styleObj === 'object') {
+          Object.assign((element as HTMLElement).style, styleObj);
+        }
+        return undefined;
+      });
     } else if (value) {
       Object.assign((element as HTMLElement).style, value);
     }

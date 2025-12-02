@@ -297,17 +297,21 @@ document.getElementById('btn').onclick = () => count.value++;`,
 
       <div class="max-w-6xl mx-auto px-6 py-12">
         {/* Framework selector */}
-        <div class="flex flex-wrap gap-2 justify-center mb-12">
+        <div class="flex flex-wrap gap-3 justify-center mb-12">
           <For each={frameworks}>
             {(fw) => (
               <button
                 type="button"
-                class={activeFramework.value === fw.id ? 'btn btn-primary' : 'btn btn-secondary'}
+                class={
+                  activeFramework.value === fw.id
+                    ? 'inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white font-medium rounded-xl shadow-lg transition-all duration-200 hover:bg-primary-dark'
+                    : 'inline-flex items-center gap-2 px-5 py-2.5 bg-bg-lighter text-text font-medium rounded-xl border border-border transition-all duration-200 hover:bg-bg-dark hover:border-primary/50'
+                }
                 onClick={() => {
                   activeFramework.value = fw.id;
                 }}
               >
-                <Icon icon={fw.icon} width="20" height="20" />
+                <Icon icon={fw.icon} width="18" height="18" />
                 {fw.name}
               </button>
             )}

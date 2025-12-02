@@ -12,11 +12,23 @@ import { TestDescriptor } from './pages/TestDescriptor.tsx';
 // Track if current page is full-screen (no header/footer)
 const isFullScreen = signal(false);
 
-// Check path on load and update
-if (typeof window !== 'undefined') {
+// Update full-screen state based on pathname
+const updateFullScreen = () => {
   isFullScreen.value = window.location.pathname === '/playground';
-  window.addEventListener('popstate', () => {
-    isFullScreen.value = window.location.pathname === '/playground';
+};
+
+// Check path on load and navigation events
+if (typeof window !== 'undefined') {
+  updateFullScreen();
+  window.addEventListener('popstate', updateFullScreen);
+  // Also intercept link clicks for SPA navigation
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    const anchor = target.closest('a');
+    if (anchor?.href && anchor.href.startsWith(window.location.origin)) {
+      // Defer check until after navigation completes
+      setTimeout(updateFullScreen, 0);
+    }
   });
 }
 

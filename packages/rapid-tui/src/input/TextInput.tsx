@@ -299,7 +299,8 @@ export function handleTextInput(
 
   // Character input (printable characters)
   // Use input string for actual typed characters
-  if (input.length === 1 && input >= ' ' && input <= '~') {
+  // Skip if Ctrl is held - Ctrl+A/Ctrl+E are navigation shortcuts
+  if (!key.ctrl && input.length === 1 && input >= ' ' && input <= '~') {
     // Insert character at cursor
     valueSignal.value = value.slice(0, pos) + input + value.slice(pos);
     cursorPos.value = pos + 1;

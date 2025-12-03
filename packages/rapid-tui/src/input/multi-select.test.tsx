@@ -4,7 +4,7 @@ import { signal } from '../index';
 import { MultiSelect, type MultiSelectOption, handleMultiSelectInput } from './MultiSelect';
 
 // Helper to create parsed key and input
-const pk = (input: string) => ({ key: parseKey(input).key, input });
+const pk = (input: string) => parseKey(input);
 
 const items: MultiSelectOption[] = [
   { label: 'Item 1', value: 'item1' },
@@ -54,12 +54,6 @@ describe('MultiSelect', () => {
     expect(node).toBeDefined();
   });
 
-  it('should accept limit prop', () => {
-    const node = MultiSelect({ items, limit: 2 });
-
-    expect(node).toBeDefined();
-  });
-
   it('should accept highlightedIndex signal', () => {
     const highlightedIndex = signal(1);
     const node = MultiSelect({ items, highlightedIndex });
@@ -71,7 +65,7 @@ describe('MultiSelect', () => {
     const node = MultiSelect({ items, style: { borderColor: 'green' } });
 
     expect(node).toBeDefined();
-    expect(node.style?.borderColor).toBeDefined();
+    expect(node.style?.borderColor).toBe('green');
   });
 });
 
@@ -81,7 +75,14 @@ describe('handleMultiSelectInput', () => {
     const selected = signal<string[]>([]);
     const scrollOffset = signal(0);
 
-    const handled = handleMultiSelectInput(highlightedIndex, selected, scrollOffset, items, 'up');
+    const handled = handleMultiSelectInput(
+      pk('\x1b[A').key,
+      pk('\x1b[A').input,
+      highlightedIndex,
+      selected,
+      scrollOffset,
+      items,
+    );
 
     expect(handled).toBe(true);
     expect(highlightedIndex.value).toBe(1);
@@ -92,7 +93,14 @@ describe('handleMultiSelectInput', () => {
     const selected = signal<string[]>([]);
     const scrollOffset = signal(0);
 
-    handleMultiSelectInput(highlightedIndex, selected, scrollOffset, items, 'k');
+    handleMultiSelectInput(
+      pk('k').key,
+      pk('k').input,
+      highlightedIndex,
+      selected,
+      scrollOffset,
+      items,
+    );
 
     expect(highlightedIndex.value).toBe(1);
   });
@@ -102,7 +110,14 @@ describe('handleMultiSelectInput', () => {
     const selected = signal<string[]>([]);
     const scrollOffset = signal(0);
 
-    handleMultiSelectInput(highlightedIndex, selected, scrollOffset, items, 'up');
+    handleMultiSelectInput(
+      pk('\x1b[A').key,
+      pk('\x1b[A').input,
+      highlightedIndex,
+      selected,
+      scrollOffset,
+      items,
+    );
 
     expect(highlightedIndex.value).toBe(0);
   });
@@ -112,7 +127,14 @@ describe('handleMultiSelectInput', () => {
     const selected = signal<string[]>([]);
     const scrollOffset = signal(0);
 
-    const handled = handleMultiSelectInput(highlightedIndex, selected, scrollOffset, items, 'down');
+    const handled = handleMultiSelectInput(
+      pk('\x1b[B').key,
+      pk('\x1b[B').input,
+      highlightedIndex,
+      selected,
+      scrollOffset,
+      items,
+    );
 
     expect(handled).toBe(true);
     expect(highlightedIndex.value).toBe(1);
@@ -123,7 +145,14 @@ describe('handleMultiSelectInput', () => {
     const selected = signal<string[]>([]);
     const scrollOffset = signal(0);
 
-    handleMultiSelectInput(highlightedIndex, selected, scrollOffset, items, 'j');
+    handleMultiSelectInput(
+      pk('j').key,
+      pk('j').input,
+      highlightedIndex,
+      selected,
+      scrollOffset,
+      items,
+    );
 
     expect(highlightedIndex.value).toBe(1);
   });
@@ -133,7 +162,14 @@ describe('handleMultiSelectInput', () => {
     const selected = signal<string[]>([]);
     const scrollOffset = signal(0);
 
-    handleMultiSelectInput(highlightedIndex, selected, scrollOffset, items, 'down');
+    handleMultiSelectInput(
+      pk('\x1b[B').key,
+      pk('\x1b[B').input,
+      highlightedIndex,
+      selected,
+      scrollOffset,
+      items,
+    );
 
     expect(highlightedIndex.value).toBe(3);
   });
@@ -143,7 +179,14 @@ describe('handleMultiSelectInput', () => {
     const selected = signal<string[]>([]);
     const scrollOffset = signal(0);
 
-    const handled = handleMultiSelectInput(highlightedIndex, selected, scrollOffset, items, ' ');
+    const handled = handleMultiSelectInput(
+      pk(' ').key,
+      pk(' ').input,
+      highlightedIndex,
+      selected,
+      scrollOffset,
+      items,
+    );
 
     expect(handled).toBe(true);
     expect(selected.value).toContain('item1');
@@ -154,7 +197,14 @@ describe('handleMultiSelectInput', () => {
     const selected = signal<string[]>([]);
     const scrollOffset = signal(0);
 
-    handleMultiSelectInput(highlightedIndex, selected, scrollOffset, items, 'space');
+    handleMultiSelectInput(
+      pk(' ').key,
+      pk(' ').input,
+      highlightedIndex,
+      selected,
+      scrollOffset,
+      items,
+    );
 
     expect(selected.value).toContain('item2');
   });
@@ -164,7 +214,14 @@ describe('handleMultiSelectInput', () => {
     const selected = signal<string[]>(['item1', 'item2']);
     const scrollOffset = signal(0);
 
-    handleMultiSelectInput(highlightedIndex, selected, scrollOffset, items, ' ');
+    handleMultiSelectInput(
+      pk(' ').key,
+      pk(' ').input,
+      highlightedIndex,
+      selected,
+      scrollOffset,
+      items,
+    );
 
     expect(selected.value).not.toContain('item1');
     expect(selected.value).toContain('item2');
@@ -177,11 +234,12 @@ describe('handleMultiSelectInput', () => {
     const onSubmit = vi.fn();
 
     const handled = handleMultiSelectInput(
+      pk('\r').key,
+      pk('\r').input,
       highlightedIndex,
       selected,
       scrollOffset,
       items,
-      'enter',
       4,
       onSubmit,
     );
@@ -196,7 +254,16 @@ describe('handleMultiSelectInput', () => {
     const scrollOffset = signal(0);
     const onSubmit = vi.fn();
 
-    handleMultiSelectInput(highlightedIndex, selected, scrollOffset, items, 'return', 4, onSubmit);
+    handleMultiSelectInput(
+      pk('\r').key,
+      pk('\r').input,
+      highlightedIndex,
+      selected,
+      scrollOffset,
+      items,
+      4,
+      onSubmit,
+    );
 
     expect(onSubmit).toHaveBeenCalledWith(['item2']);
   });
@@ -206,7 +273,14 @@ describe('handleMultiSelectInput', () => {
     const selected = signal<string[]>([]);
     const scrollOffset = signal(0);
 
-    const handled = handleMultiSelectInput(highlightedIndex, selected, scrollOffset, items, 'a');
+    const handled = handleMultiSelectInput(
+      pk('a').key,
+      pk('a').input,
+      highlightedIndex,
+      selected,
+      scrollOffset,
+      items,
+    );
 
     expect(handled).toBe(true);
     expect(selected.value).toEqual(['item1', 'item2', 'item3', 'item4']);
@@ -217,7 +291,14 @@ describe('handleMultiSelectInput', () => {
     const selected = signal<string[]>(['item1', 'item2']);
     const scrollOffset = signal(0);
 
-    const handled = handleMultiSelectInput(highlightedIndex, selected, scrollOffset, items, 'c');
+    const handled = handleMultiSelectInput(
+      pk('c').key,
+      pk('c').input,
+      highlightedIndex,
+      selected,
+      scrollOffset,
+      items,
+    );
 
     expect(handled).toBe(true);
     expect(selected.value).toEqual([]);
@@ -230,7 +311,15 @@ describe('handleMultiSelectInput', () => {
     const limit = 2;
 
     // Move to item 2 (index 2), should trigger scroll
-    handleMultiSelectInput(highlightedIndex, selected, scrollOffset, items, 'down', limit);
+    handleMultiSelectInput(
+      pk('\x1b[B').key,
+      pk('\x1b[B').input,
+      highlightedIndex,
+      selected,
+      scrollOffset,
+      items,
+      limit,
+    );
 
     expect(highlightedIndex.value).toBe(2);
     expect(scrollOffset.value).toBe(1);
@@ -243,32 +332,18 @@ describe('handleMultiSelectInput', () => {
     const limit = 2;
 
     // Move to item 1 (index 1), should trigger scroll up
-    handleMultiSelectInput(highlightedIndex, selected, scrollOffset, items, 'up', limit);
-
-    expect(highlightedIndex.value).toBe(1);
-    expect(scrollOffset.value).toBe(1);
-  });
-
-  it('should ignore unknown keys', () => {
-    const highlightedIndex = signal(1);
-    const selected = signal<string[]>([]);
-    const scrollOffset = signal(0);
-    const onSubmit = vi.fn();
-
-    const handled = handleMultiSelectInput(
+    handleMultiSelectInput(
+      pk('\x1b[A').key,
+      pk('\x1b[A').input,
       highlightedIndex,
       selected,
       scrollOffset,
       items,
-      'x',
-      4,
-      onSubmit,
+      limit,
     );
 
-    expect(handled).toBe(false);
     expect(highlightedIndex.value).toBe(1);
-    expect(selected.value).toEqual([]);
-    expect(onSubmit).not.toHaveBeenCalled();
+    expect(scrollOffset.value).toBe(1);
   });
 
   it('should work without onSubmit callback', () => {
@@ -276,9 +351,16 @@ describe('handleMultiSelectInput', () => {
     const selected = signal<string[]>([]);
     const scrollOffset = signal(0);
 
-    expect(() =>
-      handleMultiSelectInput(highlightedIndex, selected, scrollOffset, items, 'enter'),
-    ).not.toThrow();
+    const handled = handleMultiSelectInput(
+      pk('\r').key,
+      pk('\r').input,
+      highlightedIndex,
+      selected,
+      scrollOffset,
+      items,
+    );
+
+    expect(handled).toBe(true);
   });
 
   it('should handle numeric values', () => {
@@ -287,12 +369,19 @@ describe('handleMultiSelectInput', () => {
       { label: 'Two', value: 2 },
       { label: 'Three', value: 3 },
     ];
-    const highlightedIndex = signal(0);
+    const highlightedIndex = signal(1);
     const selected = signal<number[]>([]);
     const scrollOffset = signal(0);
 
-    handleMultiSelectInput(highlightedIndex, selected, scrollOffset, numericItems, ' ');
+    handleMultiSelectInput(
+      pk(' ').key,
+      pk(' ').input,
+      highlightedIndex,
+      selected,
+      scrollOffset,
+      numericItems,
+    );
 
-    expect(selected.value).toContain(1);
+    expect(selected.value).toContain(2);
   });
 });

@@ -1,12 +1,14 @@
 <div align="center">
 
-# Rapid Ecosystem 🧘
+# 🧘 Rapid Ecosystem
 
-**Ultra-fast reactive primitives (@rapid/signal) and fine-grained framework (@rapid/web)**
+> Ultra-fast reactive primitives (@rapid/signal) and fine-grained framework (@rapid/web)
 
-[![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](https://github.com/SylphxAI/rapid/blob/main/LICENSE)
-[![pnpm](https://img.shields.io/badge/maintained%20with-pnpm-cc00ff?style=flat-square&logo=pnpm)](https://pnpm.io/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
+[![npm](https://img.shields.io/npm/v/@rapid/signal)](https://www.npmjs.com/package/@rapid/signal)
+[![downloads](https://img.shields.io/npm/dm/@rapid/signal)](https://www.npmjs.com/package/@rapid/signal)
+[![stars](https://img.shields.io/github/stars/SylphxAI/rapid)](https://github.com/SylphxAI/rapid)
+[![CI](https://github.com/SylphxAI/rapid/actions/workflows/ci.yml/badge.svg)](https://github.com/SylphxAI/rapid/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **2.49 KB** • **2.97x vs Solid** • **Auto-tracking** • **Zero config**
 
@@ -62,7 +64,7 @@ Rapid:
 
 ---
 
-## 📦 Packages
+## Packages
 
 ### 🎯 Core Packages
 
@@ -496,12 +498,19 @@ Built with:
 
 ---
 
-<p align="center">
-  <strong>The tiniest, fastest reactive state library</strong>
-  <br>
-  <sub>2.49 KB • 2.97x vs Solid • Auto-tracking magic</sub>
-  <br><br>
-  <a href="https://sylphx.com">sylphx.com</a> •
-  <a href="https://x.com/SylphxAI">@SylphxAI</a> •
-  <a href="mailto:hi@sylphx.com">hi@sylphx.com</a>
-</p>
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=SylphxAI/rapid&type=Date)](https://star-history.com/#SylphxAI/rapid&Date)
+
+## Powered by Sylphx
+
+- [@sylphx/doctor](https://github.com/SylphxAI/doctor) - Monorepo health checker
+- [@sylphx/bump](https://github.com/SylphxAI/bump) - Semantic versioning tool
+- [@sylphx/biome-config](https://github.com/SylphxAI/biome-config) - Shared Biome configuration
+- [@sylphx/tsconfig](https://github.com/SylphxAI/tsconfig) - Shared TypeScript configuration
+
+---
+
+<div align="center">
+<sub>Built with ❤️ by <a href="https://github.com/SylphxAI">Sylphx</a></sub>
+</div>

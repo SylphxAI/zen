@@ -7,7 +7,7 @@
 import { $router, defineRoutes, startHistoryListener, stopHistoryListener } from '@zen/router-core';
 import type { RouteConfig } from '@zen/router-core';
 import { executeDescriptor, isDescriptor } from '@zen/runtime';
-import { computed, disposeNode, onCleanup, onMount } from '@zen/signal';
+import { computed, disposeNode, effect, onCleanup, onMount } from '@zen/signal';
 
 export interface ZenRoute {
   path: string;
@@ -82,6 +82,14 @@ export function Router(props: RouterProps): Node {
   const currentComponent = computed(() => {
     const { path } = $router.value;
     return renderRoute(path);
+  });
+
+  // Scroll to top on route change
+  effect(() => {
+    // Track path changes
+    const _path = $router.value.path;
+    // Scroll to top
+    window.scrollTo(0, 0);
   });
 
   // Initialize router

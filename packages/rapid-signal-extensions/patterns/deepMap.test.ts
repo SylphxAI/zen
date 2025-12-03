@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, mock } from 'bun:test';
 import { subscribe } from '@rapid/signal';
 import { deepMap, listenPaths, setPath } from './deepMap';
 
@@ -167,7 +167,7 @@ describe('deepMap', () => {
     const themeZ = config.selectPath('ui.theme');
 
     // Need to subscribe to trigger initial computation
-    const unsub = subscribe(themeZ, vi.fn());
+    const unsub = subscribe(themeZ, mock());
 
     expect(themeZ.value).toBe('dark');
 

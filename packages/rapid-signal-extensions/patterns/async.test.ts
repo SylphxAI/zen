@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'bun:test';
 import { signal } from '@rapid/signal';
 import { computedAsync } from './async';
 
@@ -6,9 +6,9 @@ describe('computedAsync', () => {
   it('should start with loading state', () => {
     const user = computedAsync(async () => ({ name: 'Alice' }));
 
-    expect(user.state.value.loading).toBe(true);
-    expect(user.state.value.data).toBeUndefined();
-    expect(user.state.value.error).toBeUndefined();
+    expect(user.value.loading).toBe(true);
+    expect(user.value.data).toBeUndefined();
+    expect(user.value.error).toBeUndefined();
   });
 
   it('should update to data state on success', async () => {
@@ -19,9 +19,9 @@ describe('computedAsync', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    expect(user.state.value.loading).toBe(false);
-    expect(user.state.value.data).toEqual({ name: 'Alice' });
-    expect(user.state.value.error).toBeUndefined();
+    expect(user.value.loading).toBe(false);
+    expect(user.value.data).toEqual({ name: 'Alice' });
+    expect(user.value.error).toBeUndefined();
   });
 
   it('should update to error state on failure', async () => {
@@ -32,10 +32,10 @@ describe('computedAsync', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    expect(user.state.value.loading).toBe(false);
-    expect(user.state.value.data).toBeUndefined();
-    expect(user.state.value.error).toBeInstanceOf(Error);
-    expect(user.state.value.error?.message).toBe('Failed to fetch');
+    expect(user.value.loading).toBe(false);
+    expect(user.value.data).toBeUndefined();
+    expect(user.value.error).toBeInstanceOf(Error);
+    expect(user.value.error?.message).toBe('Failed to fetch');
   });
 
   it('should support manual refetch', async () => {
@@ -47,11 +47,11 @@ describe('computedAsync', () => {
     });
 
     await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(user.state.value.data?.name).toBe('User 1');
+    expect(user.value.data?.name).toBe('User 1');
 
     await user.refetch();
     await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(user.state.value.data?.name).toBe('User 2');
+    expect(user.value.data?.name).toBe('User 2');
   });
 
   it('should abort previous request on refetch', async () => {
@@ -88,7 +88,7 @@ describe('computedAsync', () => {
     await new Promise((resolve) => setTimeout(resolve, 150));
 
     // State should still be loading (aborted, no update)
-    expect(user.state.value.loading).toBe(true);
+    expect(user.value.loading).toBe(true);
   });
 
   it('should re-execute when deps change', async () => {
@@ -108,7 +108,7 @@ describe('computedAsync', () => {
     // Wait for initial execution
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    expect(user.state.value.data?.id).toBe(1);
+    expect(user.value.data?.id).toBe(1);
     expect(callCounts.length).toBeGreaterThanOrEqual(1);
     const initialCallCount = callCounts.length;
 
@@ -117,7 +117,7 @@ describe('computedAsync', () => {
 
     // Should have executed at least one more time
     expect(callCounts.length).toBeGreaterThan(initialCallCount);
-    expect(user.state.value.data?.id).toBe(2);
+    expect(user.value.data?.id).toBe(2);
     expect(callCounts[callCounts.length - 1]).toBe(2);
   });
 
@@ -128,13 +128,13 @@ describe('computedAsync', () => {
     });
 
     await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(user.state.value.data?.name).toBe('Alice');
+    expect(user.value.data?.name).toBe('Alice');
 
     user.refetch();
 
     // During refetch, should have loading=true but preserve old data
-    expect(user.state.value.loading).toBe(true);
-    expect(user.state.value.data?.name).toBe('Alice');
+    expect(user.value.loading).toBe(true);
+    expect(user.value.data?.name).toBe('Alice');
   });
 
   it('should handle non-Error thrown values', async () => {
@@ -145,8 +145,8 @@ describe('computedAsync', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    expect(user.state.value.error).toBeInstanceOf(Error);
-    expect(user.state.value.error?.message).toBe('String error');
+    expect(user.value.error).toBeInstanceOf(Error);
+    expect(user.value.error?.message).toBe('String error');
   });
 
   it('should not execute on mount when deps provided but empty', async () => {

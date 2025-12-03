@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, mock } from 'bun:test';
 import { subscribe } from '@rapid/signal';
 import { map, listenKeys, setKey } from './map';
 
@@ -113,7 +113,7 @@ describe('map', () => {
     const nameZ = form.selectKey('name');
 
     // Need to subscribe to trigger initial computation
-    const unsub = subscribe(nameZ, vi.fn());
+    const unsub = subscribe(nameZ, mock());
 
     expect(nameZ.value).toBe('Alice');
 

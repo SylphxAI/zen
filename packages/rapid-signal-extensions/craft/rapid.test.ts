@@ -1,5 +1,5 @@
 import { signal as atom, subscribe } from '@rapid/signal';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, mock } from 'bun:test';
 import type { Patch } from './types';
 import { craftSignal } from './rapid';
 
@@ -16,7 +16,7 @@ describe('craftSignal', () => {
   it('should update atom state immutably based on recipe mutations', () => {
     const baseState: SimpleState = { a: 1, b: { c: 2 } };
     const myZen = atom(baseState);
-    const listener = vi.fn();
+    const listener = mock();
     subscribe(myZen, listener);
 
     craftSignal(
@@ -48,7 +48,7 @@ describe('craftSignal', () => {
   it('should not update atom or call listener if recipe results in no changes', () => {
     const baseState = { a: 1 };
     const myZen = atom(baseState);
-    const listener = vi.fn();
+    const listener = mock();
     subscribe(myZen, listener);
 
     craftSignal(
@@ -68,7 +68,7 @@ describe('craftSignal', () => {
   it('should update atom with the exact value returned by the recipe', () => {
     const baseState = { a: 1 };
     const myZen = atom(baseState);
-    const listener = vi.fn();
+    const listener = mock();
     subscribe(myZen, listener);
     const newState = { b: 2 }; // A completely different object
 
@@ -99,7 +99,7 @@ describe('craftSignal', () => {
   it('should handle mutations in nested structures', () => {
     const baseState: NestedState = { data: { value: 10, items: ['x', 'y'] } };
     const myZen = atom(baseState);
-    const listener = vi.fn();
+    const listener = mock();
     subscribe(myZen, listener);
 
     craftSignal(

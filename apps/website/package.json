@@ -9,7 +9,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@rapid/compiler": "workspace:*",
     "@rapid/router": "workspace:*",
+    "@rapid/runtime": "workspace:*",
     "@rapid/signal": "workspace:*",
     "@rapid/web": "workspace:*",
     "lz-string": "^1.5.0"

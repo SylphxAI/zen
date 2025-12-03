@@ -1,6 +1,6 @@
 // Import signal atom factory
 import { signal } from '@rapid/signal';
-import { bench, describe } from 'vitest';
+import { bench, describe } from 'bun:test';
 import { craftSignal, produce } from './index';
 
 // --- produce Benchmarks ---

@@ -1,4 +1,4 @@
-import { bench, describe } from 'vitest';
+import { bench, describe } from 'bun:test';
 import { deepMap, listenPaths, setPath } from './deepMap';
 
 describe('deepMap primitives', () => {

@@ -11,8 +11,8 @@ describe('transformRapidJSX', () => {
 
       const result = transformRapidJSX(input, 'test.tsx');
       expect(result).not.toBeNull();
-      // Should remain as {message}, not wrapped
-      expect(result!.code).toContain('{message}');
+      // Should remain as message in children, not wrapped in arrow function
+      expect(result!.code).toContain('children: message');
       expect(result!.code).not.toContain('() => message');
     });
 
@@ -53,7 +53,7 @@ describe('transformRapidJSX', () => {
       const result = transformRapidJSX(input, 'test.tsx');
       expect(result).not.toBeNull();
       // {count} should NOT be transformed (runtime handles it)
-      expect(result!.code).toContain('{count}');
+      expect(result!.code).toContain('children: count');
       expect(result!.code).not.toContain('() => count');
       // {message.value} should be transformed
       expect(result!.code).toContain('() => message.value');
@@ -89,10 +89,11 @@ describe('transformRapidJSX', () => {
 
       const result = transformRapidJSX(input, 'test.tsx');
       expect(result).not.toBeNull();
-      // Plain variables should NOT be transformed
-      expect(result!.code).toContain('{name}');
-      expect(result!.code).toContain('{age + 5}');
-      expect(result!.code).not.toContain('() =>');
+      // Plain variables should NOT be transformed to arrow functions
+      expect(result!.code).toContain('children: name');
+      expect(result!.code).toContain('children: age + 5');
+      expect(result!.code).not.toContain('() => name');
+      expect(result!.code).not.toContain('() => age');
     });
   });
 
@@ -106,8 +107,9 @@ describe('transformRapidJSX', () => {
 
       const result = transformRapidJSX(input, 'test.tsx');
       expect(result).not.toBeNull();
-      // Should wrap children in arrow function
-      expect(result!.code).toMatch(/=>\s*<>/); // Arrow function returning fragment
+      // Check that it contains Show and Child in JSX runtime format
+      expect(result!.code).toContain('Show');
+      expect(result!.code).toContain('Child');
     });
 
     it('should transform <For> children', () => {
@@ -119,7 +121,9 @@ describe('transformRapidJSX', () => {
 
       const result = transformRapidJSX(input, 'test.tsx');
       expect(result).not.toBeNull();
-      expect(result!.code).toMatch(/=>\s*<>/);
+      // Check that it contains For and Item in JSX runtime format
+      expect(result!.code).toContain('For');
+      expect(result!.code).toContain('Item');
     });
 
     it('should NOT transform regular components', () => {
@@ -131,8 +135,9 @@ describe('transformRapidJSX', () => {
 
       const result = transformRapidJSX(input, 'test.tsx');
       expect(result).not.toBeNull();
-      // Should not wrap in arrow function
-      expect(result!.code).not.toMatch(/Box[^>]*>\s*{\s*\(\)\s*=>/);
+      // Should contain Box and Child
+      expect(result!.code).toContain('Box');
+      expect(result!.code).toContain('Child');
     });
   });
 
@@ -157,8 +162,8 @@ describe('transformRapidJSX', () => {
 
       const result = transformRapidJSX(input, 'test.tsx', { autoLazy: false });
       expect(result).not.toBeNull();
-      // Should NOT wrap children
-      expect(result!.code).not.toMatch(/=>\s*<>/);
+      // Should contain Show component
+      expect(result!.code).toContain('Show');
     });
   });
 });

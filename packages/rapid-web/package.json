@@ -38,7 +38,7 @@
   },
   "files": ["dist"],
   "scripts": {
-    "build": "tsup",
+    "build": "bunup --entry 'src/{index,jsx-runtime,jsx-runtime-server,server,hydrate}.ts' --format esm --dts --target node --splitting=false",
     "dev": "bun run --watch src/index.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
@@ -56,7 +56,7 @@
     "@rapid/signal": "workspace:*"
   },
   "devDependencies": {
-    "tsup": "^8.3.5",
+    "bunup": "^0.16.10",
     "typescript": "^5.8.3"
   },
   "publishConfig": {

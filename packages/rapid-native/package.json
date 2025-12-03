@@ -21,7 +21,7 @@
   },
   "files": ["dist"],
   "scripts": {
-    "build": "tsup",
+    "build": "bunup",
     "dev": "bun run --watch src/index.ts",
     "typecheck": "tsc --noEmit"
   },
@@ -38,7 +38,7 @@
     "@rapid/signal": "workspace:*"
   },
   "devDependencies": {
-    "tsup": "^8.3.5",
+    "bunup": "^0.16.10",
     "typescript": "^5.8.3"
   },
   "publishConfig": {

@@ -1,4 +1,4 @@
-import { bench, describe } from 'vitest';
+import { bench, describe } from 'bun:test';
 import { listenKeys, map, setKey } from './map';
 
 describe('map primitives', () => {

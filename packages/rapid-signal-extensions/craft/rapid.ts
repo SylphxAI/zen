@@ -25,7 +25,7 @@ export function craftSignal<T>(
   recipe: (draft: T) => undefined,
   options?: CraftOptions,
 ): [Patch[], Patch[]] | undefined {
-  const currentState = targetSignal.value;
+  const currentState = targetRapid.value;
 
   // Directly use craftWithPatches or craft to avoid intermediate produce layer
   if (options?.patches || options?.inversePatches) {
@@ -34,7 +34,7 @@ export function craftSignal<T>(
       recipe as (draft: T) => T | undefined,
     );
     if (nextState !== currentState) {
-      targetSignal.value = nextState;
+      targetRapid.value = nextState;
     }
     return [patches, inversePatches];
   }
@@ -42,6 +42,6 @@ export function craftSignal<T>(
   // Fast path: no patches needed
   const nextState = craft(currentState, recipe as (draft: T) => T | undefined);
   if (nextState !== currentState) {
-    targetSignal.value = nextState;
+    targetRapid.value = nextState;
   }
 }

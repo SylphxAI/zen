@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, mock } from 'bun:test';
 import { produce } from './produce';
 import type { Patch } from './types';
 import { nothing } from '@sylphx/craft';
@@ -62,7 +62,7 @@ describe('produce', () => {
     // Test non-draftable base state (primitives)
     it('should handle non-draftable base state', () => {
       const baseState = 123;
-      const mockRecipe = vi.fn();
+      const mockRecipe = mock();
       const [nextState, patches, inversePatches] = produce(baseState, mockRecipe);
       expect(mockRecipe).toHaveBeenCalledWith(123);
       expect(nextState).toBe(123);
@@ -423,7 +423,7 @@ describe('produce', () => {
         { autoFreeze: true },
       );
       expect(nextState).not.toBe(baseState);
-      expect(Object.isFrosignal(nextState)).toBe(true);
+      expect(Object.isFrozen(nextState)).toBe(true);
     });
 
     it('should not freeze the original state', () => {
@@ -436,7 +436,7 @@ describe('produce', () => {
         },
         { autoFreeze: true },
       );
-      expect(Object.isFrosignal(baseState)).toBe(false);
+      expect(Object.isFrozen(baseState)).toBe(false);
     });
 
     it('should not freeze if no changes were made', () => {
@@ -450,7 +450,7 @@ describe('produce', () => {
       );
       expect(nextState).toBe(baseState);
       // Immer freezes result even if unchanged
-      expect(Object.isFrosignal(nextState)).toBe(true);
+      expect(Object.isFrozen(nextState)).toBe(true);
     });
 
     it('should recursively freeze nested structures', () => {
@@ -464,8 +464,8 @@ describe('produce', () => {
         },
         { autoFreeze: true },
       );
-      expect(Object.isFrosignal(nextState)).toBe(true);
-      expect(Object.isFrosignal(nextState.b)).toBe(true);
+      expect(Object.isFrozen(nextState)).toBe(true);
+      expect(Object.isFrozen(nextState.b)).toBe(true);
     });
   });
 });

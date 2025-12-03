@@ -34,26 +34,26 @@ const GenericJSONSerializer = {
   decode: JSON.parse,
 };
 
-/** @internal Handles storage event updates for persistentZen */
+/** @internal Handles storage event updates for persistent stores */
 function _handleStorageEventUpdate<Value>(
   event: StorageEvent,
-  baseRapid: Signal<Value>,
+  baseSignal: Signal<Value>,
   serializer: Serializer<Value>,
   initialValue: Value, // Needed for reset case
 ): void {
   if (event.newValue === null) {
     // Key removed or cleared in another tab
-    baseZen.value = initialValue;
+    baseSignal.value = initialValue;
   } else {
     try {
       const decodedValue = serializer.decode(event.newValue);
       // Check if the decoded value is different before setting to prevent loops
-      if (baseZen.value !== decodedValue) {
-        baseZen.value = decodedValue;
+      if (baseSignal.value !== decodedValue) {
+        baseSignal.value = decodedValue;
       }
     } catch (_error) {
       // Optionally reset to initial value on decode error
-      // baseZen.value = initialValue;
+      // baseSignal.value = initialValue;
     }
   }
 }
@@ -67,7 +67,7 @@ function _handleStorageEventUpdate<Value>(
  * @param options Configuration options.
  * @returns A writable signal synchronized with storage.
  */
-export function persistentRapid<Value>(
+export function persistentAtom<Value>(
   key: string,
   initialValue: Value,
   options?: PersistentOptions<Value>,
@@ -95,7 +95,7 @@ export function persistentRapid<Value>(
   }
 
   const actualInitialValue = initialValueFromStorage ?? initialValue;
-  const baseZen = signal<Value>(actualInitialValue);
+  const baseSignal = signal<Value>(actualInitialValue);
   // --- End Revised Initialization ---
 
   let ignoreNextStorageEvent = false; // Flag to prevent echo from self-triggered events
@@ -120,7 +120,7 @@ export function persistentRapid<Value>(
 
   // Subscribe to persist future changes immediately after creation.
   // We don't need to store the unsubscribe function unless we plan to stop persisting later.
-  subscribe(baseZen, (newValue: Value) => {
+  subscribe(baseSignal, (newValue: Value) => {
     writeToStorage(newValue);
   });
 
@@ -133,7 +133,7 @@ export function persistentRapid<Value>(
         return; // Ignore event triggered by this instance
       }
       // Handle the update using the helper function
-      _handleStorageEventUpdate(event, baseZen, serializer, initialValue);
+      _handleStorageEventUpdate(event, baseSignal, serializer, initialValue);
     }
   };
 
@@ -142,7 +142,7 @@ export function persistentRapid<Value>(
     window.addEventListener('storage', storageEventHandler);
   }
 
-  return baseZen;
+  return baseSignal;
 }
 
 /**

@@ -1,449 +1,477 @@
-import { For, signal } from '@zen/web';
+import { For, Show, signal } from '@zen/web';
 import { Icon } from '../components/Icon.tsx';
 
 export function Migration() {
-  const activeFramework = signal('react');
+  const activeFramework = signal<'react' | 'vue' | 'solid' | 'svelte' | 'vanilla'>('react');
+  const activeStep = signal(0);
 
   const frameworks = [
-    { id: 'react', name: 'React', icon: 'lucide:atom' },
-    { id: 'vue', name: 'Vue', icon: 'lucide:triangle' },
-    { id: 'solid', name: 'Solid', icon: 'lucide:box' },
-    { id: 'svelte', name: 'Svelte', icon: 'lucide:flame' },
-    { id: 'vanilla', name: 'Vanilla JS', icon: 'lucide:code' },
+    { id: 'react' as const, name: 'React', color: '#61DAFB', abbr: 'R' },
+    { id: 'vue' as const, name: 'Vue', color: '#42B883', abbr: 'V' },
+    { id: 'solid' as const, name: 'Solid', color: '#4F88C6', abbr: 'S' },
+    { id: 'svelte' as const, name: 'Svelte', color: '#FF3E00', abbr: 'Sv' },
+    { id: 'vanilla' as const, name: 'Vanilla', color: '#F7DF1E', abbr: 'JS' },
   ];
 
   const migrations = {
     react: {
-      title: 'Migrating from React',
-      description: 'React developers will find Zen familiar with a much smaller footprint',
-      comparison: [
+      tagline: '90% smaller, 10x faster',
+      stats: { before: '42 KB', after: '< 5 KB', reduction: '-88%' },
+      quickWins: [
+        { icon: 'lucide:package', text: 'No dependency arrays' },
+        { icon: 'lucide:zap', text: 'No re-renders' },
+        { icon: 'lucide:brain', text: 'Auto-tracking' },
+      ],
+      comparisons: [
         {
-          aspect: 'State Management',
+          label: 'State',
           before: `const [count, setCount] = useState(0);
-setCount(count + 1);`,
+setCount(c => c + 1);`,
           after: `const count = signal(0);
 count.value++;`,
         },
         {
-          aspect: 'Derived State',
+          label: 'Computed',
           before: `const doubled = useMemo(
-  () => count * 2, [count]
+  () => count * 2,
+  [count]  // 😩 dependency array
 );`,
           after: `const doubled = computed(
   () => count.value * 2
+  // ✨ auto-tracked!
 );`,
         },
         {
-          aspect: 'Side Effects',
+          label: 'Effects',
           before: `useEffect(() => {
-  console.log(count);
-}, [count]);`,
+  document.title = count;
+}, [count]);  // 😩 easy to forget`,
           after: `effect(() => {
-  console.log(count.value);
-});`,
+  document.title = count.value;
+});  // ✨ just works`,
         },
-        {
-          aspect: 'Conditional Render',
-          before: `{condition && <Child />}
-{condition ? <A /> : <B />}`,
-          after: `<Show when={condition}>
-  <Child />
-</Show>`,
-        },
-        {
-          aspect: 'List Rendering',
-          before: `{items.map(item => (
-  <Item key={item.id} {...item} />
-))}`,
-          after: `<For each={items}>
-  {item => <Item {...item} />}
-</For>`,
-        },
-      ],
-      steps: [
-        {
-          step: 1,
-          title: 'Install Zen packages',
-          code: 'npm install @zen/signal @zen/web',
-        },
-        {
-          step: 2,
-          title: 'Update tsconfig.json',
-          code: `{
-  "compilerOptions": {
-    "jsx": "react-jsx",
-    "jsxImportSource": "@zen/web"
-  }
-}`,
-        },
-        {
-          step: 3,
-          title: 'Migrate components gradually',
-          code: `// Before (React)
-function Counter() {
-  const [count, setCount] = useState(0);
-  return <button onClick={() => setCount(c => c + 1)}>{count}</button>;
-}
-
-// After (Zen)
-function Counter() {
-  const count = signal(0);
-  return <button onClick={() => count.value++}>{count}</button>;
-}`,
-        },
-      ],
-      benefits: [
-        'Bundle size: 42KB to <5KB (90% smaller)',
-        'No dependency array bugs',
-        'Automatic dependency tracking',
-        'Fine-grained updates (no re-renders)',
-        '150M+ operations per second',
       ],
     },
     vue: {
-      title: 'Migrating from Vue',
-      description: 'Vue 3 Composition API users will feel right at home with Zen',
-      comparison: [
+      tagline: 'Same API, smaller bundle',
+      stats: { before: '34 KB', after: '< 5 KB', reduction: '-85%' },
+      quickWins: [
+        { icon: 'lucide:copy', text: 'Nearly identical API' },
+        { icon: 'lucide:file-code', text: 'No .vue files needed' },
+        { icon: 'lucide:boxes', text: 'Any bundler works' },
+      ],
+      comparisons: [
         {
-          aspect: 'Reactive State',
-          before: `const count = ref(0);
+          label: 'Reactive',
+          before: `import { ref } from 'vue';
+const count = ref(0);
 count.value++;`,
-          after: `const count = signal(0);
-count.value++;`,
+          after: `import { signal } from '@zen/signal';
+const count = signal(0);
+count.value++;  // ✨ identical!`,
         },
         {
-          aspect: 'Computed',
-          before: `const doubled = computed(
+          label: 'Computed',
+          before: `import { computed } from 'vue';
+const doubled = computed(
   () => count.value * 2
 );`,
-          after: `const doubled = computed(
+          after: `import { computed } from '@zen/signal';
+const doubled = computed(
   () => count.value * 2
-);`,
+);  // ✨ same API!`,
         },
         {
-          aspect: 'Watch Effect',
+          label: 'Watch',
           before: `watchEffect(() => {
   console.log(count.value);
 });`,
           after: `effect(() => {
   console.log(count.value);
-});`,
+});  // ✨ just renamed`,
         },
-      ],
-      steps: [
-        {
-          step: 1,
-          title: 'Install Zen packages',
-          code: 'npm install @zen/signal @zen/web',
-        },
-        {
-          step: 2,
-          title: 'Migrate reactive state',
-          code: `// Vue 3
-import { ref, computed } from 'vue';
-const count = ref(0);
-
-// Zen (nearly identical!)
-import { signal, computed } from '@zen/signal';
-const count = signal(0);`,
-        },
-      ],
-      benefits: [
-        'Almost identical API - minimal learning curve',
-        'Smaller bundle (34KB to <5KB)',
-        'Works with any build tool',
-        'No .vue file format required',
       ],
     },
     solid: {
-      title: 'Migrating from Solid',
-      description: 'Solid users will appreciate the unified .value API',
-      comparison: [
+      tagline: 'Unified .value API',
+      stats: { before: '7 KB', after: '< 5 KB', reduction: '-30%' },
+      quickWins: [
+        { icon: 'lucide:equal', text: 'Consistent .value' },
+        { icon: 'lucide:arrow-right-left', text: 'No getter/setter split' },
+        { icon: 'lucide:sparkles', text: 'Same reactivity model' },
+      ],
+      comparisons: [
         {
-          aspect: 'Signals',
+          label: 'Signals',
           before: `const [count, setCount] = createSignal(0);
-count(); // read
-setCount(1); // write`,
+count();      // read (call it)
+setCount(1);  // write (different fn)`,
           after: `const count = signal(0);
-count.value; // read
-count.value = 1; // write`,
+count.value;      // read
+count.value = 1;  // write
+// ✨ unified API!`,
         },
         {
-          aspect: 'Computed',
+          label: 'Computed',
           before: `const doubled = createMemo(
   () => count() * 2
-);`,
+);
+doubled();  // call to read`,
           after: `const doubled = computed(
   () => count.value * 2
-);`,
+);
+doubled.value;  // ✨ consistent`,
         },
-      ],
-      steps: [
-        {
-          step: 1,
-          title: 'Replace signal syntax',
-          code: `// Solid
-const [count, setCount] = createSignal(0);
-setCount(prev => prev + 1);
-
-// Zen
-const count = signal(0);
-count.value++;`,
-        },
-      ],
-      benefits: [
-        'Consistent .value API (no getter function confusion)',
-        'Slightly smaller bundle (7KB to <5KB)',
-        'Same fine-grained reactivity model',
       ],
     },
     svelte: {
-      title: 'Migrating from Svelte',
-      description: 'Use standard JavaScript instead of compiler magic',
-      comparison: [
-        {
-          aspect: 'Reactive State',
-          before: `let count = 0;
-$: doubled = count * 2;`,
-          after: `const count = signal(0);
-const doubled = computed(() => count.value * 2);`,
-        },
+      tagline: 'No compiler needed',
+      stats: { before: 'Compiler', after: 'Runtime', reduction: '0 KB build' },
+      quickWins: [
+        { icon: 'lucide:code', text: 'Standard JavaScript' },
+        { icon: 'lucide:check-circle', text: 'Better IDE support' },
+        { icon: 'lucide:globe', text: 'Works anywhere' },
       ],
-      steps: [
+      comparisons: [
         {
-          step: 1,
-          title: 'Replace reactive declarations',
-          code: `// Svelte (requires compiler)
+          label: 'Reactive',
+          before: `// Svelte (needs compiler)
 <script>
   let count = 0;
   $: doubled = count * 2;
-</script>
-
-// Zen (standard JavaScript)
+</script>`,
+          after: `// Zen (standard JS)
 const count = signal(0);
-const doubled = computed(() => count.value * 2);`,
+const doubled = computed(
+  () => count.value * 2
+);`,
         },
-      ],
-      benefits: [
-        'No special compiler required',
-        'Standard JavaScript/TypeScript',
-        'Works in any environment',
-        'Better IDE support',
+        {
+          label: 'Stores',
+          before: `// Svelte store
+import { writable } from 'svelte/store';
+const count = writable(0);
+$count;  // auto-subscribe`,
+          after: `// Zen signal
+import { signal } from '@zen/signal';
+const count = signal(0);
+count.value;  // ✨ simpler`,
+        },
       ],
     },
     vanilla: {
-      title: 'Adding Zen to Vanilla JS',
-      description: 'Supercharge vanilla JavaScript with reactive primitives',
-      comparison: [
+      tagline: 'Add reactivity, keep control',
+      stats: { before: 'Manual DOM', after: '1.75 KB', reduction: 'Reactive' },
+      quickWins: [
+        { icon: 'lucide:feather', text: 'Only 1.75 KB' },
+        { icon: 'lucide:puzzle', text: 'Gradual adoption' },
+        { icon: 'lucide:layers', text: 'Works with any DOM' },
+      ],
+      comparisons: [
         {
-          aspect: 'State + DOM',
+          label: 'State + DOM',
           before: `let count = 0;
-const el = document.getElementById('count');
+const el = document.querySelector('#n');
+
 function update() {
-  el.textContent = count;
+  el.textContent = count;  // manual!
 }
-button.onclick = () => { count++; update(); };`,
+
+btn.onclick = () => {
+  count++;
+  update();  // 😩 don't forget!
+};`,
           after: `const count = signal(0);
+
 effect(() => {
   el.textContent = count.value;
-});
-button.onclick = () => count.value++;`,
-        },
-      ],
-      steps: [
-        {
-          step: 1,
-          title: 'Install @zen/signal',
-          code: 'npm install @zen/signal',
-        },
-        {
-          step: 2,
-          title: 'Add reactivity',
-          code: `import { signal, effect } from '@zen/signal';
+});  // ✨ auto-updates!
 
-const count = signal(0);
-
-effect(() => {
-  document.getElementById('count').textContent = count.value;
-});
-
-document.getElementById('btn').onclick = () => count.value++;`,
+btn.onclick = () => count.value++;`,
         },
-      ],
-      benefits: [
-        'Add reactivity without a framework',
-        'Only 1.75KB',
-        'Works with any DOM manipulation',
-        'Gradual adoption',
       ],
     },
   };
 
-  const currentMigration = () => migrations[activeFramework.value as keyof typeof migrations];
+  const steps = [
+    {
+      title: 'Install',
+      icon: 'lucide:download',
+      code: 'npm install @zen/signal @zen/web',
+      description: 'Add Zen packages to your project',
+    },
+    {
+      title: 'Configure',
+      icon: 'lucide:settings',
+      code: `// tsconfig.json
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@zen/web"
+  }
+}`,
+      description: 'Update your TypeScript config',
+    },
+    {
+      title: 'Migrate',
+      icon: 'lucide:git-branch',
+      code: `// Start with one component
+import { signal } from '@zen/signal';
+
+function Counter() {
+  const count = signal(0);
+  return (
+    <button onClick={() => count.value++}>
+      {count}
+    </button>
+  );
+}`,
+      description: 'Convert components one at a time',
+    },
+  ];
+
+  const current = () => migrations[activeFramework.value];
 
   return (
     <div class="min-h-screen bg-bg">
-      {/* Hero */}
-      <section class="py-16 px-6 bg-gradient-hero border-b border-border">
-        <div class="max-w-4xl mx-auto text-center">
-          <span class="badge badge-primary mb-4">Switch to Zen</span>
-          <h1 class="heading-1 text-text mb-4">Migration Guide</h1>
-          <p class="text-xl text-text-muted max-w-2xl mx-auto">
-            Migrate to Zen from your current framework with confidence. Our API is designed to feel
-            familiar while delivering superior performance.
-          </p>
-        </div>
-      </section>
+      {/* Hero - Dramatic gradient */}
+      <section class="relative overflow-hidden border-b border-border">
+        <div class="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-secondary/10" />
+        <div class="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+        <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-secondary/5 rounded-full blur-3xl" />
 
-      <div class="max-w-5xl mx-auto px-6 py-12">
-        {/* Framework selector */}
-        <div class="flex justify-center mb-10">
-          <div class="inline-flex bg-bg-light border border-border rounded-2xl p-1.5 gap-1">
+        <div class="relative max-w-6xl mx-auto px-6 py-20 text-center">
+          <div class="inline-flex items-center gap-2 px-4 py-2 bg-bg-light/80 backdrop-blur border border-border rounded-full text-sm text-text-muted mb-6">
+            <Icon icon="lucide:arrow-right-left" width="16" height="16" class="text-primary" />
+            Framework Migration Guide
+          </div>
+
+          <h1 class="text-4xl md:text-6xl font-bold text-text mb-6">
+            Switch to{' '}
+            <span class="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              Zen
+            </span>
+          </h1>
+
+          <p class="text-xl text-text-muted max-w-2xl mx-auto mb-10">
+            Familiar APIs. Smaller bundles. Better performance.
+            <br />
+            Migrate from your current framework with confidence.
+          </p>
+
+          {/* Framework Pills */}
+          <div class="flex flex-wrap justify-center gap-3">
             <For each={frameworks}>
               {(fw) => (
                 <button
                   type="button"
-                  class={
-                    activeFramework.value === fw.id
-                      ? 'flex items-center gap-2 px-5 py-2.5 bg-primary text-white font-medium rounded-xl shadow-md transition-all duration-200'
-                      : 'flex items-center gap-2 px-5 py-2.5 text-text-muted font-medium rounded-xl transition-all duration-200 hover:text-text hover:bg-bg-lighter'
-                  }
+                  class="group relative"
                   onClick={() => {
                     activeFramework.value = fw.id;
                   }}
                 >
-                  <Icon icon={fw.icon} width="18" height="18" />
-                  {fw.name}
+                  <div
+                    class={
+                      activeFramework.value === fw.id
+                        ? 'flex items-center gap-3 px-6 py-3 bg-bg-light border-2 border-primary rounded-2xl shadow-lg shadow-primary/20 transition-all'
+                        : 'flex items-center gap-3 px-6 py-3 bg-bg-light/50 border-2 border-transparent rounded-2xl hover:bg-bg-light hover:border-border transition-all'
+                    }
+                  >
+                    <div
+                      class="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold text-white"
+                      style={{ backgroundColor: fw.color }}
+                    >
+                      {fw.abbr}
+                    </div>
+                    <span class="font-medium text-text">{fw.name}</span>
+                  </div>
                 </button>
               )}
             </For>
           </div>
         </div>
+      </section>
 
-        {/* Migration content */}
-        <div class="space-y-8">
-          {/* Title */}
-          <div class="bg-bg-light border border-border rounded-2xl p-8 text-center">
-            <h2 class="text-2xl md:text-3xl font-bold text-text mb-3">
-              {currentMigration().title}
-            </h2>
-            <p class="text-lg text-text-muted">{currentMigration().description}</p>
+      {/* Stats Banner */}
+      <section class="border-b border-border bg-bg-light/50">
+        <div class="max-w-6xl mx-auto px-6 py-8">
+          <div class="flex flex-wrap items-center justify-center gap-8 md:gap-16">
+            <div class="text-center">
+              <div class="text-3xl font-bold text-text-muted line-through opacity-60">
+                {current().stats.before}
+              </div>
+              <div class="text-sm text-text-subtle">Before</div>
+            </div>
+            <div class="flex items-center gap-3">
+              <Icon icon="lucide:arrow-right" width="24" height="24" class="text-primary" />
+              <div class="px-4 py-2 bg-success/10 text-success font-bold rounded-xl text-lg">
+                {current().stats.reduction}
+              </div>
+              <Icon icon="lucide:arrow-right" width="24" height="24" class="text-primary" />
+            </div>
+            <div class="text-center">
+              <div class="text-3xl font-bold text-primary">{current().stats.after}</div>
+              <div class="text-sm text-text-subtle">After (Zen)</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Quick Wins */}
+      <section class="py-12 border-b border-border">
+        <div class="max-w-6xl mx-auto px-6">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <For each={() => current().quickWins}>
+              {(win) => (
+                <div class="flex items-center gap-4 p-5 bg-bg-light rounded-2xl border border-border">
+                  <div class="w-12 h-12 flex items-center justify-center bg-primary/10 text-primary rounded-xl">
+                    <Icon icon={win.icon} width="24" height="24" />
+                  </div>
+                  <span class="font-medium text-text">{win.text}</span>
+                </div>
+              )}
+            </For>
+          </div>
+        </div>
+      </section>
+
+      {/* Code Comparisons */}
+      <section class="py-16">
+        <div class="max-w-6xl mx-auto px-6">
+          <div class="text-center mb-12">
+            <h2 class="text-3xl font-bold text-text mb-3">Side-by-Side</h2>
+            <p class="text-text-muted">See how your code transforms</p>
           </div>
 
-          {/* Comparison table */}
-          <div class="bg-bg-light border border-border rounded-2xl overflow-hidden">
-            <div class="bg-bg-lighter border-b border-border px-6 py-4 flex items-center gap-3">
-              <div class="w-8 h-8 flex items-center justify-center bg-primary/10 text-primary rounded-lg">
-                <Icon icon="lucide:code-2" width="18" height="18" />
-              </div>
-              <h3 class="text-lg font-semibold text-text">Side-by-Side Comparison</h3>
-            </div>
-            <div class="divide-y divide-border">
-              <For each={currentMigration().comparison}>
-                {(item) => (
-                  <div class="grid grid-cols-1 lg:grid-cols-[200px_1fr_1fr]">
-                    <div class="p-5 bg-bg-lighter border-b lg:border-b-0 lg:border-r border-border flex items-center">
-                      <span class="font-semibold text-text">{item.aspect}</span>
-                    </div>
-                    <div class="p-5 border-b lg:border-b-0 lg:border-r border-border">
-                      <div class="text-xs text-text-subtle uppercase tracking-wider font-medium mb-3">
+          <div class="space-y-6">
+            <For each={() => current().comparisons}>
+              {(comp) => (
+                <div class="bg-bg-light rounded-3xl border border-border overflow-hidden">
+                  <div class="px-6 py-4 bg-bg-lighter border-b border-border">
+                    <span class="font-semibold text-text">{comp.label}</span>
+                  </div>
+                  <div class="grid grid-cols-1 lg:grid-cols-2">
+                    {/* Before */}
+                    <div class="p-6 border-b lg:border-b-0 lg:border-r border-border">
+                      <div class="flex items-center gap-2 text-sm text-text-muted mb-4">
+                        <div class="w-2 h-2 rounded-full bg-red-400" />
                         Before
                       </div>
-                      <pre class="text-sm text-text-muted font-mono whitespace-pre-wrap bg-bg rounded-lg p-3 border border-border">
-                        {item.before}
+                      <pre class="text-sm font-mono text-text-muted whitespace-pre-wrap leading-relaxed">
+                        {comp.before}
                       </pre>
                     </div>
-                    <div class="p-5 bg-success/5">
-                      <div class="text-xs text-success uppercase tracking-wider font-semibold mb-3 flex items-center gap-1.5">
-                        <Icon icon="lucide:zap" width="12" height="12" />
+                    {/* After */}
+                    <div class="p-6 bg-success/[0.03]">
+                      <div class="flex items-center gap-2 text-sm text-success font-medium mb-4">
+                        <div class="w-2 h-2 rounded-full bg-success" />
                         After (Zen)
                       </div>
-                      <pre class="text-sm text-text font-mono whitespace-pre-wrap bg-bg-light rounded-lg p-3 border border-success/20">
-                        {item.after}
+                      <pre class="text-sm font-mono text-text whitespace-pre-wrap leading-relaxed">
+                        {comp.after}
                       </pre>
                     </div>
                   </div>
-                )}
-              </For>
-            </div>
+                </div>
+              )}
+            </For>
+          </div>
+        </div>
+      </section>
+
+      {/* Migration Steps */}
+      <section class="py-16 bg-bg-light/30 border-y border-border">
+        <div class="max-w-4xl mx-auto px-6">
+          <div class="text-center mb-12">
+            <h2 class="text-3xl font-bold text-text mb-3">3 Simple Steps</h2>
+            <p class="text-text-muted">Get started in minutes</p>
           </div>
 
-          {/* Migration steps */}
-          <div class="bg-bg-light border border-border rounded-2xl overflow-hidden">
-            <div class="bg-bg-lighter border-b border-border px-6 py-4 flex items-center gap-3">
-              <div class="w-8 h-8 flex items-center justify-center bg-secondary/10 text-secondary rounded-lg">
-                <Icon icon="lucide:list" width="18" height="18" />
-              </div>
-              <h3 class="text-lg font-semibold text-text">Migration Steps</h3>
-            </div>
-            <div class="p-6 space-y-6">
-              <For each={currentMigration().steps}>
-                {(step) => (
-                  <div class="flex gap-5">
-                    <div class="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-gradient-to-br from-primary to-secondary text-white rounded-xl font-bold shadow-md">
-                      {step.step}
+          {/* Step Tabs */}
+          <div class="flex justify-center gap-2 mb-8">
+            {steps.map((step, i) => (
+              <button
+                key={step.title}
+                type="button"
+                class={() =>
+                  activeStep.value === i
+                    ? 'flex items-center gap-2 px-5 py-2.5 bg-primary text-white font-medium rounded-xl transition-all'
+                    : 'flex items-center gap-2 px-5 py-2.5 bg-bg-light text-text-muted font-medium rounded-xl border border-border hover:border-primary/50 transition-all'
+                }
+                onClick={() => {
+                  activeStep.value = i;
+                }}
+              >
+                <span
+                  class={() =>
+                    activeStep.value === i
+                      ? 'w-6 h-6 flex items-center justify-center bg-white/20 rounded-lg text-sm'
+                      : 'w-6 h-6 flex items-center justify-center bg-primary/10 text-primary rounded-lg text-sm font-bold'
+                  }
+                >
+                  {i + 1}
+                </span>
+                {step.title}
+              </button>
+            ))}
+          </div>
+
+          {/* Step Content */}
+          <div class="bg-bg-light rounded-3xl border border-border overflow-hidden">
+            {steps.map((step, i) => (
+              <Show key={step.title} when={() => activeStep.value === i}>
+                <div class="p-8">
+                  <div class="flex items-center gap-4 mb-6">
+                    <div class="w-14 h-14 flex items-center justify-center bg-gradient-to-br from-primary to-secondary text-white rounded-2xl shadow-lg">
+                      <Icon icon={step.icon} width="28" height="28" />
                     </div>
-                    <div class="flex-1 min-w-0">
-                      <h4 class="font-semibold text-text mb-3 text-lg">{step.title}</h4>
-                      <pre class="text-sm font-mono whitespace-pre-wrap bg-bg-lighter rounded-xl p-4 border border-border overflow-x-auto">
-                        {step.code}
-                      </pre>
+                    <div>
+                      <h3 class="text-xl font-bold text-text">{step.title}</h3>
+                      <p class="text-text-muted">{step.description}</p>
                     </div>
                   </div>
-                )}
-              </For>
-            </div>
+                  <pre class="p-5 bg-bg rounded-2xl border border-border font-mono text-sm text-text whitespace-pre-wrap overflow-x-auto">
+                    {step.code}
+                  </pre>
+                </div>
+              </Show>
+            ))}
           </div>
+        </div>
+      </section>
 
-          {/* Benefits */}
-          <div class="bg-bg-light border border-border rounded-2xl overflow-hidden">
-            <div class="bg-bg-lighter border-b border-border px-6 py-4 flex items-center gap-3">
-              <div class="w-8 h-8 flex items-center justify-center bg-success/10 text-success rounded-lg">
-                <Icon icon="lucide:sparkles" width="18" height="18" />
-              </div>
-              <h3 class="text-lg font-semibold text-text">Benefits</h3>
-            </div>
-            <div class="p-6">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <For each={currentMigration().benefits}>
-                  {(benefit) => (
-                    <div class="flex items-start gap-3 p-4 bg-bg rounded-xl border border-border">
-                      <div class="w-6 h-6 flex items-center justify-center bg-success/10 text-success rounded-lg flex-shrink-0">
-                        <Icon icon="lucide:check" width="14" height="14" />
-                      </div>
-                      <span class="text-text-muted text-sm">{benefit}</span>
-                    </div>
-                  )}
-                </For>
+      {/* CTA */}
+      <section class="py-20">
+        <div class="max-w-4xl mx-auto px-6 text-center">
+          <div class="relative">
+            <div class="absolute inset-0 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-3xl blur-2xl" />
+            <div class="relative bg-bg-light rounded-3xl border border-border p-12">
+              <Icon icon="lucide:rocket" width="48" height="48" class="mx-auto mb-6 text-primary" />
+              <h2 class="text-3xl font-bold text-text mb-4">Ready to migrate?</h2>
+              <p class="text-lg text-text-muted mb-8 max-w-lg mx-auto">
+                Join thousands of developers who've made the switch to faster, lighter, more
+                maintainable code.
+              </p>
+              <div class="flex flex-wrap justify-center gap-4">
+                <a
+                  href="/docs"
+                  class="inline-flex items-center gap-2 px-8 py-4 bg-primary hover:bg-primary-dark text-white font-semibold rounded-2xl shadow-lg shadow-primary/30 transition-all hover:scale-105"
+                >
+                  <Icon icon="lucide:book-open" width="20" height="20" />
+                  Read the Docs
+                </a>
+                <a
+                  href="/playground"
+                  class="inline-flex items-center gap-2 px-8 py-4 bg-bg hover:bg-bg-lighter text-text font-semibold rounded-2xl border border-border transition-all hover:scale-105"
+                >
+                  <Icon icon="lucide:play" width="20" height="20" />
+                  Try Playground
+                </a>
               </div>
             </div>
           </div>
         </div>
-
-        {/* CTA */}
-        <div class="mt-12 bg-gradient-to-br from-primary/5 to-secondary/5 border border-primary/20 rounded-2xl p-8 text-center">
-          <h3 class="text-xl font-bold text-text mb-3">Ready to get started?</h3>
-          <p class="text-text-muted mb-6 max-w-xl mx-auto">
-            Check out our documentation for detailed guides and API references.
-          </p>
-          <div class="flex gap-4 justify-center flex-wrap">
-            <a
-              href="/docs"
-              class="inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary-dark text-white font-medium rounded-xl shadow-lg transition-all"
-            >
-              <Icon icon="lucide:book-open" width="18" height="18" />
-              Read the Docs
-            </a>
-            <a
-              href="/playground"
-              class="inline-flex items-center gap-2 px-6 py-3 bg-bg-light hover:bg-bg-lighter text-text font-medium rounded-xl border border-border transition-all"
-            >
-              <Icon icon="lucide:terminal" width="18" height="18" />
-              Try in Playground
-            </a>
-          </div>
-        </div>
-      </div>
+      </section>
     </div>
   );
 }
